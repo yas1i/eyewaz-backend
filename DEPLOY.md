@@ -126,3 +126,31 @@ redirect to `www`). HTTPS certs are issued automatically once DNS resolves.
 - Tighten CORS in `server.py` from `*` to `https://www.eyewaz.com`.
 - Add request logging/monitoring; set a real SMTP/transactional email sender.
 - Add a healthcheck endpoint and autoscale rules.
+
+---
+
+# Clean-deploy checklist (lessons learned)
+
+Bugs that bit us once, and how to avoid them:
+
+1. **Base image / deps** — Dockerfile must be Python 3.9+ (numpy 2 needs it) and
+   `apt install libsndfile1`. Keep `requirements.txt` lines un-merged
+   (a missing trailing newline once hid `beautifulsoup4` in a comment).
+2. **Render can't pull Azure ACR** — push the image to **Docker Hub** (public)
+   and deploy that, or build from a Git repo. ACR creds will always be "invalid".
+3. **Bind to `$PORT`** — the Dockerfile CMD uses `0.0.0.0:${PORT:-8080}`.
+4. **Every env var must be set** — a missing `STATIC_DIR` crashes boot. Do **not**
+   set `PUBLIC_BASE_URL` (leave file links relative). Do **not** set `SMTP_*`.
+5. **MongoDB Atlas → Network Access** — add `0.0.0.0/0` as **Permanent**
+   (NOT the temporary "delete after N hours" option, which expires and silently
+   re-blocks the host). App uses `serverSelectionTimeoutMS=5000` to fail fast.
+6. **Email** — PaaS hosts block outbound SMTP. Use **SendGrid** (HTTP API):
+   set `SENDGRID_API_KEY` + a verified `SENDGRID_FROM`. With neither SendGrid nor
+   SMTP set, codes appear on-screen (dev mode) and the app still works.
+7. **Free tier sleeps** (~1 min cold start) → feels broken. Upgrade to a paid
+   always-on instance for demos/users.
+
+Production env vars (Render): `MONGO_URI`, `JWT_SECRET_KEY`, `FLASK_SECRET_KEY`,
+`STATIC_DIR=templates/`, `REGION`, `VISION_KEY`, `VISION_ENDPOINT`,
+`TRANSLATION_KEY`, `TEXT_TRANSLATION_ENDPOINT`, `SPEECH_KEY`,
+`SENDGRID_API_KEY`, `SENDGRID_FROM`.
