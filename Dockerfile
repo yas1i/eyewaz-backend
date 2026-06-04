@@ -14,7 +14,7 @@ COPY . .
 
 EXPOSE 8080
 
-# Threads help because requests spend time waiting on Azure; a longer timeout
-# covers the OCR -> translate -> speech pipeline on large inputs.
-CMD ["gunicorn", "wsgi:app", "--workers", "2", "--threads", "4", \
-     "--timeout", "120", "--bind", "0.0.0.0:8080"]
+# Bind to the host-provided $PORT (Render/Railway/Fly set this); default 8080
+# for Azure/local. Shell form so $PORT expands. Threads + long timeout cover the
+# OCR -> translate -> speech pipeline.
+CMD gunicorn wsgi:app --workers 2 --threads 4 --timeout 120 --bind 0.0.0.0:${PORT:-8080}
