@@ -14,7 +14,10 @@ from flask import request, Response
 from flask_restful import Resource
 from flask_jwt_extended import jwt_required
 
-from helpers import translate
+import storage
+from helpers import translate, TexttoSpeech_Female, TexttoSpeech_Male
+
+SPEAK_MAX_CHARS = 6000  # cap Azure synthesis so long pages stay responsive
 
 MAX_BYTES = 3_000_000   # don't download more than ~3 MB of HTML
 MAX_CHARS = 20_000      # cap extracted text so TTS stays manageable
@@ -123,3 +126,28 @@ class TranslateTextAPI(Resource):
         except Exception as e:
             return _json({"message": f"Translation failed: {e}"}, 502)
         return _json({"translated": translated, "to": to}, 200)
+
+
+class SpeakAPI(Resource):
+    """Synthesize text to speech with Azure (high-quality Urdu voices) and
+    return an audio URL. Used where the browser has no matching voice (Urdu)."""
+
+    @jwt_required()
+    def post(self):
+        data = request.get_json(force=True, silent=True) or {}
+        text = (data.get("text") or "").strip()
+        voice = data.get("voice", "female")
+        if not text:
+            return _json({"message": "There is no text to read."}, 400)
+
+        capped = text[:SPEAK_MAX_CHARS]
+        synth = TexttoSpeech_Male if voice == "male" else TexttoSpeech_Female
+        try:
+            audio = b""
+            for piece in _split_for_translate(capped, 2500):
+                audio += synth(piece).audio_data
+        except Exception as e:
+            return _json({"message": f"Could not generate audio: {e}"}, 502)
+
+        stored = storage.save_file(audio, "speech.mp3")
+        return _json({"audio_url": stored.url, "truncated": len(text) > SPEAK_MAX_CHARS}, 200)

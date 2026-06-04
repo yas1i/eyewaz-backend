@@ -409,32 +409,20 @@ $("#pageUrduBtn")?.addEventListener("click", async (e) => {
   try {
     const data = await api("/translate", { method: "POST", body: { text, to: "ur-PK" } });
     const urdu = data.translated || "";
-    const wrap = $("#pageUrduWrap");
-    const container = $("#pageUrduText");
-    container.innerHTML = "";
-    TTS.chunk(urdu).forEach((c, i) => {
-      const span = document.createElement("span");
-      span.id = "urdu-chunk-" + i;
-      span.textContent = c + " ";
-      container.appendChild(span);
-    });
-    wrap.hidden = false;
-    $("#pageUrduText").scrollIntoView({ block: "nearest" });
-    if (!TTS.hasVoice("ur")) {
-      announce("Translated to Urdu. Your device has no Urdu voice, so the text is shown but may not read aloud well.", "ok");
-    } else {
-      announce("Reading the page in Urdu.", "ok");
-    }
-    TTS.speakLong(urdu, "ur", {
-      onChunk: (i) => {
-        document.querySelectorAll("#pageUrduText .speaking-chunk").forEach((s) => s.classList.remove("speaking-chunk"));
-        const el = document.getElementById("urdu-chunk-" + i);
-        if (el) { el.classList.add("speaking-chunk"); el.scrollIntoView({ block: "nearest" }); }
-      },
-      onend: () => document.querySelectorAll("#pageUrduText .speaking-chunk").forEach((s) => s.classList.remove("speaking-chunk")),
-    });
+    $("#pageUrduText").textContent = urdu;
+    $("#pageUrduWrap").hidden = false;
+    $("#pageUrduWrap").scrollIntoView({ block: "nearest" });
+
+    // Browser voices rarely include Urdu, so synthesize with Azure's Urdu voice.
+    announce("Creating the Urdu audio… this can take a few seconds.", "busy");
+    const speech = await api("/speak", { method: "POST", body: { text: urdu, voice: "female" } });
+    const player = $("#pageUrduAudio");
+    player.src = speech.audio_url;
+    const note = speech.truncated ? " (reading the first part of a long page)" : "";
+    announce("Playing the page in Urdu" + note + ".", "ok");
+    player.play().catch(() => announce("Urdu audio ready — press play to listen.", "ok"));
   } catch (err) {
-    announce(err.message || "Could not translate the page.", "error");
+    announce(err.message || "Could not translate or read the page.", "error");
   } finally {
     btn.disabled = false;
   }
