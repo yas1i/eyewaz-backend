@@ -34,7 +34,9 @@ cors = CORS(app, resources={r"/api/*": {"origins": "*"}})
 # connect=False defers the actual connection so a bad/unreachable MONGO_URI
 # doesn't crash startup; wrap it too so a malformed URI just logs a warning.
 try:
-    db = connect(host=os.getenv("MONGO_URI"), connect=False)
+    # serverSelectionTimeoutMS keeps requests from hanging when the DB is
+    # unreachable (e.g. Atlas IP allow-list expired) — they fail fast instead.
+    db = connect(host=os.getenv("MONGO_URI"), connect=False, serverSelectionTimeoutMS=5000)
 except Exception as e:
     print(f"WARNING: MongoDB connection setup failed: {e}", flush=True)
     db = None
