@@ -1,0 +1,23 @@
+flask
+flask-restful
+flask-cors
+Flask-JWT-Extended
+gunicorn
+python-dotenv
+requests
+flask-cors
+certifi
+Pillow
+pymongo[srv]
+flask_mongoengine
+azure-cognitiveservices-speech
+azure-cognitiveservices-vision-computervision
+python-dotenv
+azure-storage-blob
+soundfile
+numpy
+docx2txt
+PyPDF2
+# celery
+# redis
+# flower
