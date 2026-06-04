@@ -34,12 +34,15 @@ def send_email(to, subject, body):
     msg.set_content(body)
 
     context = ssl.create_default_context()
+    # A timeout is essential: some hosts (e.g. Render's free tier) block outbound
+    # SMTP, and without a timeout the request would hang forever.
+    timeout = int(os.getenv("SMTP_TIMEOUT", "12"))
     if os.getenv("SMTP_USE_SSL", "false").lower() == "true":
-        with smtplib.SMTP_SSL(host, port, context=context) as server:
+        with smtplib.SMTP_SSL(host, port, context=context, timeout=timeout) as server:
             server.login(user, password)
             server.send_message(msg)
     else:
-        with smtplib.SMTP(host, port) as server:
+        with smtplib.SMTP(host, port, timeout=timeout) as server:
             server.starttls(context=context)
             server.login(user, password)
             server.send_message(msg)
