@@ -1,14 +1,46 @@
 """
 Email sending for 2-step verification codes.
 
-Configured via SMTP_* env vars. If SMTP is not configured, falls back to logging
-the message to the console so the OTP flow is still testable in development.
+Order of preference:
+  1. SendGrid HTTP API (SENDGRID_API_KEY) — works on PaaS hosts that block SMTP.
+  2. SMTP (SMTP_* env) — legacy; blocked on many free hosts.
+  3. Dev fallback — log the message so the OTP flow stays testable with no setup.
 """
 
 import os
+import re
 import smtplib
 import ssl
 from email.message import EmailMessage
+
+import requests
+
+
+def _from_address():
+    raw = os.getenv("SENDGRID_FROM") or os.getenv("SMTP_FROM") or os.getenv("SMTP_USER") or ""
+    m = re.search(r"<([^>]+)>", raw)
+    return (m.group(1) if m else raw).strip()
+
+
+def _send_via_sendgrid(to, subject, body):
+    """Send via SendGrid's HTTP API (HTTPS — not blocked by PaaS)."""
+    resp = requests.post(
+        "https://api.sendgrid.com/v3/mail/send",
+        headers={
+            "Authorization": f"Bearer {os.getenv('SENDGRID_API_KEY')}",
+            "Content-Type": "application/json",
+        },
+        json={
+            "personalizations": [{"to": [{"email": to}]}],
+            "from": {"email": _from_address()},
+            "subject": subject,
+            "content": [{"type": "text/plain", "value": body}],
+        },
+        timeout=12,
+    )
+    if resp.status_code >= 400:
+        raise RuntimeError(f"SendGrid {resp.status_code}: {resp.text[:200]}")
+    return True
 
 
 def smtp_configured():
@@ -17,9 +49,12 @@ def smtp_configured():
 
 def send_email(to, subject, body):
     """Send an email. Returns True if actually sent, False if dev-logged."""
+    if os.getenv("SENDGRID_API_KEY"):
+        return _send_via_sendgrid(to, subject, body)
+
     host = os.getenv("SMTP_HOST")
     if not host:
-        print(f"\n[DEV-EMAIL — SMTP not configured]\n  To: {to}\n  Subject: {subject}\n  {body}\n", flush=True)
+        print(f"\n[DEV-EMAIL — no email provider configured]\n  To: {to}\n  Subject: {subject}\n  {body}\n", flush=True)
         return False
 
     port = int(os.getenv("SMTP_PORT", "587"))
