@@ -119,6 +119,27 @@
         <p id="engText" class="eng" lang="en"></p>
       </article>
 
+      <h3 class="section-title">Read a web page</h3>
+      <p class="lede">Paste a link to an English web page and have it read aloud.</p>
+      <form id="urlForm" class="card" novalidate>
+        <div class="field">
+          <label for="urlInput">Web page address</label>
+          <input id="urlInput" name="url" type="url" inputmode="url"
+                 placeholder="https://example.com/article" autocomplete="url" required />
+        </div>
+        <button type="submit" class="primary-btn">Read this page aloud</button>
+      </form>
+
+      <article id="pageResult" class="card" hidden aria-labelledby="pageResultHeading">
+        <h3 id="pageResultHeading" tabindex="-1">Page</h3>
+        <div class="row">
+          <button id="pagePlayBtn" type="button" class="primary-btn">▶ Play</button>
+          <button id="pagePauseBtn" type="button" class="primary-btn ghost">⏸ Pause</button>
+          <button id="pageStopBtn" type="button" class="primary-btn ghost">⏹ Stop</button>
+        </div>
+        <p id="pageText" class="page-text" lang="en"></p>
+      </article>
+
       <h3 class="section-title">Your library</h3>
       <ul id="library" class="library" aria-label="Previously read documents"></ul>
     </section>

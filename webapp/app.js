@@ -46,9 +46,49 @@ const TTS = (() => {
     synth.speak(u);
     return true;
   }
+  // Split long text into <=220-char chunks on sentence boundaries. This avoids
+  // the well-known browser bug where long utterances cut off after ~15s.
+  function chunk(text) {
+    const sentences = text.replace(/\s+/g, " ").match(/[^.!?]+[.!?]+|\S[^.!?]*$/g) || [text];
+    const out = [];
+    let cur = "";
+    for (const s of sentences) {
+      if ((cur + s).length > 220) { if (cur.trim()) out.push(cur.trim()); cur = s; }
+      else cur += s;
+    }
+    if (cur.trim()) out.push(cur.trim());
+    return out;
+  }
+
+  // Speak long text chunk-by-chunk. onChunk(index) fires as each chunk starts.
+  function speakLong(text, langPrefix, { rate = 0.95, onChunk, onend } = {}) {
+    if (!synth || !text) return [];
+    synth.cancel();
+    const v = pickVoice(langPrefix);
+    const chunks = chunk(text);
+    let i = 0;
+    const next = () => {
+      if (i >= chunks.length) { onend && onend(); return; }
+      const idx = i++;
+      const u = new SpeechSynthesisUtterance(chunks[idx]);
+      if (v) { u.voice = v; u.lang = v.lang; } else { u.lang = langPrefix; }
+      u.rate = rate;
+      if (onChunk) u.addEventListener("start", () => onChunk(idx));
+      u.addEventListener("end", next);
+      u.addEventListener("error", next);
+      synth.speak(u);
+    };
+    next();
+    return chunks;
+  }
+
   return {
     speak,
+    speakLong,
+    chunk,
     stop: () => synth && synth.cancel(),
+    pause: () => synth && synth.pause(),
+    resume: () => synth && synth.resume(),
     hasVoice: (p) => !!pickVoice(p),
     get supported() { return !!synth; },
   };
@@ -273,6 +313,63 @@ $("#stopSpeakBtn")?.addEventListener("click", () => {
   TTS.stop();
   document.querySelectorAll(".primary-btn.speaking").forEach((b) => b.classList.remove("speaking"));
 });
+
+/* ---------------------------- Read a web page ------------------------------- */
+let pagePaused = false;
+
+$("#urlForm")?.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const url = $("#urlInput").value.trim();
+  if (!url) return;
+  announce("Opening the page…", "busy");
+  try {
+    const data = await api("/read-url", { method: "POST", body: { url } });
+    showPage(data);
+  } catch (err) {
+    announce(err.message || "Could not read that page.", "error");
+  }
+});
+
+function clearPageHighlight() {
+  document.querySelectorAll("#pageText .speaking-chunk").forEach((s) => s.classList.remove("speaking-chunk"));
+}
+
+function showPage(data) {
+  $("#pageResultHeading").textContent = data.title || "Page";
+  const container = $("#pageText");
+  container.innerHTML = "";
+  // Render each speakable chunk as its own span so the current one can be lit up.
+  TTS.chunk(data.text).forEach((c, i) => {
+    const span = document.createElement("span");
+    span.id = "chunk-" + i;
+    span.textContent = c + " ";
+    container.appendChild(span);
+  });
+  $("#pageResult").hidden = false;
+  $("#pageResultHeading").focus();
+  startPageReading();
+}
+
+function startPageReading() {
+  if (!TTS.supported) return announce("Your browser does not support speech.", "error");
+  pagePaused = false;
+  announce("Reading the page aloud.", "ok");
+  TTS.speakLong($("#pageText").textContent, "en", {
+    onChunk: (i) => {
+      clearPageHighlight();
+      const el = document.getElementById("chunk-" + i);
+      if (el) { el.classList.add("speaking-chunk"); el.scrollIntoView({ block: "nearest" }); }
+    },
+    onend: () => { clearPageHighlight(); announce("Finished reading the page.", "ok"); },
+  });
+}
+
+$("#pagePlayBtn")?.addEventListener("click", () => {
+  if (pagePaused) { TTS.resume(); pagePaused = false; }
+  else startPageReading();
+});
+$("#pagePauseBtn")?.addEventListener("click", () => { TTS.pause(); pagePaused = true; });
+$("#pageStopBtn")?.addEventListener("click", () => { TTS.stop(); pagePaused = false; clearPageHighlight(); });
 
 /* -------------------------------- Library ----------------------------------- */
 

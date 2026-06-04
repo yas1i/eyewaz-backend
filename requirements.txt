@@ -20,4 +20,4 @@ docx2txt
 PyPDF2
 # celery
 # redis
-# flower
+# flowerbeautifulsoup4
