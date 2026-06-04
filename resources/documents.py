@@ -120,7 +120,9 @@ def translationSpeechTask(f):
         except Exception as e:
             print(f"An error occurred while deleting {temp_folder}: {e}")
     elif ext == "png" or ext == "jpg" or ext == "jpeg":
-        text = ImagetoText(blob_client.url)
+        # Send raw image bytes to Azure Vision (the file is stored locally,
+        # so a localhost URL would be unreachable by Azure's cloud service).
+        text = ImagetoText(blob_client.read_bytes())
         print(text)
 
     Trans_text, lang = ConvertEnglishtoUrdu(text)
