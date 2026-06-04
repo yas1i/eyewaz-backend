@@ -4,6 +4,8 @@ venv
 .env
 .DS_Store
 .flaskenv
+uploads/
+.temp/
 *.pyc
 *.pyo
 env/

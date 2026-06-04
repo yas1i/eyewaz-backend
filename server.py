@@ -1,11 +1,12 @@
 import os
-from flask import Flask, render_template
+from flask import Flask, render_template, send_from_directory
 from flask_restful import Api
 from routes import initialize_routes
 from dotenv import load_dotenv, find_dotenv
 from flask_cors import CORS
 from mongoengine import connect
 from flask_jwt_extended import JWTManager
+import storage
 
 # from celery import Celery
 
@@ -33,6 +34,12 @@ initialize_routes(api)
 @app.route("/")
 def index():
     return render_template("index.html")
+
+
+@app.route("/files/<path:filename>")
+def serve_file(filename):
+    """Serve uploaded documents and generated audio from local storage."""
+    return send_from_directory(storage.UPLOAD_DIR, filename)
 
 
 # @celery.task

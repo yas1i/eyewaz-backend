@@ -31,7 +31,7 @@ class UserSignUpAPI(Resource):
         u = Users(
             email=data["email"],
             name=data["name"],
-            password=generate_password_hash(data["password"]),
+            password=generate_password_hash(data["password"], method="pbkdf2:sha256"),
             phone=data["phone"],
         ).save()
         resp = Response()

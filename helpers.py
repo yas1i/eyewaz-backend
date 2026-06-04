@@ -1,6 +1,8 @@
 import random
 import string
+import io
 import requests, os, time
+import storage
 from azure.cognitiveservices.vision.computervision import ComputerVisionClient
 from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient
 from msrest.authentication import CognitiveServicesCredentials
@@ -162,24 +164,33 @@ def TexttoSpeech_Male(text):
 
 
 def UploadOnAzure(file, filename):
-    service_client = BlobServiceClient.from_connection_string(connect_str)
-    container_client = service_client.get_container_client(container_str)
-    blob_client = container_client.get_blob_client(filename)
-    blob_client.upload_blob(file, overwrite=True)
-    return blob_client
+    """Store a file and return a blob-like handle.
+
+    Storage moved from Azure Blob to the local filesystem (see storage.py);
+    the name is kept so call sites stay unchanged.
+    """
+    return storage.save_file(file, filename)
 
 
-def ImagetoText(image_url):
-    print("===== Read File - remote =====")
+def ImagetoText(image):
+    """OCR an image to text using Azure Vision's Read API.
+
+    ``image`` is the raw image bytes (or a file-like object). We send the bytes
+    directly via ``read_in_stream`` rather than a URL, because images are now
+    stored locally and Azure's cloud service cannot reach a localhost URL.
+    """
+    print("===== Read File - stream =====")
     computervision_client = ComputerVisionClient(
         vision_endpoint, CognitiveServicesCredentials(vision_key)
     )
-    # Get an image with text
-    read_image_url = image_url
 
-    # Call API with URL and raw response (allows you to get the operation location)
-    read_response = computervision_client.read(read_image_url, raw=True)
-    # print(jsonify(read_response))
+    if isinstance(image, (bytes, bytearray)):
+        stream = io.BytesIO(bytes(image))
+    else:
+        stream = image
+
+    # Call API with the image stream and raw response (to read the op location)
+    read_response = computervision_client.read_in_stream(stream, raw=True)
 
     # Get the operation location (URL with an ID at the end) from the response
     read_operation_location = read_response.headers["Operation-Location"]
