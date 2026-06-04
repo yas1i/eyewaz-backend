@@ -150,9 +150,26 @@ function showView(name) {
 /* --------------------------------- Auth ------------------------------------- */
 
 let pendingEmail = null;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// Accessible error handling: shows a persistent message AND announces it.
+function showAuthError(msg, focusSel) {
+  const el = $("#authError");
+  el.textContent = msg;
+  el.hidden = false;
+  announce(msg, "error");
+  if (focusSel) { const f = $(focusSel); if (f) { f.setAttribute("aria-invalid", "true"); f.focus(); } }
+  return false;
+}
+function clearAuthError(...sels) {
+  $("#authError").hidden = true;
+  $("#authError").textContent = "";
+  sels.forEach((s) => $(s)?.removeAttribute("aria-invalid"));
+}
 
 // Show one of the three auth cards: 'login', 'signup', 'otp'.
 function showAuthForm(name) {
+  clearAuthError();
   $("#loginForm").hidden = name !== "login";
   $("#signupForm").hidden = name !== "signup";
   $("#otpForm").hidden = name !== "otp";
@@ -165,35 +182,58 @@ $("#showLogin").addEventListener("click", () => { showAuthForm("login"); $("#log
 $("#backToLogin").addEventListener("click", () => { showAuthForm("login"); $("#loginEmail").focus(); });
 
 // After password/signup succeeds, the server emails a code — move to the OTP step.
-function goToOtp(email, message) {
+function goToOtp(email, data) {
   pendingEmail = email;
   $("#otpInstructions").textContent =
-    (message || "We emailed you a 6-digit code.") + " Enter it below to continue.";
+    (data.message || "We emailed you a 6-digit code.") + " Enter it below to continue.";
+  const banner = $("#devCodeBanner");
+  if (data.dev_code) {
+    banner.textContent = "Your code is " + data.dev_code;
+    banner.hidden = false;
+    $("#otpCode").value = data.dev_code;   // prefill so it works without email
+  } else {
+    banner.hidden = true;
+    $("#otpCode").value = "";
+  }
   showAuthForm("otp");
-  $("#otpCode").value = "";
   $("#otpCode").focus();
-  announce(message || "We emailed you a verification code.", "ok");
+  const spoken = data.dev_code
+    ? "Email is not set up. Your code is " + data.dev_code.split("").join(" ") + ". Press verify."
+    : "We emailed you a verification code.";
+  announce(spoken, "ok");
 }
 
 $("#loginForm").addEventListener("submit", async (e) => {
   e.preventDefault();
+  clearAuthError("#loginEmail", "#loginPassword");
+  if (!EMAIL_RE.test($("#loginEmail").value.trim()))
+    return showAuthError("Please enter a valid email address.", "#loginEmail");
+  if (!$("#loginPassword").value)
+    return showAuthError("Please enter your password.", "#loginPassword");
   announce("Checking your details…", "busy");
   try {
     const data = await api("/login", {
       method: "POST", auth: false,
       body: { email: $("#loginEmail").value.trim(), password: $("#loginPassword").value },
     });
-    goToOtp($("#loginEmail").value.trim(), data.message);
+    goToOtp($("#loginEmail").value.trim(), data);
   } catch (err) {
-    announce(err.message || "Could not sign in.", "error");
+    showAuthError(err.message === "Invalid credentials"
+      ? "That email or password is incorrect." : (err.message || "Could not sign in."));
   }
 });
 
 $("#signupForm").addEventListener("submit", async (e) => {
   e.preventDefault();
-  if ($("#suPassword").value !== $("#suConfirm").value) {
-    return announce("Passwords do not match.", "error");
-  }
+  clearAuthError("#suName", "#suEmail", "#suPassword", "#suConfirm");
+  if (!$("#suName").value.trim())
+    return showAuthError("Please enter your name.", "#suName");
+  if (!EMAIL_RE.test($("#suEmail").value.trim()))
+    return showAuthError("Please enter a valid email address.", "#suEmail");
+  if ($("#suPassword").value.length < 8)
+    return showAuthError("Your password must be at least 8 characters.", "#suPassword");
+  if ($("#suPassword").value !== $("#suConfirm").value)
+    return showAuthError("The two passwords do not match.", "#suConfirm");
   announce("Creating your account…", "busy");
   try {
     const data = await api("/signup", {
@@ -206,26 +246,37 @@ $("#signupForm").addEventListener("submit", async (e) => {
         confirmPassword: $("#suConfirm").value,
       },
     });
-    goToOtp($("#suEmail").value.trim(), data.message);
+    goToOtp($("#suEmail").value.trim(), data);
   } catch (err) {
-    announce(err.message || "Could not create account.", "error");
+    if ((err.message || "").includes("already exists")) {
+      showAuthError("An account with this email already exists. Please sign in instead.", "#suEmail");
+      showAuthForm("login");
+      $("#loginEmail").value = $("#suEmail").value.trim();
+      showAuthError("This email already has an account — please sign in.");
+    } else {
+      showAuthError(err.message || "Could not create account.");
+    }
   }
 });
 
 $("#otpForm").addEventListener("submit", async (e) => {
   e.preventDefault();
+  clearAuthError("#otpCode");
+  const code = $("#otpCode").value.trim();
+  if (!/^[0-9]{6}$/.test(code))
+    return showAuthError("Enter the 6-digit code.", "#otpCode");
   announce("Verifying your code…", "busy");
   try {
     const data = await api("/verify-otp", {
       method: "POST", auth: false,
-      body: { email: pendingEmail, code: $("#otpCode").value.trim() },
+      body: { email: pendingEmail, code },
     });
     if (!data.token) throw new Error("Verification failed.");
     setToken(data.token);
     announce("Verified. Welcome!", "ok");
     enterApp();
   } catch (err) {
-    announce(err.message || "Could not verify the code.", "error");
+    showAuthError(err.message || "Could not verify the code.", "#otpCode");
   }
 });
 
@@ -234,9 +285,16 @@ $("#resendOtp").addEventListener("click", async () => {
   announce("Sending a new code…", "busy");
   try {
     const data = await api("/resend-otp", { method: "POST", auth: false, body: { email: pendingEmail } });
-    announce(data.message || "A new code is on its way.", "ok");
+    if (data.dev_code) {
+      $("#devCodeBanner").textContent = "Your code is " + data.dev_code;
+      $("#devCodeBanner").hidden = false;
+      $("#otpCode").value = data.dev_code;
+      announce("Your new code is " + data.dev_code.split("").join(" "), "ok");
+    } else {
+      announce(data.message || "A new code is on its way.", "ok");
+    }
   } catch (err) {
-    announce(err.message || "Could not resend the code.", "error");
+    showAuthError(err.message || "Could not resend the code.");
   }
 });
 
