@@ -53,4 +53,9 @@ def send_otp_email(to, code):
         "It expires in 10 minutes.\n"
         "If you didn't request this, you can safely ignore this email."
     )
-    return send_email(to, subject, body)
+    try:
+        return send_email(to, subject, body)
+    except Exception as e:
+        # Never let a mail problem break sign-up: fall back to the dev code path.
+        print(f"\n[EMAIL FAILED — falling back to on-screen code]\n  {e}\n  Code for {to}: {code}\n", flush=True)
+        return False
