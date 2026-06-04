@@ -157,7 +157,7 @@
     <!-- ===================== CAPTURE ===================== -->
     <section id="captureView" aria-labelledby="captureHeading" hidden>
       <h2 id="captureHeading">Read a photo aloud</h2>
-      <p class="lede">Take or choose a photo of English text. EYEWAZ will read it to you in Urdu.</p>
+      <p class="lede">Take or choose a photo of text. EYEWAZ reads it in your chosen language &amp; voice (set in ⚙ Account).</p>
 
       <!-- The big primary action. The hidden input opens the camera on phones. -->
       <label for="photoInput" class="capture-btn" id="captureLabel">
@@ -169,11 +169,6 @@
       <div id="previewWrap" hidden>
         <img id="preview" alt="Selected photo, ready to read" />
         <div class="row">
-          <fieldset class="voice">
-            <legend>Voice</legend>
-            <label><input type="radio" name="voice" value="female" checked /> Female</label>
-            <label><input type="radio" name="voice" value="male" /> Male</label>
-          </fieldset>
           <button id="readBtn" class="primary-btn">Read it to me</button>
         </div>
       </div>
@@ -189,16 +184,16 @@
 
         <h4>Read with your device voice</h4>
         <div class="row">
-          <button id="speakUrduBtn" type="button" class="primary-btn">🔊 Speak Urdu</button>
-          <button id="speakEngBtn" type="button" class="primary-btn ghost">🔊 Speak English</button>
+          <button id="speakUrduBtn" type="button" class="primary-btn">🔊 Speak translation</button>
+          <button id="speakEngBtn" type="button" class="primary-btn ghost">🔊 Speak original</button>
           <button id="stopSpeakBtn" type="button" class="primary-btn ghost">⏹ Stop</button>
         </div>
         <p id="ttsHint" class="hint" hidden></p>
 
-        <h4>Urdu</h4>
-        <p id="urduText" class="urdu" lang="ur" dir="rtl"></p>
-        <h4>English (detected)</h4>
-        <p id="engText" class="eng" lang="en"></p>
+        <h4>Translation</h4>
+        <p id="urduText" class="urdu"></p>
+        <h4>Original text</h4>
+        <p id="engText" class="eng"></p>
       </article>
 
       <h3 class="section-title">Read a web page</h3>
@@ -218,14 +213,14 @@
           <button id="pagePlayBtn" type="button" class="primary-btn">▶ Play (English)</button>
           <button id="pagePauseBtn" type="button" class="primary-btn ghost">⏸ Pause</button>
           <button id="pageStopBtn" type="button" class="primary-btn ghost">⏹ Stop</button>
-          <button id="pageUrduBtn" type="button" class="primary-btn">🌐 Translate to Urdu &amp; read</button>
+          <button id="pageUrduBtn" type="button" class="primary-btn">🌐 Translate &amp; read aloud</button>
         </div>
         <p id="pageText" class="page-text" lang="en"></p>
 
         <div id="pageUrduWrap" hidden>
-          <h4>Urdu translation (natural voice)</h4>
+          <h4>Translation (natural voice)</h4>
           <audio id="pageUrduAudio" controls preload="auto"></audio>
-          <p id="pageUrduText" class="page-text urdu" lang="ur" dir="rtl"></p>
+          <p id="pageUrduText" class="page-text urdu"></p>
         </div>
       </article>
 

@@ -76,6 +76,16 @@ def ConvertEnglishtoUrdu(text):
     return trans_lang, lang
 
 
+def ConvertText(text, target_lang="ur-PK"):
+    """Translate text into target_lang. Returns (translated_text, source_lang).
+    If the text is already in the target language, returns it unchanged."""
+    src = detect_language(text)
+    print(f"Detected source: {src} -> target: {target_lang}")
+    if src == target_lang.split("-")[0]:
+        return text, src
+    return translate(text, src, target_lang), src
+
+
 # This example requires environment variables named "SPEECH_KEY" and "SPEECH_REGION"
 
 

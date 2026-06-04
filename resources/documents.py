@@ -1,7 +1,7 @@
 import io, requests
 import os
 import storage
-from helpers import ConvertEnglishtoUrdu, TexttoSpeech_Female, TexttoSpeech_Male, UploadOnAzure, ImagetoText
+from helpers import ConvertText, synthesize, UploadOnAzure, ImagetoText
 from azure.storage.blob import BlobServiceClient, ContainerClient
 from flask import request, jsonify, Response
 from flask_restful import Resource
@@ -25,7 +25,7 @@ def get_audio_duration_from_bytes(audio_bytes):
     duration = len(data) / samplerate
     return duration
 
-def translationSpeechTask(f):
+def translationSpeechTask(f, target_lang="ur-PK", voice="ur-PK-UzmaNeural", rate=1.0):
     blob_client = UploadOnAzure(f, f.filename)
 
     data = blob_client.download_blob()
@@ -131,25 +131,14 @@ def translationSpeechTask(f):
     if not text or not text.strip():
         raise ValueError("No readable text was found in this file.")
 
-    Trans_text, lang = ConvertEnglishtoUrdu(text)
-    print(text)
-    female_audio = TexttoSpeech_Female(Trans_text)
-    female_audio_data = female_audio.audio_data
-    female_audio_duration = get_audio_duration_from_bytes(female_audio_data)
-    print("FEMALE AUDIO DURATION", female_audio_duration)
-    
-    male_audio = TexttoSpeech_Male(Trans_text)
-    male_audio_data = male_audio.audio_data
-    male_audio_duration = get_audio_duration_from_bytes(male_audio_data)
-    print("MALE AUDIO DURATION", male_audio_duration)
-    # Generate a unique filename. Azure synthesizes MP3 (audio-48khz-192kbitrate-
-    # mono-mp3), so use a .mp3 extension — mobile players key off it.
-    female_audio_filename = blob_client.blob_name.split(".")[0] + "_female.mp3"
-    female_audio_blob_client = UploadOnAzure(female_audio_data, female_audio_filename)
-
-    male_audio_filename = blob_client.blob_name.split(".")[0] + "_male.mp3"
-    male_audio_blob_client = UploadOnAzure(male_audio_data, male_audio_filename)
-    return text,Trans_text,lang,female_audio_duration,blob_client,female_audio_blob_client,male_audio_blob_client,male_audio_duration
+    # Translate into the user's chosen language and speak with their chosen voice.
+    Trans_text, lang = ConvertText(text, target_lang)
+    audio = synthesize(Trans_text, voice, rate)
+    audio_data = audio.audio_data
+    audio_duration = get_audio_duration_from_bytes(audio_data)
+    audio_filename = blob_client.blob_name.split(".")[0] + "_audio.mp3"
+    audio_blob_client = UploadOnAzure(audio_data, audio_filename)
+    return text, Trans_text, lang, audio_duration, blob_client, audio_blob_client
 
 class DocumentTransSpeechAPI(Resource):
     """Uploads file to Azure Blob Storage"""
@@ -165,9 +154,14 @@ class DocumentTransSpeechAPI(Resource):
         f = request.files["file"]
         email = get_jwt_identity()
         user = Users.objects.get(email=email)
+        prefs = user.preferences()
+        target_lang = prefs.get("language", "ur-PK")
+        voice = prefs.get("voice", "ur-PK-UzmaNeural")
+        rate = prefs.get("rate", 1.0)
 
         try:
-            text,Trans_text,lang,female_audio_duration,blob_client,female_audio_blob_client,male_audio_blob_client,male_audio_duration = translationSpeechTask(f)
+            text, Trans_text, lang, audio_duration, blob_client, audio_blob_client = \
+                translationSpeechTask(f, target_lang, voice, rate)
         except ValueError as e:
             # Expected, user-facing problems (no text found, unsupported type).
             return Response(json.dumps({"message": str(e)}),
@@ -176,6 +170,8 @@ class DocumentTransSpeechAPI(Resource):
             import traceback; traceback.print_exc()
             return Response(json.dumps({"message": f"Could not process the file: {e}"}),
                             status=500, mimetype="application/json")
+        # A single audio in the user's chosen voice; stored in both audio fields
+        # so the existing client (and library) keep working.
         data = {
             "doc_url": blob_client.url,
             "doc_name": blob_client.blob_name,
@@ -183,17 +179,19 @@ class DocumentTransSpeechAPI(Resource):
             "eng_text": text,
             "tran_text": Trans_text,
             "lang": lang,
-            "trans_lang": "ur-PK",
-            "female_audio_url": female_audio_blob_client.url,
-            "female_audio_name": female_audio_blob_client.blob_name,
-            "female_audio_extension": female_audio_blob_client.blob_name.split(".")[-1],
-            "female_audio_duration": female_audio_duration,
-            "male_audio_url": male_audio_blob_client.url,
-            "male_audio_name": male_audio_blob_client.blob_name,
-            "male_audio_extension": male_audio_blob_client.blob_name.split(".")[-1],
-            "male_audio_duration": male_audio_duration,
+            "trans_lang": target_lang,
+            "female_audio_url": audio_blob_client.url,
+            "female_audio_name": audio_blob_client.blob_name,
+            "female_audio_extension": audio_blob_client.blob_name.split(".")[-1],
+            "female_audio_duration": audio_duration,
+            "male_audio_url": audio_blob_client.url,
+            "male_audio_name": audio_blob_client.blob_name,
+            "male_audio_extension": audio_blob_client.blob_name.split(".")[-1],
+            "male_audio_duration": audio_duration,
             "message": blob_client.blob_name + " Is Uploaded",
         }
+        female_audio_duration = audio_duration
+        male_audio_duration = audio_duration
         doc = Docs(
             id=str(uuid.uuid4()),
             user=user,
