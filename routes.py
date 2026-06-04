@@ -2,7 +2,11 @@
 https://flask-restful.readthedocs.io/en/latest/
 """
 
-from resources.user import UserSignUpAPI, UserLoginAPI, VerifyOtpAPI, ResendOtpAPI
+from resources.user import (
+    UserSignUpAPI, UserLoginAPI, VerifyOtpAPI, ResendOtpAPI,
+    ForgotPasswordAPI, ResetPasswordAPI,
+)
+from resources.auth_oauth import AuthProviders, OAuthStart, OAuthCallback
 from resources.documents import DocumentTransSpeechAPI, DocumentAPI
 from resources.documents import UpdateDocumentFavAPI, UpdateDocumentUnFavAPI
 from resources.playback import PausePlaybackAPI
@@ -15,6 +19,11 @@ def initialize_routes(api):
     api.add_resource(UserLoginAPI, "/api/login")
     api.add_resource(VerifyOtpAPI, "/api/verify-otp")
     api.add_resource(ResendOtpAPI, "/api/resend-otp")
+    api.add_resource(ForgotPasswordAPI, "/api/forgot-password")
+    api.add_resource(ResetPasswordAPI, "/api/reset-password")
+    api.add_resource(AuthProviders, "/api/auth/providers")
+    api.add_resource(OAuthStart, "/api/auth/<string:provider>/start")
+    api.add_resource(OAuthCallback, "/api/auth/<string:provider>/callback")
     api.add_resource(DocumentTransSpeechAPI, "/api/document-translation-and-speech")
     api.add_resource(DocumentAPI, "/api/document")
     api.add_resource(UpdateDocumentFavAPI, "/api/fav-document")

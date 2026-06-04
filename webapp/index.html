@@ -25,27 +25,56 @@
   <main id="main" tabindex="-1">
 
     <!-- ===================== AUTH ===================== -->
-    <section id="authView" aria-labelledby="authHeading">
-      <h2 id="authHeading">Sign in</h2>
-      <p class="lede">Sign in to turn a photo of English text into spoken Urdu.</p>
+    <section id="authView" class="auth" aria-labelledby="authHeading">
+      <h2 id="authHeading">Welcome back</h2>
+      <p class="lede" id="authLede">Sign in to turn text into spoken Urdu.</p>
       <p id="authError" class="form-error" role="alert" hidden></p>
 
-      <form id="loginForm" class="card" novalidate>
+      <!-- Social sign-in (shown on the login & signup steps) -->
+      <div id="socialBlock">
+        <button type="button" class="social-btn" data-provider="google">
+          <span class="social-logo" aria-hidden="true">
+            <svg viewBox="0 0 48 48" width="24" height="24"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.4 29.3 35 24 35c-6.1 0-11-4.9-11-11s4.9-11 11-11c2.8 0 5.4 1.1 7.3 2.8l5.7-5.7C33.6 6.1 29.1 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.3-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 16 19 13 24 13c2.8 0 5.4 1.1 7.3 2.8l5.7-5.7C33.6 6.1 29.1 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35 26.7 36 24 36c-5.3 0-9.7-2.6-11.3-7l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.1-4.1 5.6l6.2 5.2C39.9 36.5 44 31 44 24c0-1.3-.1-2.3-.4-3.5z"/></svg>
+          </span>
+          <span>Continue with Google</span>
+        </button>
+        <button type="button" class="social-btn" data-provider="apple">
+          <span class="social-logo" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M16.4 12.9c0-2.3 1.9-3.4 2-3.5-1.1-1.6-2.8-1.8-3.4-1.9-1.4-.1-2.8.8-3.5.8s-1.8-.8-3-.8c-1.5 0-2.9.9-3.7 2.3-1.6 2.7-.4 6.8 1.1 9 .7 1.1 1.6 2.3 2.7 2.2 1.1 0 1.5-.7 2.8-.7s1.7.7 2.8.7c1.2 0 1.9-1.1 2.6-2.2.8-1.2 1.2-2.4 1.2-2.5-.1 0-2.3-.9-2.4-3.4zM14.2 5.9c.6-.7 1-1.7.9-2.7-.9 0-1.9.6-2.5 1.3-.6.6-1 1.6-.9 2.6 1 .1 1.9-.5 2.5-1.2z"/></svg>
+          </span>
+          <span>Continue with Apple</span>
+        </button>
+        <button type="button" class="social-btn" data-provider="facebook">
+          <span class="social-logo" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="24" height="24"><path fill="#1877F2" d="M24 12c0-6.6-5.4-12-12-12S0 5.4 0 12c0 6 4.4 11 10.1 11.9v-8.4H7.1V12h3V9.4c0-3 1.8-4.6 4.5-4.6 1.3 0 2.7.2 2.7.2v2.9h-1.5c-1.5 0-2 .9-2 1.9V12h3.3l-.5 3.5h-2.8v8.4C19.6 23 24 18 24 12z"/></svg>
+          </span>
+          <span>Continue with Facebook</span>
+        </button>
+        <div class="divider"><span>or</span></div>
+      </div>
+
+      <form id="loginForm" class="auth-form" novalidate>
         <div class="field">
           <label for="loginEmail">Email</label>
           <input id="loginEmail" name="email" type="email" autocomplete="email" required />
         </div>
         <div class="field">
           <label for="loginPassword">Password</label>
-          <input id="loginPassword" name="password" type="password" autocomplete="current-password" required />
+          <div class="pw-wrap">
+            <input id="loginPassword" name="password" type="password" autocomplete="current-password" required />
+            <button type="button" class="pw-toggle" data-target="loginPassword" aria-pressed="false" aria-label="Show password">Show</button>
+          </div>
         </div>
-        <button type="submit" class="primary-btn">Sign in</button>
-        <p class="switch">No account?
-          <button type="button" id="showSignup" class="link-btn">Create one</button>
+        <button type="submit" class="primary-btn">Log in</button>
+        <p class="auth-links">
+          <button type="button" id="showForgot" class="link-btn">Forgot password?</button>
+        </p>
+        <p class="switch">Don't have an account?
+          <button type="button" id="showSignup" class="link-btn">Create account</button>
         </p>
       </form>
 
-      <form id="signupForm" class="card" novalidate hidden>
+      <form id="signupForm" class="auth-form" novalidate hidden>
         <div class="field">
           <label for="suName">Name</label>
           <input id="suName" name="name" type="text" autocomplete="name" required />
@@ -55,13 +84,16 @@
           <input id="suEmail" name="email" type="email" autocomplete="email" required />
         </div>
         <div class="field">
-          <label for="suPhone">Phone</label>
-          <input id="suPhone" name="phone" type="tel" autocomplete="tel" inputmode="tel" required />
+          <label for="suPhone">Phone <span class="optional">(optional)</span></label>
+          <input id="suPhone" name="phone" type="tel" autocomplete="tel" inputmode="tel" />
         </div>
         <div class="field">
           <label for="suPassword">Password</label>
-          <input id="suPassword" name="password" type="password" autocomplete="new-password"
-                 minlength="8" aria-describedby="pwHint" required />
+          <div class="pw-wrap">
+            <input id="suPassword" name="password" type="password" autocomplete="new-password"
+                   minlength="8" aria-describedby="pwHint" required />
+            <button type="button" class="pw-toggle" data-target="suPassword" aria-pressed="false" aria-label="Show password">Show</button>
+          </div>
           <p id="pwHint" class="hint">Use at least 8 characters.</p>
         </div>
         <div class="field">
@@ -74,7 +106,7 @@
         </p>
       </form>
 
-      <form id="otpForm" class="card" novalidate hidden>
+      <form id="otpForm" class="auth-form" novalidate hidden>
         <p id="otpInstructions" class="lede">Enter the 6-digit code we emailed you.</p>
         <p id="devCodeBanner" class="dev-code" role="status" hidden></p>
         <div class="field">
@@ -89,6 +121,35 @@
           <span aria-hidden="true">·</span>
           <button type="button" id="backToLogin" class="link-btn">Start over</button>
         </p>
+      </form>
+
+      <form id="forgotForm" class="auth-form" novalidate hidden>
+        <p class="lede">Enter your email and we'll send you a reset code.</p>
+        <div class="field">
+          <label for="forgotEmail">Email</label>
+          <input id="forgotEmail" name="email" type="email" autocomplete="email" required />
+        </div>
+        <button type="submit" class="primary-btn">Send reset code</button>
+        <p class="switch"><button type="button" id="forgotBackToLogin" class="link-btn">Back to sign in</button></p>
+      </form>
+
+      <form id="resetForm" class="auth-form" novalidate hidden>
+        <p class="lede">Enter the code we sent and choose a new password.</p>
+        <p id="resetDevCode" class="dev-code" role="status" hidden></p>
+        <div class="field">
+          <label for="resetCode">Reset code</label>
+          <input id="resetCode" name="code" type="text" inputmode="numeric"
+                 autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required />
+        </div>
+        <div class="field">
+          <label for="resetPassword">New password</label>
+          <div class="pw-wrap">
+            <input id="resetPassword" name="newPassword" type="password" autocomplete="new-password" minlength="8" required />
+            <button type="button" class="pw-toggle" data-target="resetPassword" aria-pressed="false" aria-label="Show password">Show</button>
+          </div>
+          <p class="hint">Use at least 8 characters.</p>
+        </div>
+        <button type="submit" class="primary-btn">Set new password</button>
       </form>
     </section>
 

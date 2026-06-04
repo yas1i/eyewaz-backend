@@ -86,6 +86,47 @@ h4 { font-size: 1.15rem; margin: 18px 0 6px; }
 .field input[aria-invalid="true"] { border-color: var(--danger); border-width: 3px; }
 
 .hint { color: var(--muted); font-size: .95rem; margin: 6px 0 0; }
+.optional { color: var(--muted); font-weight: 400; font-size: .9rem; }
+
+/* Auth screen layout (social-first, like leading apps but higher contrast). */
+.auth { max-width: 420px; margin: 0 auto; text-align: center; }
+.auth h2 { font-size: 2rem; margin: 18px 0 6px; }
+.auth .lede { text-align: center; }
+.auth-form { text-align: left; }
+.auth-links { margin: 12px 0 0; text-align: center; }
+.switch { text-align: center; }
+
+/* Social sign-in buttons — large, clear logos, strong border. */
+.social-btn {
+  display: flex; align-items: center; gap: 12px;
+  width: 100%; min-height: 56px; padding: 12px 18px; margin-bottom: 12px;
+  background: #fff; color: var(--text);
+  border: 2px solid var(--border); border-radius: 999px;
+  font-size: 1.1rem; font-weight: 700; cursor: pointer;
+}
+.social-btn:hover { background: var(--surface); }
+.social-btn .social-logo { display: inline-flex; width: 24px; justify-content: center; }
+.social-btn > span:last-child { flex: 1; text-align: center; margin-right: 24px; }
+
+.divider {
+  display: flex; align-items: center; text-align: center;
+  color: var(--muted); margin: 18px 0; font-weight: 700;
+}
+.divider::before, .divider::after {
+  content: ""; flex: 1; height: 2px; background: #d4dbe9;
+}
+.divider span { padding: 0 14px; }
+
+/* Password field with show/hide toggle. */
+.pw-wrap { position: relative; display: flex; }
+.pw-wrap input { padding-right: 84px; }
+.pw-toggle {
+  position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+  min-height: 40px; padding: 0 12px;
+  background: var(--surface); color: var(--accent);
+  border: 2px solid #d4dbe9; border-radius: 6px;
+  font: inherit; font-weight: 700; cursor: pointer;
+}
 
 /* Errors: bold, dark red, with a left bar so they stand out. */
 .form-error {
