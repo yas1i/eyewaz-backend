@@ -84,9 +84,16 @@ class Docs(Document):
 class Folders(Document):
     id = StringField(primary_key=True)
     user = ReferenceField(Users)
-    folder_name = StringField(max_length=20, unique=True)
+    # Folder names are unique per-user (not globally), so different users can
+    # each have e.g. a "Books" folder.
+    folder_name = StringField(max_length=20)
     files = ListField(ReferenceField(Docs))
     objects = QuerySetManager()
+    meta = {
+        "indexes": [
+            {"fields": ("user", "folder_name"), "unique": True},
+        ]
+    }
 
     def add_file(self, file_instance):
         if file_instance not in self.files:
