@@ -139,12 +139,16 @@ async function api(path, { method = "GET", body, auth = true, isForm = false } =
 /* ------------------------------ View switching ------------------------------ */
 
 function showView(name) {
+  const loggedIn = name === "capture" || name === "account";
   $("#authView").hidden = name !== "auth";
   $("#captureView").hidden = name !== "capture";
-  $("#logoutBtn").hidden = name !== "capture";
-  const heading = name === "auth" ? "#authHeading" : "#captureHeading";
+  $("#accountView").hidden = name !== "account";
+  $("#logoutBtn").hidden = !loggedIn;
+  $("#accountBtn").hidden = !loggedIn;
+  const headingMap = { auth: "#authHeading", capture: "#captureHeading", account: "#accountHeading" };
   $("#main").focus();
-  $(heading).scrollIntoView({ block: "start" });
+  const h = $(headingMap[name]);
+  if (h) h.scrollIntoView({ block: "start" });
 }
 
 /* --------------------------------- Auth ------------------------------------- */
@@ -528,6 +532,7 @@ function startPageReading() {
   pagePaused = false;
   announce("Reading the page aloud.", "ok");
   TTS.speakLong($("#pageText").textContent, "en", {
+    rate: userPrefs.rate,
     onChunk: (i) => {
       clearPageHighlight();
       const el = document.getElementById("chunk-" + i);
@@ -559,7 +564,7 @@ $("#pageUrduBtn")?.addEventListener("click", async (e) => {
 
     // Browser voices rarely include Urdu, so synthesize with Azure's Urdu voice.
     announce("Creating the Urdu audio… this can take a few seconds.", "busy");
-    const speech = await api("/speak", { method: "POST", body: { text: urdu, voice: "female" } });
+    const speech = await api("/speak", { method: "POST", body: { text: urdu, voice: "female", rate: userPrefs.rate } });
     const player = $("#pageUrduAudio");
     player.src = speech.audio_url;
     const note = speech.truncated ? " (reading the first part of a long page)" : "";
@@ -604,11 +609,159 @@ function escapeHtml(s) {
   return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
 
+/* ------------------------------ Account & voice ----------------------------- */
+
+let userPrefs = { engine: "azure", language: "ur-PK", voice: "ur-PK-UzmaNeural", rate: 1.0 };
+let azureVoices = null;
+
+async function loadPrefs() {
+  try {
+    const p = await api("/profile", { method: "GET" });
+    if (p && p.preferences) userPrefs = p.preferences;
+    return p;
+  } catch (_) { return null; }
+}
+
+function accStatus(msg, kind) {
+  const s = $("#accountStatus");
+  s.textContent = msg;
+  s.className = "status" + (kind ? " " + kind : "");
+  if (msg) announce(msg, kind);
+}
+
+function currentEngine() {
+  return document.querySelector('input[name="engine"]:checked')?.value || "azure";
+}
+
+async function getAzureVoices() {
+  if (azureVoices) return azureVoices;
+  const d = await api("/voices", { method: "GET" });
+  azureVoices = (d && d.voices) || [];
+  return azureVoices;
+}
+
+function browserVoiceList() {
+  const voices = window.speechSynthesis ? speechSynthesis.getVoices() : [];
+  return voices.map((v) => ({
+    shortName: v.name, locale: v.lang, localeName: v.lang, displayName: v.name, gender: "",
+  }));
+}
+
+const SAMPLES = {
+  ur: "السلام علیکم، یہ آپ کی منتخب کردہ آواز ہے۔",
+  ar: "مرحبا، هذا هو الصوت الذي اخترته.",
+  hi: "नमस्ते, यह आपकी चुनी हुई आवाज़ है।",
+};
+function sampleFor(locale) {
+  return SAMPLES[(locale || "").slice(0, 2)] || "Hello, this is the voice you selected for EYEWAZ.";
+}
+
+async function populateVoiceControls() {
+  const engine = currentEngine();
+  const voices = engine === "azure" ? await getAzureVoices() : browserVoiceList();
+  const byLocale = {};
+  voices.forEach((v) => { (byLocale[v.locale] = byLocale[v.locale] || []).push(v); });
+  const locales = Object.keys(byLocale).sort((a, b) =>
+    (byLocale[a][0].localeName || a).localeCompare(byLocale[b][0].localeName || b));
+
+  const langSel = $("#accLanguage");
+  langSel.innerHTML = "";
+  locales.forEach((loc) => {
+    const opt = document.createElement("option");
+    opt.value = loc;
+    opt.textContent = `${byLocale[loc][0].localeName || loc} (${loc})`;
+    langSel.appendChild(opt);
+  });
+  langSel.value = (userPrefs.language && byLocale[userPrefs.language]) ? userPrefs.language : (locales[0] || "");
+
+  const fillVoices = () => {
+    const lang = langSel.value;
+    const voiceSel = $("#accVoice");
+    voiceSel.innerHTML = "";
+    (byLocale[lang] || []).forEach((v) => {
+      const opt = document.createElement("option");
+      opt.value = v.shortName;
+      opt.textContent = v.displayName + (v.gender ? " — " + v.gender : "");
+      voiceSel.appendChild(opt);
+    });
+    if ([...voiceSel.options].some((o) => o.value === userPrefs.voice)) voiceSel.value = userPrefs.voice;
+  };
+  fillVoices();
+  langSel.onchange = fillVoices;
+}
+
+async function openAccount() {
+  showView("account");
+  accStatus("Loading your settings…", "busy");
+  const profile = await loadPrefs();
+  if (profile) { $("#accName").value = profile.name || ""; $("#accEmail").value = profile.email || ""; }
+  const engineRadio = document.querySelector(`input[name="engine"][value="${userPrefs.engine}"]`)
+    || document.querySelector('input[name="engine"][value="azure"]');
+  engineRadio.checked = true;
+  try {
+    await populateVoiceControls();
+  } catch (e) {
+    accStatus("Could not load the voice list: " + (e.message || e), "error");
+  }
+  $("#accRate").value = userPrefs.rate;
+  $("#rateVal").textContent = Number(userPrefs.rate).toFixed(2) + "×";
+  accStatus("", "");
+}
+
+$("#accountBtn").addEventListener("click", openAccount);
+$("#accountBackBtn").addEventListener("click", () => showView("capture"));
+document.querySelectorAll('input[name="engine"]').forEach((r) =>
+  r.addEventListener("change", () => populateVoiceControls().catch(() => {})));
+$("#accRate").addEventListener("input", () => {
+  $("#rateVal").textContent = Number($("#accRate").value).toFixed(2) + "×";
+});
+
+$("#testVoiceBtn").addEventListener("click", async () => {
+  const engine = currentEngine();
+  const lang = $("#accLanguage").value;
+  const voice = $("#accVoice").value;
+  const rate = Number($("#accRate").value);
+  const sample = sampleFor(lang);
+  if (engine === "browser") {
+    if (!TTS.supported) return accStatus("Your browser doesn't support speech.", "error");
+    TTS.speak(sample, lang, { rate });
+    accStatus("Playing a sample with your device voice.", "ok");
+    return;
+  }
+  accStatus("Generating a sample…", "busy");
+  try {
+    const d = await api("/speak", { method: "POST", body: { text: sample, voiceName: voice, rate } });
+    new Audio(d.audio_url).play();
+    accStatus("Playing a sample.", "ok");
+  } catch (e) {
+    accStatus(e.message || "Could not play a sample.", "error");
+  }
+});
+
+$("#accountForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const prefs = {
+    engine: currentEngine(),
+    language: $("#accLanguage").value,
+    voice: $("#accVoice").value,
+    rate: Number($("#accRate").value),
+  };
+  accStatus("Saving…", "busy");
+  try {
+    const d = await api("/profile", { method: "PUT", body: { name: $("#accName").value.trim(), preferences: prefs } });
+    userPrefs = d.preferences || prefs;
+    accStatus("Your settings have been saved.", "ok");
+  } catch (err) {
+    accStatus(err.message || "Could not save your settings.", "error");
+  }
+});
+
 /* --------------------------------- Boot ------------------------------------- */
 
 function enterApp() {
   showView("capture");
   loadLibrary();
+  loadPrefs();   // so saved speed/voice apply to reading right away
 }
 
 // Handle the return from a social sign-in redirect (/app#token=... or #auth_error=...).

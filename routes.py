@@ -7,6 +7,7 @@ from resources.user import (
     ForgotPasswordAPI, ResetPasswordAPI,
 )
 from resources.auth_oauth import AuthProviders, OAuthStart, OAuthCallback
+from resources.account import ProfileAPI, VoicesAPI
 from resources.documents import DocumentTransSpeechAPI, DocumentAPI
 from resources.documents import UpdateDocumentFavAPI, UpdateDocumentUnFavAPI
 from resources.playback import PausePlaybackAPI
@@ -34,3 +35,5 @@ def initialize_routes(api):
     api.add_resource(ReadUrlAPI, "/api/read-url")
     api.add_resource(TranslateTextAPI, "/api/translate")
     api.add_resource(SpeakAPI, "/api/speak")
+    api.add_resource(ProfileAPI, "/api/profile")
+    api.add_resource(VoicesAPI, "/api/voices")
