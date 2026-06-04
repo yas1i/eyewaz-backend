@@ -122,11 +122,25 @@ async function api(path, { method = "GET", body, auth = true, isForm = false } =
   const headers = {};
   if (auth && getToken()) headers["Authorization"] = "Bearer " + getToken();
   if (!isForm && body) headers["Content-Type"] = "application/json";
-  const res = await fetch(API + path, {
-    method,
-    headers,
-    body: isForm ? body : body ? JSON.stringify(body) : undefined,
-  });
+  // Gentle hint if the (free) server is cold-starting.
+  const slow = setTimeout(() => {
+    const st = $("#status");
+    if (st && st.classList.contains("busy") && !st.dataset.waking) {
+      st.dataset.waking = "1";
+      st.textContent += " — the server may be waking up (up to a minute)…";
+    }
+  }, 7000);
+  let res;
+  try {
+    res = await fetch(API + path, {
+      method,
+      headers,
+      body: isForm ? body : body ? JSON.stringify(body) : undefined,
+    });
+  } finally {
+    clearTimeout(slow);
+    const st = $("#status"); if (st) delete st.dataset.waking;
+  }
   let data = null;
   try { data = await res.json(); } catch (_) { /* non-JSON error page */ }
   if (!res.ok) {
@@ -439,18 +453,26 @@ function audioUrlFor(doc, voice) {
 
 let currentDoc = null;
 
+const RTL_LANGS = ["ar", "ur", "fa", "he", "ps", "sd", "ug", "yi", "dv"];
+function isRTL(lang) { return RTL_LANGS.includes((lang || "").slice(0, 2)); }
+function applyLangDir(el, lang) {
+  el.lang = (lang || "").slice(0, 2) || "en";
+  el.dir = isRTL(lang) ? "rtl" : "ltr";
+}
+
 function renderResult(doc) {
   currentDoc = doc;
-  const voice = chosenVoice();
-  $("#urduText").textContent = doc.trans_text || "(no text found)";
-  $("#engText").textContent = doc.eng_text || "(no English text detected)";
+  const t = $("#urduText");
+  t.textContent = doc.trans_text || "(no text found)";
+  applyLangDir(t, doc.trans_lang);
+  $("#engText").textContent = doc.eng_text || "(no text detected)";
   const player = $("#player");
-  player.src = audioUrlFor(doc, voice) || "";
+  player.src = (doc.female_audio_url || doc.male_audio_url) || "";
 
-  // Hint if the device has no Urdu voice for the browser-TTS buttons.
+  // Hint if the device has no voice for the result's language.
   const hint = $("#ttsHint");
-  if (TTS.supported && !TTS.hasVoice("ur")) {
-    hint.textContent = "Tip: no Urdu device voice is installed, so “Speak Urdu” may sound off — the natural Urdu audio above is best. English uses your device voice.";
+  if (TTS.supported && !TTS.hasVoice(doc.trans_lang)) {
+    hint.textContent = "Tip: your device may not have a voice for this language, so “Speak” can sound off — the natural audio above is best.";
     hint.hidden = false;
   } else {
     hint.hidden = true;
@@ -459,8 +481,8 @@ function renderResult(doc) {
   $("#result").hidden = false;
   $("#resultHeading").setAttribute("tabindex", "-1");
   $("#resultHeading").focus();
-  announce("Done. Here is the Urdu reading.", "ok");
-  // Try to autoplay the natural Urdu audio; browsers may block without a gesture.
+  announce("Done. Here is your reading.", "ok");
+  // Try to autoplay the natural audio; browsers may block without a gesture.
   player.play().catch(() => {
     announce("Ready. Press play to listen.", "ok");
     $("#replayBtn").focus();
@@ -483,9 +505,9 @@ function speakWith(btn, text, langPrefix) {
   TTS.speak(text, langPrefix, { onend: () => btn.classList.remove("speaking") });
 }
 $("#speakUrduBtn")?.addEventListener("click", (e) =>
-  speakWith(e.currentTarget, currentDoc && currentDoc.trans_text, "ur"));
+  speakWith(e.currentTarget, currentDoc && currentDoc.trans_text, (currentDoc && currentDoc.trans_lang) || "ur"));
 $("#speakEngBtn")?.addEventListener("click", (e) =>
-  speakWith(e.currentTarget, currentDoc && currentDoc.eng_text, "en"));
+  speakWith(e.currentTarget, currentDoc && currentDoc.eng_text, (currentDoc && currentDoc.lang) || "en"));
 $("#stopSpeakBtn")?.addEventListener("click", () => {
   TTS.stop();
   document.querySelectorAll(".primary-btn.speaking").forEach((b) => b.classList.remove("speaking"));
@@ -554,17 +576,19 @@ $("#pageUrduBtn")?.addEventListener("click", async (e) => {
   if (!text) return;
   const btn = e.currentTarget;
   btn.disabled = true;
-  announce("Translating the page to Urdu… this can take a moment.", "busy");
+  announce("Translating the page… this can take a moment.", "busy");
   try {
-    const data = await api("/translate", { method: "POST", body: { text, to: "ur-PK" } });
-    const urdu = data.translated || "";
-    $("#pageUrduText").textContent = urdu;
+    const data = await api("/translate", { method: "POST", body: { text, to: userPrefs.language } });
+    const translated = data.translated || "";
+    const out = $("#pageUrduText");
+    out.textContent = translated;
+    applyLangDir(out, userPrefs.language);
     $("#pageUrduWrap").hidden = false;
     $("#pageUrduWrap").scrollIntoView({ block: "nearest" });
 
-    // Browser voices rarely include Urdu, so synthesize with Azure's Urdu voice.
-    announce("Creating the Urdu audio… this can take a few seconds.", "busy");
-    const speech = await api("/speak", { method: "POST", body: { text: urdu, voice: "female", rate: userPrefs.rate } });
+    // Synthesize with the user's chosen Azure voice (browsers rarely have these).
+    announce("Creating the audio… this can take a few seconds.", "busy");
+    const speech = await api("/speak", { method: "POST", body: { text: translated, voiceName: userPrefs.voice, rate: userPrefs.rate } });
     const player = $("#pageUrduAudio");
     player.src = speech.audio_url;
     const note = speech.truncated ? " (reading the first part of a long page)" : "";
