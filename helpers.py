@@ -10,7 +10,8 @@ from azure.cognitiveservices.vision.computervision.models import OperationStatus
 import azure.cognitiveservices.speech as speechsdk
 from dotenv import load_dotenv
 
-load_dotenv()
+# Load .env from this file's directory (cwd-independent).
+load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"))
 
 key = os.getenv("TRANSLATION_KEY")
 region = os.getenv("REGION")
