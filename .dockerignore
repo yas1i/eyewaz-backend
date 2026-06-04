@@ -4,6 +4,17 @@ Dockerfile
 .gitignore
 .dockerignore
 
+# SECRETS — never bake these into the image (config comes from host env vars)
+.env
+.env.*
+*.env
+# Local-only data + tooling
+uploads/
+.temp/
+venv/
+__pycache__/
+*.pyc
+
 /credentials
 /cache
 /store
