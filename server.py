@@ -30,7 +30,14 @@ app.config["SECRET_KEY"] = os.getenv("FLASK_SECRET_KEY")
 
 jwt = JWTManager(app)
 cors = CORS(app, resources={r"/api/*": {"origins": "*"}})
-db = connect(host=os.getenv("MONGO_URI"))
+
+# connect=False defers the actual connection so a bad/unreachable MONGO_URI
+# doesn't crash startup; wrap it too so a malformed URI just logs a warning.
+try:
+    db = connect(host=os.getenv("MONGO_URI"), connect=False)
+except Exception as e:
+    print(f"WARNING: MongoDB connection setup failed: {e}", flush=True)
+    db = None
 api = Api(app)
 initialize_routes(api)
 
