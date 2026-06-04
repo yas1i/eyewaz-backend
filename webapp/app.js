@@ -149,32 +149,41 @@ function showView(name) {
 
 /* --------------------------------- Auth ------------------------------------- */
 
-$("#showSignup").addEventListener("click", () => {
-  $("#loginForm").hidden = true;
-  $("#signupForm").hidden = false;
-  $("#authHeading").textContent = "Create account";
-  $("#suName").focus();
-});
-$("#showLogin").addEventListener("click", () => {
-  $("#signupForm").hidden = true;
-  $("#loginForm").hidden = false;
-  $("#authHeading").textContent = "Sign in";
-  $("#loginEmail").focus();
-});
+let pendingEmail = null;
+
+// Show one of the three auth cards: 'login', 'signup', 'otp'.
+function showAuthForm(name) {
+  $("#loginForm").hidden = name !== "login";
+  $("#signupForm").hidden = name !== "signup";
+  $("#otpForm").hidden = name !== "otp";
+  const headings = { login: "Sign in", signup: "Create account", otp: "Verify your email" };
+  $("#authHeading").textContent = headings[name];
+}
+
+$("#showSignup").addEventListener("click", () => { showAuthForm("signup"); $("#suName").focus(); });
+$("#showLogin").addEventListener("click", () => { showAuthForm("login"); $("#loginEmail").focus(); });
+$("#backToLogin").addEventListener("click", () => { showAuthForm("login"); $("#loginEmail").focus(); });
+
+// After password/signup succeeds, the server emails a code — move to the OTP step.
+function goToOtp(email, message) {
+  pendingEmail = email;
+  $("#otpInstructions").textContent =
+    (message || "We emailed you a 6-digit code.") + " Enter it below to continue.";
+  showAuthForm("otp");
+  $("#otpCode").value = "";
+  $("#otpCode").focus();
+  announce(message || "We emailed you a verification code.", "ok");
+}
 
 $("#loginForm").addEventListener("submit", async (e) => {
   e.preventDefault();
-  announce("Signing in…", "busy");
+  announce("Checking your details…", "busy");
   try {
     const data = await api("/login", {
-      method: "POST",
-      auth: false,
+      method: "POST", auth: false,
       body: { email: $("#loginEmail").value.trim(), password: $("#loginPassword").value },
     });
-    if (!data.token) throw new Error("Invalid email or password.");
-    setToken(data.token);
-    announce("Signed in.", "ok");
-    enterApp();
+    goToOtp($("#loginEmail").value.trim(), data.message);
   } catch (err) {
     announce(err.message || "Could not sign in.", "error");
   }
@@ -187,9 +196,8 @@ $("#signupForm").addEventListener("submit", async (e) => {
   }
   announce("Creating your account…", "busy");
   try {
-    await api("/signup", {
-      method: "POST",
-      auth: false,
+    const data = await api("/signup", {
+      method: "POST", auth: false,
       body: {
         name: $("#suName").value.trim(),
         email: $("#suEmail").value.trim(),
@@ -198,16 +206,37 @@ $("#signupForm").addEventListener("submit", async (e) => {
         confirmPassword: $("#suConfirm").value,
       },
     });
-    announce("Account created. Signing you in…", "ok");
-    // Auto-login for a smooth first run.
-    const data = await api("/login", {
-      method: "POST", auth: false,
-      body: { email: $("#suEmail").value.trim(), password: $("#suPassword").value },
-    });
-    setToken(data.token);
-    enterApp();
+    goToOtp($("#suEmail").value.trim(), data.message);
   } catch (err) {
     announce(err.message || "Could not create account.", "error");
+  }
+});
+
+$("#otpForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  announce("Verifying your code…", "busy");
+  try {
+    const data = await api("/verify-otp", {
+      method: "POST", auth: false,
+      body: { email: pendingEmail, code: $("#otpCode").value.trim() },
+    });
+    if (!data.token) throw new Error("Verification failed.");
+    setToken(data.token);
+    announce("Verified. Welcome!", "ok");
+    enterApp();
+  } catch (err) {
+    announce(err.message || "Could not verify the code.", "error");
+  }
+});
+
+$("#resendOtp").addEventListener("click", async () => {
+  if (!pendingEmail) return;
+  announce("Sending a new code…", "busy");
+  try {
+    const data = await api("/resend-otp", { method: "POST", auth: false, body: { email: pendingEmail } });
+    announce(data.message || "A new code is on its way.", "ok");
+  } catch (err) {
+    announce(err.message || "Could not resend the code.", "error");
   }
 });
 

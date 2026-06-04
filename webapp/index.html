@@ -70,6 +70,22 @@
           <button type="button" id="showLogin" class="link-btn">Sign in</button>
         </p>
       </form>
+
+      <form id="otpForm" class="card" novalidate hidden>
+        <p id="otpInstructions" class="lede">Enter the 6-digit code we emailed you.</p>
+        <div class="field">
+          <label for="otpCode">Verification code</label>
+          <input id="otpCode" name="code" type="text" inputmode="numeric"
+                 autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}"
+                 placeholder="123456" required />
+        </div>
+        <button type="submit" class="primary-btn">Verify &amp; continue</button>
+        <p class="switch">Didn't get it?
+          <button type="button" id="resendOtp" class="link-btn">Resend code</button>
+          <span aria-hidden="true">·</span>
+          <button type="button" id="backToLogin" class="link-btn">Start over</button>
+        </p>
+      </form>
     </section>
 
     <!-- ===================== CAPTURE ===================== -->

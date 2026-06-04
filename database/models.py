@@ -23,8 +23,13 @@ http://docs.mongoengine.org/tutorial.html?highlight=string
 class Users(Document):
     name = StringField(max_length=30, default="")
     email = EmailField(required=True, unique=True)
-    phone = StringField(max_length=12, unique=True)
+    phone = StringField(max_length=12)
     password = StringField(required=True, max_length=250)
+    # Email 2-step verification
+    is_verified = BooleanField(default=False)
+    otp_hash = StringField()
+    otp_expires = DateTimeField()
+    otp_purpose = StringField(max_length=20)
     objects = QuerySetManager()
 
 
