@@ -17,15 +17,31 @@ def _resp(payload, status):
     return Response(json.dumps(payload), status=status, mimetype="application/json")
 
 
+def _verification_payload(email, dev_code):
+    payload = {
+        "requiresVerification": True,
+        "email": email,
+        "message": "We sent a 6-digit verification code to your email.",
+    }
+    if dev_code:  # SMTP not configured: surface the code so dev/testing works
+        payload["dev_code"] = dev_code
+        payload["message"] = "Email delivery isn't set up yet — use the code shown below."
+    return payload
+
+
 def _issue_otp(user, purpose):
-    """Generate, store (hashed) and email a fresh 6-digit code."""
+    """Generate, store (hashed) and email a fresh 6-digit code.
+
+    Returns the code only when email was NOT actually sent (dev mode, no SMTP),
+    so the client can display it and the flow stays usable without email.
+    """
     code = f"{random.randint(0, 999999):06d}"
     user.otp_hash = generate_password_hash(code, method="pbkdf2:sha256")
     user.otp_expires = datetime.utcnow() + timedelta(minutes=OTP_TTL_MINUTES)
     user.otp_purpose = purpose
     user.save()
     sent = send_otp_email(user.email, code)
-    return sent
+    return None if sent else code
 
 
 class UserSignUpAPI(Resource):
@@ -48,15 +64,8 @@ class UserSignUpAPI(Resource):
             phone=data.get("phone", ""),
             is_verified=False,
         ).save()
-        _issue_otp(user, "signup")
-        return _resp(
-            {
-                "requiresVerification": True,
-                "email": user.email,
-                "message": "We sent a 6-digit verification code to your email.",
-            },
-            200,
-        )
+        dev_code = _issue_otp(user, "signup")
+        return _resp(_verification_payload(user.email, dev_code), 200)
 
 
 class UserLoginAPI(Resource):
@@ -72,15 +81,8 @@ class UserLoginAPI(Resource):
         if not check_password_hash(user.password, data.get("password", "")):
             return _resp({"message": "Invalid credentials"}, 401)
 
-        _issue_otp(user, "login")
-        return _resp(
-            {
-                "requiresVerification": True,
-                "email": user.email,
-                "message": "We sent a verification code to your email.",
-            },
-            200,
-        )
+        dev_code = _issue_otp(user, "login")
+        return _resp(_verification_payload(user.email, dev_code), 200)
 
 
 class VerifyOtpAPI(Resource):
@@ -129,5 +131,9 @@ class ResendOtpAPI(Resource):
             user = Users.objects.get(email=data.get("email"))
         except Users.DoesNotExist:
             return _resp({"message": "Account not found"}, 404)
-        _issue_otp(user, user.otp_purpose or "login")
-        return _resp({"message": "A new code is on its way."}, 200)
+        dev_code = _issue_otp(user, user.otp_purpose or "login")
+        payload = {"message": "A new code is on its way."}
+        if dev_code:
+            payload["dev_code"] = dev_code
+            payload["message"] = "Email delivery isn't set up yet — use the code shown below."
+        return _resp(payload, 200)

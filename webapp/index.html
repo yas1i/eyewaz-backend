@@ -28,6 +28,7 @@
     <section id="authView" aria-labelledby="authHeading">
       <h2 id="authHeading">Sign in</h2>
       <p class="lede">Sign in to turn a photo of English text into spoken Urdu.</p>
+      <p id="authError" class="form-error" role="alert" hidden></p>
 
       <form id="loginForm" class="card" novalidate>
         <div class="field">
@@ -59,7 +60,9 @@
         </div>
         <div class="field">
           <label for="suPassword">Password</label>
-          <input id="suPassword" name="password" type="password" autocomplete="new-password" required />
+          <input id="suPassword" name="password" type="password" autocomplete="new-password"
+                 minlength="8" aria-describedby="pwHint" required />
+          <p id="pwHint" class="hint">Use at least 8 characters.</p>
         </div>
         <div class="field">
           <label for="suConfirm">Confirm password</label>
@@ -73,6 +76,7 @@
 
       <form id="otpForm" class="card" novalidate hidden>
         <p id="otpInstructions" class="lede">Enter the 6-digit code we emailed you.</p>
+        <p id="devCodeBanner" class="dev-code" role="status" hidden></p>
         <div class="field">
           <label for="otpCode">Verification code</label>
           <input id="otpCode" name="code" type="text" inputmode="numeric"
