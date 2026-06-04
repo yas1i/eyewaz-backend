@@ -51,15 +51,22 @@ def serve_file(filename):
 WEBAPP_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "webapp")
 
 
+def _no_cache(resp):
+    # Always serve fresh web-client assets during development so HTML/JS/CSS
+    # never get out of sync in the browser cache.
+    resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    return resp
+
+
 @app.route("/app")
 @app.route("/app/")
 def webapp_index():
-    return send_from_directory(WEBAPP_DIR, "index.html")
+    return _no_cache(send_from_directory(WEBAPP_DIR, "index.html"))
 
 
 @app.route("/app/<path:filename>")
 def webapp_static(filename):
-    return send_from_directory(WEBAPP_DIR, filename)
+    return _no_cache(send_from_directory(WEBAPP_DIR, filename))
 
 
 # @celery.task
