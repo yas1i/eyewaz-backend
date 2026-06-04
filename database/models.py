@@ -9,6 +9,7 @@ from mongoengine import (
     ListField,
     DateTimeField,
     QuerySetManager,
+    FloatField,
     IntField,
     UUIDField,
     ObjectIdField
@@ -30,7 +31,20 @@ class Users(Document):
     otp_hash = StringField()
     otp_expires = DateTimeField()
     otp_purpose = StringField(max_length=20)
+    # Listening preferences
+    pref_engine = StringField(max_length=10, default="azure")      # azure | browser
+    pref_language = StringField(max_length=10, default="ur-PK")
+    pref_voice = StringField(default="ur-PK-UzmaNeural")
+    pref_rate = FloatField(default=1.0)                            # speed multiplier
     objects = QuerySetManager()
+
+    def preferences(self):
+        return {
+            "engine": self.pref_engine or "azure",
+            "language": self.pref_language or "ur-PK",
+            "voice": self.pref_voice or "ur-PK-UzmaNeural",
+            "rate": self.pref_rate or 1.0,
+        }
 
 
 class Docs(Document):

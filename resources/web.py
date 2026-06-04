@@ -15,7 +15,9 @@ from flask_restful import Resource
 from flask_jwt_extended import jwt_required
 
 import storage
-from helpers import translate, TexttoSpeech_Female, TexttoSpeech_Male
+from flask_jwt_extended import get_jwt_identity
+from database.models import Users
+from helpers import translate, synthesize
 
 SPEAK_MAX_CHARS = 6000  # cap Azure synthesis so long pages stay responsive
 
@@ -136,18 +138,26 @@ class SpeakAPI(Resource):
     def post(self):
         data = request.get_json(force=True, silent=True) or {}
         text = (data.get("text") or "").strip()
-        voice = data.get("voice", "female")
         if not text:
             return _json({"message": "There is no text to read."}, 400)
 
+        user = Users.objects(email=get_jwt_identity()).first()
+        prefs = user.preferences() if user else {}
+
+        # Resolve the voice: explicit request > legacy female/male > saved pref.
+        legacy = {"female": "ur-PK-UzmaNeural", "male": "ur-PK-AsadNeural"}
+        voice = data.get("voiceName") or legacy.get(data.get("voice")) \
+            or prefs.get("voice", "ur-PK-UzmaNeural")
+        rate = data.get("rate", prefs.get("rate", 1.0))
+
         capped = text[:SPEAK_MAX_CHARS]
-        synth = TexttoSpeech_Male if voice == "male" else TexttoSpeech_Female
         try:
             audio = b""
             for piece in _split_for_translate(capped, 2500):
-                audio += synth(piece).audio_data
+                audio += synthesize(piece, voice, rate).audio_data
         except Exception as e:
             return _json({"message": f"Could not generate audio: {e}"}, 502)
 
         stored = storage.save_file(audio, "speech.mp3")
-        return _json({"audio_url": stored.url, "truncated": len(text) > SPEAK_MAX_CHARS}, 200)
+        return _json({"audio_url": stored.url, "truncated": len(text) > SPEAK_MAX_CHARS,
+                      "voice": voice}, 200)

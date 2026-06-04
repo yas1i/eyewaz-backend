@@ -170,6 +170,55 @@ def TexttoSpeech_Male(text):
         raise
 
 
+def _speech_config():
+    cfg = speechsdk.SpeechConfig(subscription=os.getenv("SPEECH_KEY"), region=os.getenv("REGION"))
+    cfg.set_property(
+        speechsdk.PropertyId.SpeechServiceConnection_SynthOutputFormat,
+        "audio-48khz-192kbitrate-mono-mp3",
+    )
+    return cfg
+
+
+def list_voices():
+    """Return Azure's full catalogue of neural voices (all languages)."""
+    region = os.getenv("REGION")
+    url = f"https://{region}.tts.speech.microsoft.com/cognitiveservices/voices/list"
+    r = requests.get(url, headers={"Ocp-Apim-Subscription-Key": os.getenv("SPEECH_KEY")}, timeout=20)
+    r.raise_for_status()
+    return [
+        {
+            "shortName": v["ShortName"],
+            "locale": v["Locale"],
+            "localeName": v.get("LocaleName", v["Locale"]),
+            "displayName": v.get("LocalName") or v.get("DisplayName", v["ShortName"]),
+            "gender": v.get("Gender", ""),
+        }
+        for v in r.json()
+        if v.get("VoiceType") == "Neural" or "Neural" in v.get("ShortName", "")
+    ]
+
+
+def synthesize(text, voice_name, rate=1.0):
+    """Synthesize text with any Azure voice and speaking rate (returns result)."""
+    cfg = _speech_config()
+    cfg.speech_synthesis_voice_name = voice_name
+    synth = speechsdk.SpeechSynthesizer(speech_config=cfg, audio_config=None)
+    try:
+        rate = float(rate)
+    except (TypeError, ValueError):
+        rate = 1.0
+    if abs(rate - 1.0) < 0.01:
+        return synth.speak_text_async(text).get()
+    # Use SSML to control rate (as a multiplier of the default speaking rate).
+    locale = "-".join(voice_name.split("-")[:2]) if "-" in voice_name else "en-US"
+    escaped = (text or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    ssml = (
+        f"<speak version='1.0' xml:lang='{locale}'>"
+        f"<voice name='{voice_name}'><prosody rate='{rate:.2f}'>{escaped}</prosody></voice></speak>"
+    )
+    return synth.speak_ssml_async(ssml).get()
+
+
 def UploadOnAzure(file, filename):
     """Store a file and return a blob-like handle.
 
