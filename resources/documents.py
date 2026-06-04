@@ -137,11 +137,12 @@ def translationSpeechTask(f):
     male_audio_data = male_audio.audio_data
     male_audio_duration = get_audio_duration_from_bytes(male_audio_data)
     print("MALE AUDIO DURATION", male_audio_duration)
-    # Generate a unique filename
-    female_audio_filename = blob_client.blob_name.split(".")[0] + "_female.wav"
+    # Generate a unique filename. Azure synthesizes MP3 (audio-48khz-192kbitrate-
+    # mono-mp3), so use a .mp3 extension — mobile players key off it.
+    female_audio_filename = blob_client.blob_name.split(".")[0] + "_female.mp3"
     female_audio_blob_client = UploadOnAzure(female_audio_data, female_audio_filename)
-    
-    male_audio_filename = blob_client.blob_name.split(".")[0] + "_male.wav"
+
+    male_audio_filename = blob_client.blob_name.split(".")[0] + "_male.mp3"
     male_audio_blob_client = UploadOnAzure(male_audio_data, male_audio_filename)
     return text,Trans_text,lang,female_audio_duration,blob_client,female_audio_blob_client,male_audio_blob_client,male_audio_duration
 
