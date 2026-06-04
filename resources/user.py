@@ -63,8 +63,13 @@ class UserLoginAPI(Resource):
         Login endpoint for User to login
         """
         data = request.get_json(force=True)
-        print(data)
-        user = Users.objects.get(email=data["email"])
+        try:
+            user = Users.objects.get(email=data["email"])
+        except Users.DoesNotExist:
+            return Response(
+                json.dumps({"message": "Invalid credentials"}),
+                status=401, content_type="application/json",
+            )
         if check_password_hash(user.password, data["password"]):
             access_token = create_access_token(identity=user.email)
             resp = Response()

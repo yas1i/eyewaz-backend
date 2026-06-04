@@ -1,5 +1,5 @@
 import os
-from flask import Flask, render_template, send_from_directory
+from flask import Flask, render_template, send_from_directory, redirect
 from flask_restful import Api
 from routes import initialize_routes
 from dotenv import load_dotenv, find_dotenv
@@ -10,7 +10,11 @@ import storage
 
 # from celery import Celery
 
-load_dotenv(find_dotenv())
+# Load .env from this file's directory so the app works regardless of the
+# process working directory (dev tooling, gunicorn, containers, etc.).
+_HERE = os.path.dirname(os.path.abspath(__file__))
+load_dotenv(os.path.join(_HERE, ".env"))
+load_dotenv(find_dotenv(), override=False)  # fall back to a discovered .env
 
 static_dir = str(os.path.abspath(os.path.join(__file__, "..", os.getenv("STATIC_DIR"))))
 app = Flask(
@@ -33,13 +37,29 @@ initialize_routes(api)
 
 @app.route("/")
 def index():
-    return render_template("index.html")
+    # The accessible web client is the front door.
+    return redirect("/app")
 
 
 @app.route("/files/<path:filename>")
 def serve_file(filename):
     """Serve uploaded documents and generated audio from local storage."""
     return send_from_directory(storage.UPLOAD_DIR, filename)
+
+
+# --- Accessible web client (served same-origin so /api and /files just work) ---
+WEBAPP_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "webapp")
+
+
+@app.route("/app")
+@app.route("/app/")
+def webapp_index():
+    return send_from_directory(WEBAPP_DIR, "index.html")
+
+
+@app.route("/app/<path:filename>")
+def webapp_static(filename):
+    return send_from_directory(WEBAPP_DIR, filename)
 
 
 # @celery.task

@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0b3d91" />
+  <title>EYEWAZ — Read aloud in Urdu</title>
+  <link rel="stylesheet" href="/app/styles.css" />
+</head>
+<body>
+  <!-- Screen-reader live region: every status change is announced here -->
+  <div id="live" class="sr-only" aria-live="assertive" aria-atomic="true"></div>
+
+  <a class="skip-link" href="#main">Skip to main content</a>
+
+  <header class="topbar">
+    <h1 class="brand">EYEWAZ</h1>
+    <button id="logoutBtn" class="link-btn" hidden>Log out</button>
+  </header>
+
+  <main id="main" tabindex="-1">
+
+    <!-- ===================== AUTH ===================== -->
+    <section id="authView" aria-labelledby="authHeading">
+      <h2 id="authHeading">Sign in</h2>
+      <p class="lede">Sign in to turn a photo of English text into spoken Urdu.</p>
+
+      <form id="loginForm" class="card" novalidate>
+        <div class="field">
+          <label for="loginEmail">Email</label>
+          <input id="loginEmail" name="email" type="email" autocomplete="email" required />
+        </div>
+        <div class="field">
+          <label for="loginPassword">Password</label>
+          <input id="loginPassword" name="password" type="password" autocomplete="current-password" required />
+        </div>
+        <button type="submit" class="primary-btn">Sign in</button>
+        <p class="switch">No account?
+          <button type="button" id="showSignup" class="link-btn">Create one</button>
+        </p>
+      </form>
+
+      <form id="signupForm" class="card" novalidate hidden>
+        <div class="field">
+          <label for="suName">Name</label>
+          <input id="suName" name="name" type="text" autocomplete="name" required />
+        </div>
+        <div class="field">
+          <label for="suEmail">Email</label>
+          <input id="suEmail" name="email" type="email" autocomplete="email" required />
+        </div>
+        <div class="field">
+          <label for="suPhone">Phone</label>
+          <input id="suPhone" name="phone" type="tel" autocomplete="tel" inputmode="tel" required />
+        </div>
+        <div class="field">
+          <label for="suPassword">Password</label>
+          <input id="suPassword" name="password" type="password" autocomplete="new-password" required />
+        </div>
+        <div class="field">
+          <label for="suConfirm">Confirm password</label>
+          <input id="suConfirm" name="confirmPassword" type="password" autocomplete="new-password" required />
+        </div>
+        <button type="submit" class="primary-btn">Create account</button>
+        <p class="switch">Already have an account?
+          <button type="button" id="showLogin" class="link-btn">Sign in</button>
+        </p>
+      </form>
+    </section>
+
+    <!-- ===================== CAPTURE ===================== -->
+    <section id="captureView" aria-labelledby="captureHeading" hidden>
+      <h2 id="captureHeading">Read a photo aloud</h2>
+      <p class="lede">Take or choose a photo of English text. EYEWAZ will read it to you in Urdu.</p>
+
+      <!-- The big primary action. The hidden input opens the camera on phones. -->
+      <label for="photoInput" class="capture-btn" id="captureLabel">
+        <span aria-hidden="true" class="capture-icon">📷</span>
+        <span>Take or choose a photo</span>
+      </label>
+      <input id="photoInput" type="file" accept="image/*" capture="environment" class="sr-only" />
+
+      <div id="previewWrap" hidden>
+        <img id="preview" alt="Selected photo, ready to read" />
+        <div class="row">
+          <fieldset class="voice">
+            <legend>Voice</legend>
+            <label><input type="radio" name="voice" value="female" checked /> Female</label>
+            <label><input type="radio" name="voice" value="male" /> Male</label>
+          </fieldset>
+          <button id="readBtn" class="primary-btn">Read it to me</button>
+        </div>
+      </div>
+
+      <p id="status" class="status" role="status"></p>
+
+      <!-- Result -->
+      <article id="result" class="card" hidden aria-labelledby="resultHeading">
+        <h3 id="resultHeading">Result</h3>
+        <audio id="player" controls preload="auto"></audio>
+        <button id="replayBtn" class="primary-btn">▶ Play again</button>
+
+        <h4>Urdu</h4>
+        <p id="urduText" class="urdu" lang="ur" dir="rtl"></p>
+        <h4>English (detected)</h4>
+        <p id="engText" class="eng" lang="en"></p>
+      </article>
+
+      <h3 class="section-title">Your library</h3>
+      <ul id="library" class="library" aria-label="Previously read documents"></ul>
+    </section>
+
+  </main>
+
+  <script src="/app/app.js"></script>
+</body>
+</html>
