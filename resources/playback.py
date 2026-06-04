@@ -18,8 +18,12 @@ class PausePlaybackAPI(Resource):
                 status=200,
                 mimetype="application/json",
             )
-        except:
-            return jsonify(success=False)
+        except Docs.DoesNotExist:
+            return Response(json.dumps({"success": False, "message": "Document not found"}),
+                            status=404, mimetype="application/json")
+        except Exception as e:
+            return Response(json.dumps({"success": False, "message": str(e)}),
+                            status=500, mimetype="application/json")
     def post(self):
         '''BOOKMARKS THE DOCUMENT TO A TIME'''    
         try:
@@ -34,5 +38,9 @@ class PausePlaybackAPI(Resource):
                 status=200,
                 mimetype="application/json",
             )
-        except:
-            return jsonify(success=False)
+        except Docs.DoesNotExist:
+            return Response(json.dumps({"success": False, "message": "Document not found"}),
+                            status=404, mimetype="application/json")
+        except Exception as e:
+            return Response(json.dumps({"success": False, "message": str(e)}),
+                            status=500, mimetype="application/json")

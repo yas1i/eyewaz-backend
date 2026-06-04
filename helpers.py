@@ -118,7 +118,10 @@ def TexttoSpeech_Female(text):
                     print("Did you set the speech resource key and region values?")
         return speech_synthesis_result
     except Exception as e:
-        print(str(e.message))
+        # Surface the real failure instead of masking it (str(e), not e.message,
+        # which is a Python-2 idiom that raises AttributeError on Python 3).
+        print(f"Text-to-speech failed: {e}")
+        raise
         
 def TexttoSpeech_Male(text):
     try:
@@ -160,7 +163,10 @@ def TexttoSpeech_Male(text):
                     print("Did you set the speech resource key and region values?")
         return speech_synthesis_result
     except Exception as e:
-        print(str(e.message))
+        # Surface the real failure instead of masking it (str(e), not e.message,
+        # which is a Python-2 idiom that raises AttributeError on Python 3).
+        print(f"Text-to-speech failed: {e}")
+        raise
 
 
 def UploadOnAzure(file, filename):

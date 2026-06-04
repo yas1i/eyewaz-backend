@@ -1,5 +1,6 @@
 import io, requests
 import os
+import storage
 from helpers import ConvertEnglishtoUrdu, TexttoSpeech_Female, TexttoSpeech_Male, UploadOnAzure, ImagetoText
 from azure.storage.blob import BlobServiceClient, ContainerClient
 from flask import request, jsonify, Response
@@ -229,27 +230,35 @@ class UpdatePlayerAPI(Resource):
 
 class DocumentAPI(Resource):
     """
-    User can delete a Document
-
+    User can delete a Document (its DB record and stored files).
     """
 
+    @jwt_required()
     def delete(self):
         try:
+            email = get_jwt_identity()
+            user = Users.objects.get(email=email)
             data = request.get_json(force=True)
-            service_client = BlobServiceClient.from_connection_string(connect_str)
-            container_client = service_client.get_container_client(container_str)
-            blob_client = container_client.get_blob_client(data["doc_name"])
-            blob_client.delete_blob()
-            return jsonify(
-                {
-                    "doc_url": blob_client.url,
-                    "doc_name": blob_client.blob_name,
-                    "doc_extension": blob_client.blob_name.split(".")[-1],
-                    "message": blob_client.blob_name + " Is Deleted",
-                }
+            doc = Docs.objects.get(id=data["id"], user=user)
+
+            # Remove stored document + generated audio from local storage.
+            for name in (doc.doc_name, doc.female_audio_name, doc.male_audio_name):
+                if name:
+                    storage.delete_file(name)
+
+            doc_name = doc.doc_name
+            doc.delete()
+            return Response(
+                json.dumps({"success": True, "message": f"{doc_name} has been deleted."}),
+                status=200,
+                mimetype="application/json",
             )
-        except:
-            return jsonify(success=False)
+        except Docs.DoesNotExist:
+            return Response(json.dumps({"success": False, "message": "Document not found"}),
+                            status=404, mimetype="application/json")
+        except Exception as e:
+            return Response(json.dumps({"success": False, "message": str(e)}),
+                            status=500, mimetype="application/json")
 
 
 class UpdateDocumentFavAPI(Resource):
@@ -269,8 +278,12 @@ class UpdateDocumentFavAPI(Resource):
                 status=200,
                 mimetype="application/json",
             )
-        except:
-            return jsonify(success=False)    
+        except Docs.DoesNotExist:
+            return Response(json.dumps({"success": False, "message": "Document not found"}),
+                            status=404, mimetype="application/json")
+        except Exception as e:
+            return Response(json.dumps({"success": False, "message": str(e)}),
+                            status=500, mimetype="application/json")
         
 class UpdateDocumentUnFavAPI(Resource):
     """
@@ -289,8 +302,12 @@ class UpdateDocumentUnFavAPI(Resource):
                 status=200,
                 mimetype="application/json",
             )
-        except:
-            return jsonify(success=False)
+        except Docs.DoesNotExist:
+            return Response(json.dumps({"success": False, "message": "Document not found"}),
+                            status=404, mimetype="application/json")
+        except Exception as e:
+            return Response(json.dumps({"success": False, "message": str(e)}),
+                            status=500, mimetype="application/json")
 
 class GetAllFiles(Resource):
     """Gets all filenames in the Azure Blob Storage container"""
