@@ -29,7 +29,7 @@ def translationSpeechTask(f):
     blob_client = UploadOnAzure(f, f.filename)
 
     data = blob_client.download_blob()
-    ext = blob_client.blob_name.split(".")[-1]
+    ext = blob_client.blob_name.split(".")[-1].lower()
     url = blob_client.url
     text = ""
     if ext == "docx":
@@ -125,6 +125,11 @@ def translationSpeechTask(f):
         # so a localhost URL would be unreachable by Azure's cloud service).
         text = ImagetoText(blob_client.read_bytes())
         print(text)
+    else:
+        raise ValueError(f"Unsupported file type: .{ext}")
+
+    if not text or not text.strip():
+        raise ValueError("No readable text was found in this file.")
 
     Trans_text, lang = ConvertEnglishtoUrdu(text)
     print(text)
@@ -154,12 +159,23 @@ class DocumentTransSpeechAPI(Resource):
         """
         Translates & Generates Speech for docs, pdfs, jpg, pngs for a user
         """
-        # try:
+        if "file" not in request.files:
+            return Response(json.dumps({"message": "No file was uploaded."}),
+                            status=400, mimetype="application/json")
         f = request.files["file"]
         email = get_jwt_identity()
         user = Users.objects.get(email=email)
 
-        text,Trans_text,lang,female_audio_duration,blob_client,female_audio_blob_client,male_audio_blob_client,male_audio_duration = translationSpeechTask(f)
+        try:
+            text,Trans_text,lang,female_audio_duration,blob_client,female_audio_blob_client,male_audio_blob_client,male_audio_duration = translationSpeechTask(f)
+        except ValueError as e:
+            # Expected, user-facing problems (no text found, unsupported type).
+            return Response(json.dumps({"message": str(e)}),
+                            status=422, mimetype="application/json")
+        except Exception as e:
+            import traceback; traceback.print_exc()
+            return Response(json.dumps({"message": f"Could not process the file: {e}"}),
+                            status=500, mimetype="application/json")
         data = {
             "doc_url": blob_client.url,
             "doc_name": blob_client.blob_name,
