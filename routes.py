@@ -1,0 +1,20 @@
+"""
+https://flask-restful.readthedocs.io/en/latest/
+"""
+
+from resources.user import UserSignUpAPI, UserLoginAPI
+from resources.documents import DocumentTransSpeechAPI
+from resources.documents import UpdateDocumentFavAPI, UpdateDocumentUnFavAPI
+from resources.playback import PausePlaybackAPI
+from resources.folder import Folder, FolderApi
+
+
+def initialize_routes(api):
+    api.add_resource(UserSignUpAPI, "/api/signup")
+    api.add_resource(UserLoginAPI, "/api/login")
+    api.add_resource(DocumentTransSpeechAPI, "/api/document-translation-and-speech")
+    api.add_resource(UpdateDocumentFavAPI, "/api/fav-document")
+    api.add_resource(UpdateDocumentUnFavAPI, "/api/unfav-document")
+    api.add_resource(PausePlaybackAPI, "/api/playback-time-record")
+    api.add_resource(Folder, "/api/folder")
+    api.add_resource(FolderApi,"/api/files-folders")

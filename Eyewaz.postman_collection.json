@@ -1,0 +1,397 @@
+{
+	"info": {
+		"_postman_id": "e572c404-7d5d-4ba6-9b0b-2b7254424d76",
+		"name": "Eyewaz",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "24850248"
+	},
+	"item": [
+		{
+			"name": "User",
+			"item": [
+				{
+					"name": "Update User",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"email\":\"testPOSTuser@users.com\",\r\n    \"first_name\":\"Usman\",\r\n    \"last_name\":\"Dembele\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{local}}api/users",
+							"host": [
+								"{{local}}api"
+							],
+							"path": [
+								"users"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete User",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"email\":\"testPOSTuser@users.com\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{local}}api/users",
+							"host": [
+								"{{local}}api"
+							],
+							"path": [
+								"users"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Search User",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{local}}api/users?email=testPOSTuser@users.com",
+							"host": [
+								"{{local}}api"
+							],
+							"path": [
+								"users"
+							],
+							"query": [
+								{
+									"key": "email",
+									"value": "testPOSTuser@users.com"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Documents",
+			"item": [
+				{
+					"name": "Text Documents",
+					"item": [
+						{
+							"name": "UploadTextFile",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "formdata",
+									"formdata": [
+										{
+											"key": "file",
+											"type": "file",
+											"src": "/C:/Users/aceasad/Desktop/sample.txt"
+										},
+										{
+											"key": "",
+											"value": "",
+											"type": "text",
+											"disabled": true
+										}
+									]
+								},
+								"url": {
+									"raw": "{{local}}api/textfileSpeech",
+									"host": [
+										"{{local}}api"
+									],
+									"path": [
+										"textfileSpeech"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Get all Uploads for User",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{local}}api/textfileSpeech?email=asad.saeed@live.com",
+									"host": [
+										"{{local}}api"
+									],
+									"path": [
+										"textfileSpeech"
+									],
+									"query": [
+										{
+											"key": "email",
+											"value": "asad.saeed@live.com"
+										}
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "ListDocuments",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{local}}api/listfile",
+							"host": [
+								"{{local}}api"
+							],
+							"path": [
+								"listfile"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "DownloadDocument",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"doc_name\":\"Eyewaz.txt\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{local}}api/downfile",
+							"host": [
+								"{{local}}api"
+							],
+							"path": [
+								"downfile"
+							],
+							"query": [
+								{
+									"key": "",
+									"value": "Eyewas.txt",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "DeleteDocument",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"doc_name\":\"Eyewaz.txt\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{local}}api/listfile",
+							"host": [
+								"{{local}}api"
+							],
+							"path": [
+								"listfile"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Auth",
+			"item": [
+				{
+					"name": "Login",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"email\":\"asad.saeed@live.com\",\r\n    \"password\":\"Robitacka12@\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{local}}api/login",
+							"host": [
+								"{{local}}api"
+							],
+							"path": [
+								"login"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Signup",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"name\":\"Kainat\",\r\n    \"email\":\"kainat@user.com\",\r\n    \"phone\":\"03008848621\",\r\n    \"confirmPassword\":\"12345678\",\r\n    \"password\":\"12345678\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{local}}api/signup",
+							"host": [
+								"{{local}}api"
+							],
+							"path": [
+								"signup"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"auth": {
+		"type": "jwt",
+		"jwt": [
+			{
+				"key": "secret",
+				"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTY5MTg2Mzk3MywianRpIjoiOWViYjVkODUtMjViNy00MjZkLWIwZTAtYThhNGMwMGIxZWNhIiwidHlwZSI6ImFjY2VzcyIsInN1YiI6ImFzYWQuc2FlZWRAbGl2ZS5jb20iLCJuYmYiOjE2OTE4NjM5NzMsImV4cCI6MTY5MTg2NDg3M30.VZDcgBx0edFdtItoNdIYSuLeAI1dzI7b8txWGLey7do",
+				"type": "string"
+			},
+			{
+				"key": "algorithm",
+				"value": "HS256",
+				"type": "string"
+			},
+			{
+				"key": "isSecretBase64Encoded",
+				"value": false,
+				"type": "boolean"
+			},
+			{
+				"key": "payload",
+				"value": "{}",
+				"type": "string"
+			},
+			{
+				"key": "addTokenTo",
+				"value": "header",
+				"type": "string"
+			},
+			{
+				"key": "headerPrefix",
+				"value": "Bearer",
+				"type": "string"
+			},
+			{
+				"key": "queryParamKey",
+				"value": "token",
+				"type": "string"
+			},
+			{
+				"key": "header",
+				"value": "{}",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "local",
+			"value": "https://eyewaz-backend.azurewebsites.net/"
+		},
+		{
+			"key": "token",
+			"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTY5MjA0NTg2OCwianRpIjoiNDkwMTNmNDctMzUwOS00MTA1LWFlYjMtZTgyNjcyODczNmNkIiwidHlwZSI6ImFjY2VzcyIsInN1YiI6ImFzYWQuc2FlZWRAbGl2ZS5jb20iLCJuYmYiOjE2OTIwNDU4NjgsImV4cCI6MTY5MjA0Njc2OH0.G8-mv7p0PqCEeUE23LabZV68hitiuDs64mK5kMEIZ_s",
+			"type": "string"
+		}
+	]
+}
