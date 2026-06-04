@@ -16,7 +16,7 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 load_dotenv(os.path.join(_HERE, ".env"))
 load_dotenv(find_dotenv(), override=False)  # fall back to a discovered .env
 
-static_dir = str(os.path.abspath(os.path.join(__file__, "..", os.getenv("STATIC_DIR"))))
+static_dir = str(os.path.abspath(os.path.join(__file__, "..", os.getenv("STATIC_DIR", "templates/"))))
 app = Flask(
     __name__, static_folder=static_dir, static_url_path="", template_folder=static_dir
 )
