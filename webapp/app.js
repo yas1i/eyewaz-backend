@@ -18,21 +18,6 @@ function announce(msg, kind = "") {
   guide(msg);
 }
 
-/* ---------------------------- Voice guidance toggle ------------------------- */
-const ttsToggle = $("#ttsToggle");
-function renderToggle() {
-  ttsToggle.textContent = guidanceOn ? "🔊 Voice: on" : "🔇 Voice: off";
-  ttsToggle.setAttribute("aria-pressed", String(guidanceOn));
-}
-renderToggle();
-ttsToggle.addEventListener("click", () => {
-  guidanceOn = !guidanceOn;
-  localStorage.setItem("eyewaz_guidance", guidanceOn ? "on" : "off");
-  renderToggle();
-  if (guidanceOn) TTS.speak("Voice guidance on", "en");
-  else TTS.stop();
-});
-
 function getToken() { return localStorage.getItem(TOKEN_KEY); }
 function setToken(t) { localStorage.setItem(TOKEN_KEY, t); }
 function clearToken() { localStorage.removeItem(TOKEN_KEY); }
@@ -73,6 +58,24 @@ const TTS = (() => {
 let guidanceOn = localStorage.getItem("eyewaz_guidance") !== "off";
 function guide(text) {
   if (guidanceOn && TTS.supported) TTS.speak(text, "en");
+}
+
+/* ---------------------------- Voice guidance toggle ------------------------- */
+const ttsToggle = $("#ttsToggle");
+function renderToggle() {
+  if (!ttsToggle) return;
+  ttsToggle.textContent = guidanceOn ? "🔊 Voice: on" : "🔇 Voice: off";
+  ttsToggle.setAttribute("aria-pressed", String(guidanceOn));
+}
+if (ttsToggle) {
+  renderToggle();
+  ttsToggle.addEventListener("click", () => {
+    guidanceOn = !guidanceOn;
+    localStorage.setItem("eyewaz_guidance", guidanceOn ? "on" : "off");
+    renderToggle();
+    if (guidanceOn) TTS.speak("Voice guidance on", "en");
+    else TTS.stop();
+  });
 }
 
 async function api(path, { method = "GET", body, auth = true, isForm = false } = {}) {
@@ -262,11 +265,11 @@ function speakWith(btn, text, langPrefix) {
   btn.classList.add("speaking");
   TTS.speak(text, langPrefix, { onend: () => btn.classList.remove("speaking") });
 }
-$("#speakUrduBtn").addEventListener("click", (e) =>
+$("#speakUrduBtn")?.addEventListener("click", (e) =>
   speakWith(e.currentTarget, currentDoc && currentDoc.trans_text, "ur"));
-$("#speakEngBtn").addEventListener("click", (e) =>
+$("#speakEngBtn")?.addEventListener("click", (e) =>
   speakWith(e.currentTarget, currentDoc && currentDoc.eng_text, "en"));
-$("#stopSpeakBtn").addEventListener("click", () => {
+$("#stopSpeakBtn")?.addEventListener("click", () => {
   TTS.stop();
   document.querySelectorAll(".primary-btn.speaking").forEach((b) => b.classList.remove("speaking"));
 });
