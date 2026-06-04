@@ -167,19 +167,105 @@ function clearAuthError(...sels) {
   sels.forEach((s) => $(s)?.removeAttribute("aria-invalid"));
 }
 
-// Show one of the three auth cards: 'login', 'signup', 'otp'.
+// Show one auth card: 'login' | 'signup' | 'otp' | 'forgot' | 'reset'.
 function showAuthForm(name) {
   clearAuthError();
   $("#loginForm").hidden = name !== "login";
   $("#signupForm").hidden = name !== "signup";
   $("#otpForm").hidden = name !== "otp";
-  const headings = { login: "Sign in", signup: "Create account", otp: "Verify your email" };
+  $("#forgotForm").hidden = name !== "forgot";
+  $("#resetForm").hidden = name !== "reset";
+  // Social buttons only make sense on the initial login/signup steps.
+  $("#socialBlock").hidden = !(name === "login" || name === "signup");
+  const headings = {
+    login: "Welcome back", signup: "Create your account",
+    otp: "Verify your email", forgot: "Reset your password", reset: "Reset your password",
+  };
+  const ledes = {
+    login: "Sign in to turn text into spoken Urdu.",
+    signup: "Create an account to get started.",
+    otp: "", forgot: "", reset: "",
+  };
   $("#authHeading").textContent = headings[name];
+  if (ledes[name]) { $("#authLede").textContent = ledes[name]; $("#authLede").hidden = false; }
+  else $("#authLede").hidden = true;
 }
 
 $("#showSignup").addEventListener("click", () => { showAuthForm("signup"); $("#suName").focus(); });
 $("#showLogin").addEventListener("click", () => { showAuthForm("login"); $("#loginEmail").focus(); });
 $("#backToLogin").addEventListener("click", () => { showAuthForm("login"); $("#loginEmail").focus(); });
+$("#showForgot").addEventListener("click", () => { showAuthForm("forgot"); $("#forgotEmail").focus(); });
+$("#forgotBackToLogin").addEventListener("click", () => { showAuthForm("login"); $("#loginEmail").focus(); });
+
+// Password show/hide toggles (delegated; works for every .pw-toggle).
+document.addEventListener("click", (e) => {
+  const t = e.target.closest(".pw-toggle");
+  if (!t) return;
+  const input = document.getElementById(t.dataset.target);
+  if (!input) return;
+  const show = input.type === "password";
+  input.type = show ? "text" : "password";
+  t.textContent = show ? "Hide" : "Show";
+  t.setAttribute("aria-pressed", String(show));
+  t.setAttribute("aria-label", show ? "Hide password" : "Show password");
+});
+
+// Social sign-in: full-page redirect into the provider's OAuth flow.
+document.querySelectorAll(".social-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    window.location.href = "/api/auth/" + btn.dataset.provider + "/start";
+  });
+});
+
+// Forgot password: request a reset code.
+$("#forgotForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  clearAuthError("#forgotEmail");
+  if (!EMAIL_RE.test($("#forgotEmail").value.trim()))
+    return showAuthError("Please enter a valid email address.", "#forgotEmail");
+  announce("Sending a reset code…", "busy");
+  try {
+    const data = await api("/forgot-password", {
+      method: "POST", auth: false, body: { email: $("#forgotEmail").value.trim() },
+    });
+    pendingEmail = $("#forgotEmail").value.trim();
+    showAuthForm("reset");
+    if (data.dev_code) {
+      $("#resetDevCode").textContent = "Your code is " + data.dev_code;
+      $("#resetDevCode").hidden = false;
+      $("#resetCode").value = data.dev_code;
+    } else {
+      $("#resetDevCode").hidden = true;
+    }
+    $("#resetCode").focus();
+    announce(data.message || "If that email has an account, we sent a code.", "ok");
+  } catch (err) {
+    showAuthError(err.message || "Could not send a reset code.");
+  }
+});
+
+// Reset password: verify code + set new password (then logged in).
+$("#resetForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  clearAuthError("#resetCode", "#resetPassword");
+  if (!/^[0-9]{6}$/.test($("#resetCode").value.trim()))
+    return showAuthError("Enter the 6-digit reset code.", "#resetCode");
+  if ($("#resetPassword").value.length < 8)
+    return showAuthError("Your new password must be at least 8 characters.", "#resetPassword");
+  announce("Updating your password…", "busy");
+  try {
+    const data = await api("/reset-password", {
+      method: "POST", auth: false,
+      body: { email: pendingEmail, code: $("#resetCode").value.trim(), newPassword: $("#resetPassword").value },
+    });
+    if (!data.token) throw new Error("Could not reset password.");
+    setToken(data.token);
+    announce("Password updated. Welcome!", "ok");
+    enterApp();
+  } catch (err) {
+    showAuthError(err.message || "Could not reset your password.", "#resetCode");
+  }
+});
 
 // After password/signup succeeds, the server emails a code — move to the OTP step.
 function goToOtp(email, data) {
@@ -525,8 +611,51 @@ function enterApp() {
   loadLibrary();
 }
 
-if (getToken()) {
+// Handle the return from a social sign-in redirect (/app#token=... or #auth_error=...).
+function handleAuthRedirect() {
+  const hash = window.location.hash.slice(1);
+  if (!hash) return false;
+  const params = new URLSearchParams(hash);
+  const token = params.get("token");
+  const err = params.get("auth_error");
+  // Clean the URL so the token/error isn't left in the address bar.
+  history.replaceState(null, "", window.location.pathname);
+  if (token) {
+    setToken(token);
+    return true;
+  }
+  if (err) {
+    const msgs = {
+      google_not_configured: "Google sign-in isn't set up yet. Use email, or add Google credentials.",
+      facebook_not_configured: "Facebook sign-in isn't set up yet. Use email, or add Facebook credentials.",
+      apple_not_configured: "Apple sign-in isn't set up yet. Use email for now.",
+      cancelled: "Sign-in was cancelled.",
+      no_email: "That account didn't share an email address.",
+    };
+    showView("auth");
+    showAuthForm("login");
+    showAuthError(msgs[err] || "Could not sign in with that provider.");
+    return false;
+  }
+  return false;
+}
+
+// Grey out social buttons whose provider isn't configured on the server.
+async function annotateProviders() {
+  try {
+    const cfg = await api("/auth/providers", { auth: false });
+    document.querySelectorAll(".social-btn").forEach((btn) => {
+      if (cfg && cfg[btn.dataset.provider] === false) {
+        btn.title = "Not set up yet — uses email instead";
+        btn.querySelector("span:last-child").textContent += " (setup needed)";
+      }
+    });
+  } catch (_) { /* best effort */ }
+}
+
+if (handleAuthRedirect() || getToken()) {
   enterApp();
 } else {
   showView("auth");
+  annotateProviders();
 }
