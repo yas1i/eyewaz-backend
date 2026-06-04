@@ -7,6 +7,7 @@ from resources.documents import DocumentTransSpeechAPI, DocumentAPI
 from resources.documents import UpdateDocumentFavAPI, UpdateDocumentUnFavAPI
 from resources.playback import PausePlaybackAPI
 from resources.folder import Folder, FolderApi
+from resources.web import ReadUrlAPI
 
 
 def initialize_routes(api):
@@ -19,3 +20,4 @@ def initialize_routes(api):
     api.add_resource(PausePlaybackAPI, "/api/playback-time-record")
     api.add_resource(Folder, "/api/folder")
     api.add_resource(FolderApi,"/api/files-folders")
+    api.add_resource(ReadUrlAPI, "/api/read-url")
