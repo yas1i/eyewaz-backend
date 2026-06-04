@@ -17,8 +17,12 @@ import uuid
 
 from werkzeug.utils import secure_filename
 
-# uploads/ lives next to this module (project root).
-UPLOAD_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "uploads")
+# Where uploaded files + generated audio are stored. Defaults to uploads/ next
+# to this module; in production set STORAGE_DIR to a persistent path
+# (e.g. /home/uploads on Azure App Service).
+UPLOAD_DIR = os.getenv("STORAGE_DIR") or os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "uploads"
+)
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 # Base URL the audio/file links are reachable at. For the iOS simulator

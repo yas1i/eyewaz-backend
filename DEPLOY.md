@@ -30,6 +30,7 @@ FLASK_SECRET_KEY=<new long random string>
 PUBLIC_BASE_URL=https://www.eyewaz.com
 OAUTH_REDIRECT_BASE=https://www.eyewaz.com
 STATIC_DIR=templates/
+STORAGE_DIR=/home/uploads          # persistent on Azure App Service
 
 # Azure AI (same multi-service key)
 REGION, VISION_KEY, VISION_ENDPOINT, TRANSLATION_KEY,
@@ -42,27 +43,73 @@ SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, SMTP_FROM
 GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, FACEBOOK_APP_ID, FACEBOOK_APP_SECRET
 ```
 
-## Deploy (Azure App Service via container)
+## Deploy to Azure App Service (container) — step by step
 
 ```bash
-# Build & push the image (Azure Container Registry or Docker Hub)
-docker build -t eyewaz-backend .
-# ... push to your registry ...
+# 0. Login + pick your subscription
+az login
+az account set --subscription "<your subscription>"
 
-# In the Azure portal: App Service (Linux) -> Deployment Center -> point at the
-# image. Set all env vars under Configuration > Application settings. The app
-# listens on 8080 (Dockerfile EXPOSE/CMD).
+# 1. Resource group + Azure Container Registry (ACR)
+az group create -n eyewaz-rg -l eastus
+az acr create -n eyewazacr -g eyewaz-rg --sku Basic --admin-enabled true
+
+# 2. Build the image in ACR (no local Docker needed)
+az acr build -r eyewazacr -t eyewaz-backend:latest .
+
+# 3. App Service plan (Linux). B1 supports custom domains + /home persistence.
+az appservice plan create -n eyewaz-plan -g eyewaz-rg --is-linux --sku B1
+
+# 4. Web App from the image
+az webapp create -g eyewaz-rg -p eyewaz-plan -n eyewaz \
+  --deployment-container-image-name eyewazacr.azurecr.io/eyewaz-backend:latest
+
+# 5. Tell App Service the port + keep /home persistent
+az webapp config appsettings set -g eyewaz-rg -n eyewaz --settings \
+  WEBSITES_PORT=8080 WEBSITES_ENABLE_APP_SERVICE_STORAGE=true
+
+# 6. Set every app env var (from the list above) in one go
+az webapp config appsettings set -g eyewaz-rg -n eyewaz --settings \
+  MONGO_URI="..." JWT_SECRET_KEY="..." FLASK_SECRET_KEY="..." \
+  PUBLIC_BASE_URL="https://www.eyewaz.com" OAUTH_REDIRECT_BASE="https://www.eyewaz.com" \
+  STATIC_DIR="templates/" STORAGE_DIR="/home/uploads" \
+  REGION="eastus" VISION_KEY="..." VISION_ENDPOINT="..." \
+  TRANSLATION_KEY="..." TEXT_TRANSLATION_ENDPOINT="https://api.cognitive.microsofttranslator.com/" \
+  SPEECH_KEY="..." \
+  SMTP_HOST="smtp.gmail.com" SMTP_PORT="587" SMTP_USER="..." SMTP_PASSWORD="..." \
+  SMTP_FROM="EYEWAZ <...>"
 ```
 
-Render/Railway/Fly: point them at this repo's `Dockerfile`; set the same env vars.
+Keep the App Service at **1 instance** while using local (/home) storage.
+Alternatives (Render/Railway/Fly): point them at this repo's `Dockerfile` and
+set the same env vars.
 
-## Domain + HTTPS
+## Domain + HTTPS (Azure)
 
-1. In the host, add custom domain **www.eyewaz.com** (and apex `eyewaz.com`).
-2. At your DNS provider: `CNAME www -> <host target>`; for the apex use the
-   host's ALIAS/A record. Add the host's domain-verification TXT record.
-3. Enable the host's **managed TLS certificate** (automatic on Azure/Render).
-4. Optionally redirect `eyewaz.com` -> `www.eyewaz.com`.
+```bash
+# Show the values you need for DNS
+az webapp show -g eyewaz-rg -n eyewaz --query defaultHostName -o tsv      # e.g. eyewaz.azurewebsites.net
+az webapp deployment list-publishing-profiles ...   # not needed for domain
+```
+
+At your DNS provider for **eyewaz.com**, add:
+
+| Type  | Host | Value                                  |
+|-------|------|----------------------------------------|
+| CNAME | www  | `eyewaz.azurewebsites.net`             |
+| TXT   | asuid.www | (the verification ID from the next command) |
+
+```bash
+# Get the domain-verification ID
+az webapp show -g eyewaz-rg -n eyewaz --query customDomainVerificationId -o tsv
+# Add the custom domain, then a free managed certificate
+az webapp config hostname add -g eyewaz-rg --webapp-name eyewaz --hostname www.eyewaz.com
+az webapp config ssl create -g eyewaz-rg --name eyewaz --hostname www.eyewaz.com
+az webapp config ssl bind -g eyewaz-rg --name eyewaz --hostname www.eyewaz.com --ssl-type SNI
+```
+
+For the apex `eyewaz.com`, add an ALIAS/A record per your DNS provider (or a
+redirect to `www`). HTTPS certs are issued automatically once DNS resolves.
 
 ## After deploy — checklist
 
