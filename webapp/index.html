@@ -15,7 +15,11 @@
 
   <header class="topbar">
     <h1 class="brand">EYEWAZ</h1>
-    <button id="logoutBtn" class="link-btn" hidden>Log out</button>
+    <div class="topbar-actions">
+      <button id="ttsToggle" class="link-btn" aria-pressed="true"
+              title="Speak prompts and results aloud using your device voice">🔊 Voice: on</button>
+      <button id="logoutBtn" class="link-btn" hidden>Log out</button>
+    </div>
   </header>
 
   <main id="main" tabindex="-1">
@@ -97,8 +101,17 @@
       <!-- Result -->
       <article id="result" class="card" hidden aria-labelledby="resultHeading">
         <h3 id="resultHeading">Result</h3>
+        <h4>Urdu audio (natural voice)</h4>
         <audio id="player" controls preload="auto"></audio>
-        <button id="replayBtn" class="primary-btn">▶ Play again</button>
+        <button id="replayBtn" class="primary-btn">▶ Play Urdu again</button>
+
+        <h4>Read with your device voice</h4>
+        <div class="row">
+          <button id="speakUrduBtn" type="button" class="primary-btn">🔊 Speak Urdu</button>
+          <button id="speakEngBtn" type="button" class="primary-btn ghost">🔊 Speak English</button>
+          <button id="stopSpeakBtn" type="button" class="primary-btn ghost">⏹ Stop</button>
+        </div>
+        <p id="ttsHint" class="hint" hidden></p>
 
         <h4>Urdu</h4>
         <p id="urduText" class="urdu" lang="ur" dir="rtl"></p>

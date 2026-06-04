@@ -56,6 +56,9 @@ html, body {
   background: var(--accent-strong);
 }
 .brand { margin: 0; font-size: 1.4rem; letter-spacing: 2px; }
+.topbar-actions { display: flex; align-items: center; gap: 8px; }
+.topbar-actions .link-btn { color: #fff; }
+.topbar-actions .link-btn[aria-pressed="false"] { opacity: .6; text-decoration: line-through; }
 
 main {
   max-width: 720px;
@@ -101,6 +104,11 @@ h2 { font-size: 1.6rem; margin: 8px 0 4px; }
 }
 .primary-btn:hover { background: #0e4cb8; }
 .primary-btn:disabled { opacity: .6; cursor: progress; }
+.primary-btn.ghost { background: transparent; color: var(--accent); }
+.primary-btn.ghost:hover { background: var(--surface-2); }
+.primary-btn.speaking { background: var(--success); color: #04231a; border-color: var(--success); }
+
+.hint { color: var(--muted); font-size: .95rem; margin: 8px 0 0; }
 
 .link-btn {
   background: none;
