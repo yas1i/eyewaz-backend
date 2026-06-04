@@ -14,6 +14,8 @@ from flask import request, Response
 from flask_restful import Resource
 from flask_jwt_extended import jwt_required
 
+from helpers import translate
+
 MAX_BYTES = 3_000_000   # don't download more than ~3 MB of HTML
 MAX_CHARS = 20_000      # cap extracted text so TTS stays manageable
 
@@ -86,3 +88,38 @@ class ReadUrlAPI(Resource):
             return _json({"message": "No readable text was found on that page."}, 422)
 
         return _json({"title": title, "text": text, "url": resp.url}, 200)
+
+
+def _split_for_translate(text, size=4500):
+    """Split into <=size-char pieces on word boundaries (Azure caps request size)."""
+    words = text.split(" ")
+    pieces, cur = [], ""
+    for w in words:
+        if len(cur) + len(w) + 1 > size:
+            if cur:
+                pieces.append(cur)
+            cur = w
+        else:
+            cur = (cur + " " + w) if cur else w
+    if cur:
+        pieces.append(cur)
+    return pieces
+
+
+class TranslateTextAPI(Resource):
+    """Translate arbitrary text (e.g. an extracted web page) to Urdu."""
+
+    @jwt_required()
+    def post(self):
+        data = request.get_json(force=True, silent=True) or {}
+        text = (data.get("text") or "").strip()
+        to = data.get("to", "ur-PK")
+        if not text:
+            return _json({"message": "There is no text to translate."}, 400)
+        try:
+            translated = " ".join(
+                translate(piece, "en", to) for piece in _split_for_translate(text)
+            )
+        except Exception as e:
+            return _json({"message": f"Translation failed: {e}"}, 502)
+        return _json({"translated": translated, "to": to}, 200)

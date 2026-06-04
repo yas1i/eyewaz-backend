@@ -133,11 +133,17 @@
       <article id="pageResult" class="card" hidden aria-labelledby="pageResultHeading">
         <h3 id="pageResultHeading" tabindex="-1">Page</h3>
         <div class="row">
-          <button id="pagePlayBtn" type="button" class="primary-btn">▶ Play</button>
+          <button id="pagePlayBtn" type="button" class="primary-btn">▶ Play (English)</button>
           <button id="pagePauseBtn" type="button" class="primary-btn ghost">⏸ Pause</button>
           <button id="pageStopBtn" type="button" class="primary-btn ghost">⏹ Stop</button>
+          <button id="pageUrduBtn" type="button" class="primary-btn">🌐 Translate to Urdu &amp; read</button>
         </div>
         <p id="pageText" class="page-text" lang="en"></p>
+
+        <div id="pageUrduWrap" hidden>
+          <h4>Urdu translation</h4>
+          <p id="pageUrduText" class="page-text urdu" lang="ur" dir="rtl"></p>
+        </div>
       </article>
 
       <h3 class="section-title">Your library</h3>
