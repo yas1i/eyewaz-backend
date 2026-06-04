@@ -29,7 +29,9 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 # "localhost" works; for a physical device set PUBLIC_BASE_URL to the LAN IP
 # (e.g. http://192.168.1.133:4242) or the deployed host.
 def _public_base_url():
-    return os.getenv("PUBLIC_BASE_URL", "http://localhost:4242").rstrip("/")
+    # If unset, return "" so file links are relative (/files/<name>) and resolve
+    # against whatever host serves the page — works on any deploy with no config.
+    return os.getenv("PUBLIC_BASE_URL", "").rstrip("/")
 
 
 class _Downloadable:
