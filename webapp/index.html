@@ -406,6 +406,7 @@
               <li>Unlimited recordings</li>
             </ul>
             <button type="button" class="primary-btn plan-upgrade" data-plan="monthly">Upgrade with PayPal</button>
+            <div class="paypal-slot" id="pp-monthly" hidden></div>
           </div>
           <div class="plan-card" data-plan="supermax">
             <h4>Super Max</h4>
@@ -416,9 +417,11 @@
               <li>Unlimited recordings</li>
             </ul>
             <button type="button" class="primary-btn plan-upgrade" data-plan="supermax">Upgrade with PayPal</button>
+            <div class="paypal-slot" id="pp-supermax" hidden></div>
           </div>
         </div>
         <p class="hint">Payments via PayPal (Klarna &amp; card coming soon). Cancel anytime.</p>
+        <button type="button" id="cancelSubBtn" class="primary-btn ghost" hidden>Cancel my subscription</button>
       </div>
 
       <form id="accountForm" class="card" novalidate>

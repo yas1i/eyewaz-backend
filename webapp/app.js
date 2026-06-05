@@ -884,25 +884,95 @@ const Billing = (() => {
 const PLAN_PRICES = { monthly: "4.99", supermax: "9.99" };
 
 const Plan = (() => {
+  let cfg = null;          // /api/paypal/config result
+  let sdkLoading = null;   // promise so we load the SDK once
+
   function init() {
-    // Fill prices.
     document.querySelectorAll("[data-price]").forEach((el) => {
       const p = PLAN_PRICES[el.dataset.price]; if (p) el.textContent = p;
     });
-    // Wire upgrade buttons once.
     document.querySelectorAll(".plan-upgrade").forEach((b) => {
       if (b.dataset.bound) return;
       b.dataset.bound = "1";
-      b.addEventListener("click", () => upgrade(b.dataset.plan));
+      b.addEventListener("click", () => placeholder(b.dataset.plan));
     });
+    const cancel = document.getElementById("cancelSubBtn");
+    if (cancel && !cancel.dataset.bound) {
+      cancel.dataset.bound = "1";
+      cancel.addEventListener("click", cancelSubscription);
+    }
     Billing.render();
+    setupPayPal();
   }
-  function upgrade(plan) {
-    // Phase 2 will start a PayPal checkout here. For now, guide the user.
-    announce("PayPal checkout is being set up. Your upgrade will be available here shortly.", "");
+
+  function placeholder(plan) {
+    announce("PayPal checkout is being set up. It will appear here once payments are switched on.", "");
     window.alert("PayPal checkout for the " + plan + " plan is being set up and will appear here soon.");
   }
-  return { init, upgrade };
+
+  async function setupPayPal() {
+    try { cfg = await api("/paypal/config", { auth: false }); } catch (_) { cfg = null; }
+    const enabled = cfg && cfg.enabled && cfg.client_id;
+    if (!enabled) return;                       // keep placeholder buttons
+    try { await loadSdk(cfg.client_id, cfg.currency || "GBP"); }
+    catch (_) { return; }                       // SDK blocked → keep placeholders
+    ["monthly", "supermax"].forEach((plan) => renderButton(plan));
+    // Offer cancellation if the user is already on a paid plan.
+    const cancel = document.getElementById("cancelSubBtn");
+    if (cancel && userUsage && userUsage.plan !== "free") cancel.hidden = false;
+  }
+
+  function loadSdk(clientId, currency) {
+    if (window.paypal) return Promise.resolve();
+    if (sdkLoading) return sdkLoading;
+    sdkLoading = new Promise((res, rej) => {
+      const s = document.createElement("script");
+      s.src = "https://www.paypal.com/sdk/js?client-id=" + encodeURIComponent(clientId) +
+        "&vault=true&intent=subscription&currency=" + encodeURIComponent(currency);
+      s.onload = res; s.onerror = rej;
+      document.head.appendChild(s);
+    });
+    return sdkLoading;
+  }
+
+  function renderButton(plan) {
+    const planId = cfg.plans && cfg.plans[plan];
+    const slot = document.getElementById("pp-" + plan);
+    const placeholderBtn = document.querySelector(`.plan-upgrade[data-plan="${plan}"]`);
+    if (!planId || !slot || !window.paypal) return;
+    if (placeholderBtn) placeholderBtn.hidden = true;
+    slot.hidden = false; slot.innerHTML = "";
+    window.paypal.Buttons({
+      style: { layout: "horizontal", label: "subscribe", height: 44 },
+      createSubscription: (data, actions) => actions.subscription.create({ plan_id: planId }),
+      onApprove: (data) => activate(data.subscriptionID, plan),
+      onError: () => announce("PayPal could not start checkout. Please try again.", "error"),
+    }).render("#pp-" + plan);
+  }
+
+  async function activate(subscriptionID, plan) {
+    announce("Confirming your subscription…", "busy");
+    try {
+      const d = await api("/paypal/activate", { method: "POST",
+        body: { subscription_id: subscriptionID, plan } });
+      Billing.set(d.usage);
+      announce(d.message || `You're now on the ${plan} plan. Thank you!`, "ok");
+      window.alert(d.message || `You're now on the ${plan} plan. Thank you!`);
+    } catch (e) {
+      announce(e.message || "We couldn't confirm the payment. If you were charged, contact support.", "error");
+    }
+  }
+
+  async function cancelSubscription() {
+    if (!window.confirm("Cancel your subscription? You'll keep access until the period ends.")) return;
+    try {
+      const d = await api("/paypal/cancel", { method: "POST" });
+      if (d.usage) Billing.set(d.usage);
+      announce(d.message || "Your subscription will not renew.", "ok");
+    } catch (e) { announce(e.message || "Could not cancel right now.", "error"); }
+  }
+
+  return { init };
 })();
 
 // Console helper for testing tiers before payments (needs DEV_PLAN_KEY on the server).
