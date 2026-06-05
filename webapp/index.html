@@ -161,7 +161,8 @@
 
       <!-- Mode tabs -->
       <div class="tabs" role="tablist" aria-label="Reading mode">
-        <button class="tab is-active" id="tabText" role="tab" aria-selected="true" data-panel="textPanel">✍️ Text</button>
+        <button class="tab is-active" id="tabDay" role="tab" aria-selected="true" data-panel="dayPanel">🌅 My Day</button>
+        <button class="tab" id="tabText" role="tab" aria-selected="false" data-panel="textPanel">✍️ Text</button>
         <button class="tab" id="tabDoc" role="tab" aria-selected="false" data-panel="docPanel">📄 Document</button>
         <button class="tab" id="tabPhoto" role="tab" aria-selected="false" data-panel="photoPanel">📷 Photo</button>
         <button class="tab" id="tabWeb" role="tab" aria-selected="false" data-panel="webPanel">🌐 Web page</button>
@@ -184,8 +185,22 @@
         </div>
       </div>
 
+      <!-- ===== MY DAY panel (morning assistant) ===== -->
+      <div id="dayPanel" class="mode-panel" role="tabpanel" aria-labelledby="tabDay">
+        <h2 id="dayGreeting">Good day</h2>
+        <p class="lede" id="dayDate"></p>
+        <button id="startDayBtn" class="primary-btn">🌅 Start my day</button>
+        <p id="dayStatus" class="status" role="status"></p>
+        <audio id="dayAudio" controls preload="auto" hidden></audio>
+        <div class="card">
+          <h3>Today's list</h3>
+          <p id="dayList" class="page-text"></p>
+          <p class="hint">Set your weekday &amp; weekend lists in ⚙ Account. EYEWAZ greets you, reads the date, and reads today's list aloud.</p>
+        </div>
+      </div>
+
       <!-- ===== TEXT panel ===== -->
-      <div id="textPanel" class="mode-panel" role="tabpanel" aria-labelledby="tabText">
+      <div id="textPanel" class="mode-panel" role="tabpanel" aria-labelledby="tabText" hidden>
         <textarea id="textInput" class="reader-text"
           placeholder="Type or paste text here, then press Play. EYEWAZ translates it to your reading language and reads it aloud."></textarea>
         <div class="player-bar">
@@ -342,6 +357,18 @@
           <label for="accRate">Speaking speed: <span id="rateVal">1.0×</span></label>
           <input id="accRate" type="range" min="0.5" max="2" step="0.05" value="1"
                  aria-describedby="rateVal" />
+        </div>
+
+        <h3>My Day lists</h3>
+        <div class="field">
+          <label for="accTodoWeekday">Weekday to-do list</label>
+          <textarea id="accTodoWeekday" class="reader-text" style="min-height:120px"
+            placeholder="One thing per line — e.g.&#10;Take morning medication&#10;Call the doctor at 10am&#10;Lunch with Sara"></textarea>
+        </div>
+        <div class="field">
+          <label for="accTodoWeekend">Weekend to-do list</label>
+          <textarea id="accTodoWeekend" class="reader-text" style="min-height:120px"
+            placeholder="One thing per line for Saturdays & Sundays"></textarea>
         </div>
 
         <div class="row">
