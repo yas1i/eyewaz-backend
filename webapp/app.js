@@ -659,13 +659,41 @@ async function saveRecording(audioUrl, title, lang) {
 }
 
 let recObjectUrl = null;
+let recPlaying = null;       // the recording currently in the player
+let recSaveAt = 0;           // throttle position writes
+function fmtTime(s) {
+  s = Math.max(0, Math.floor(s || 0));
+  return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+}
 function playRecording(rec) {
   const a = $("#recAudio");
   if (recObjectUrl) URL.revokeObjectURL(recObjectUrl);
   recObjectUrl = URL.createObjectURL(rec.blob);
-  a.src = recObjectUrl; a.hidden = false; a.play().catch(() => {});
-  announce("Playing " + rec.title, "ok");
+  recPlaying = rec;
+  a.src = recObjectUrl; a.hidden = false;
+  // Resume from where the listener left off (unless near the end).
+  a.onloadedmetadata = () => {
+    if (rec.position && rec.position < (a.duration || 1e9) - 2) a.currentTime = rec.position;
+    a.play().catch(() => {});
+  };
+  const at = rec.position > 5 ? ` from ${fmtTime(rec.position)}` : "";
+  announce("Playing " + rec.title + at, "ok");
 }
+// Persist playback position so the next play resumes (favourites + resume).
+(function bindRecAudio() {
+  const a = $("#recAudio"); if (!a) return;
+  a.addEventListener("timeupdate", () => {
+    if (!recPlaying) return;
+    const now = Date.now();
+    if (now - recSaveAt > 5000) { recSaveAt = now; recPlaying.position = a.currentTime; recPut(recPlaying); }
+  });
+  a.addEventListener("pause", () => {
+    if (recPlaying) { recPlaying.position = a.currentTime; recPut(recPlaying); }
+  });
+  a.addEventListener("ended", () => {
+    if (recPlaying) { recPlaying.position = 0; recPut(recPlaying); const p = recPlaying; recPlaying = null; if (p) loadRecordings(); }
+  });
+})();
 
 // Every folder name the user has, whether created empty or in use by a recording.
 function allFolderNames(recs) {
@@ -702,7 +730,8 @@ async function loadRecordings() {
   let recs = [];
   try { recs = await recAll(); } catch (_) {}
   const custom = allFolderNames(recs);
-  const chipFolders = ["All", ...custom, "Unfiled"];
+  const FAV = "★ Favourites";
+  const chipFolders = ["All", FAV, ...custom, "Unfiled"];
   if (!chipFolders.includes(activeFolder)) activeFolder = "All";
 
   // Folder chips (with counts), plus a delete control for the active custom folder.
@@ -711,13 +740,15 @@ async function loadRecordings() {
     const b = document.createElement("button");
     b.type = "button";
     b.className = "folder-chip" + (f === activeFolder ? " is-active" : "");
-    const count = recs.filter((r) => r.folder === f).length;
-    b.textContent = f === "All" ? `All (${recs.length})` : `${f} (${count})`;
+    const count = f === "All" ? recs.length
+      : f === FAV ? recs.filter((r) => r.fav).length
+      : recs.filter((r) => r.folder === f).length;
+    b.textContent = f === "All" ? `All (${count})` : `${f} (${count})`;
     b.setAttribute("aria-pressed", String(f === activeFolder));
     b.addEventListener("click", () => { activeFolder = f; loadRecordings(); });
     bar.appendChild(b);
   });
-  if (activeFolder !== "All" && activeFolder !== "Unfiled") {
+  if (activeFolder !== "All" && activeFolder !== "Unfiled" && activeFolder !== FAV) {
     const del = document.createElement("button");
     del.type = "button";
     del.className = "folder-chip folder-del";
@@ -731,7 +762,8 @@ async function loadRecordings() {
   const moveOptions = ["Unfiled", ...custom];
 
   ul.innerHTML = "";
-  const shown = recs.filter((r) => activeFolder === "All" || r.folder === activeFolder)
+  const shown = recs.filter((r) =>
+    activeFolder === "All" ? true : activeFolder === FAV ? r.fav : r.folder === activeFolder)
     .sort((a, b) => b.createdAt - a.createdAt);
   if (!shown.length) {
     ul.innerHTML = '<li class="lede">No saved recordings here yet. Read something, then press “💾 Save offline”.</li>';
@@ -744,16 +776,24 @@ async function loadRecordings() {
     const opts = moveOptions.map((f) =>
       `<option value="${escapeHtml(f)}"${f === rec.folder ? " selected" : ""}>${escapeHtml(f)}</option>`
     ).join("");
+    const resume = rec.position > 5 ? ` · ▶ resume ${fmtTime(rec.position)}` : "";
     card.innerHTML =
       `<button class="lib-play-icon" aria-label="Play ${escapeHtml(rec.title)}">▶</button>` +
       `<span class="lib-info"><strong>${escapeHtml(rec.title)}</strong>` +
-      `<span class="lib-snippet">${new Date(rec.createdAt).toLocaleDateString()}</span>` +
+      `<span class="lib-snippet">${new Date(rec.createdAt).toLocaleDateString()}${resume}</span>` +
       `<label class="sr-only" for="mv_${rec.id}">Move ${escapeHtml(rec.title)} to a folder</label>` +
       `<select class="rec-move" id="mv_${rec.id}" aria-label="Move ${escapeHtml(rec.title)} to a folder">${opts}</select>` +
       `</span>` +
+      `<button class="round-btn rec-fav${rec.fav ? " is-fav" : ""}" aria-pressed="${!!rec.fav}" ` +
+        `aria-label="${rec.fav ? "Remove from" : "Add to"} favourites">${rec.fav ? "★" : "☆"}</button>` +
       `<button class="round-btn rec-del" aria-label="Delete recording">🗑</button>`;
     card.querySelector(".lib-play-icon").addEventListener("click", () => playRecording(rec));
     card.querySelector(".rec-move").addEventListener("change", (e) => moveRecording(rec, e.target.value));
+    card.querySelector(".rec-fav").addEventListener("click", async () => {
+      rec.fav = !rec.fav; await recPut(rec);
+      announce(rec.fav ? `Added “${rec.title}” to favourites.` : `Removed from favourites.`, "ok");
+      loadRecordings();
+    });
     card.querySelector(".rec-del").addEventListener("click", async () => {
       if (!window.confirm("Delete this recording from your device?")) return;
       await recDel(rec.id); loadRecordings();
@@ -961,6 +1001,118 @@ const Assistant = (() => {
   return { init };
 })();
 
+/* Speak text in the user's chosen language: browser voice if available,
+   else Azure (e.g. Urdu). Shared by reminders and other spoken prompts. */
+function speakInUserLang(text) {
+  if (!text) return;
+  const lang = userPrefs.language || "en";
+  if (TTS.supported && TTS.hasVoice(lang)) {
+    TTS.speakLong(text, lang, { rate: userPrefs.rate });
+    return;
+  }
+  api("/speak", { method: "POST", body: { text, voiceName: userPrefs.voice, rate: userPrefs.rate } })
+    .then((sp) => { const a = $("#dayAudio"); if (a) { a.src = sp.audio_url; a.hidden = false; a.play().catch(() => {}); } })
+    .catch(() => {});
+}
+
+/* ----------------------- Reminders: spoken time-based nudges ---------------- */
+const Reminders = (() => {
+  function get() { try { return JSON.parse(localStorage.getItem("eyewaz_reminders") || "[]"); } catch (_) { return []; } }
+  function set(list) { localStorage.setItem("eyewaz_reminders", JSON.stringify(list)); }
+
+  const REPEAT_LABEL = { daily: "Every day", weekdays: "Weekdays", weekends: "Weekends", once: "Just once" };
+
+  function appliesToday(r) {
+    const d = new Date().getDay();           // 0 Sun … 6 Sat
+    const weekday = d >= 1 && d <= 5;
+    if (r.repeat === "weekdays") return weekday;
+    if (r.repeat === "weekends") return !weekday;
+    return true;                              // daily, once
+  }
+  function speak12h(t) {
+    const [h, m] = t.split(":").map(Number);
+    const ap = h < 12 ? "AM" : "PM"; const h12 = ((h + 11) % 12) + 1;
+    return `${h12}:${String(m).padStart(2, "0")} ${ap}`;
+  }
+
+  function render() {
+    const ul = $("#reminderList"); if (!ul) return;
+    const list = get().sort((a, b) => a.time.localeCompare(b.time));
+    ul.innerHTML = "";
+    if (!list.length) {
+      ul.innerHTML = '<li class="lede">No reminders yet. Add one above.</li>';
+      return;
+    }
+    list.forEach((r) => {
+      const li = document.createElement("li");
+      li.className = "reminder-item";
+      li.innerHTML =
+        `<span class="reminder-when">${speak12h(r.time)}</span>` +
+        `<span class="reminder-info"><strong>${escapeHtml(r.label)}</strong>` +
+        `<span class="lib-snippet">${REPEAT_LABEL[r.repeat] || "Every day"}</span></span>` +
+        `<button class="round-btn rem-del" aria-label="Delete reminder ${escapeHtml(r.label)}">🗑</button>`;
+      li.querySelector(".rem-del").addEventListener("click", () => {
+        set(get().filter((x) => x.id !== r.id));
+        announce("Reminder deleted.", "ok");
+        render();
+      });
+      ul.appendChild(li);
+    });
+  }
+
+  function fire(r) {
+    const msg = "Reminder. " + r.label;
+    announce("⏰ " + r.label, "ok");
+    speakInUserLang(msg);
+    try {
+      if ("Notification" in window && Notification.permission === "granted")
+        new Notification("EYEWAZ reminder", { body: r.label });
+    } catch (_) {}
+  }
+
+  function check() {
+    const now = new Date();
+    const hhmm = String(now.getHours()).padStart(2, "0") + ":" + String(now.getMinutes()).padStart(2, "0");
+    const today = now.getFullYear() + "-" + (now.getMonth() + 1) + "-" + now.getDate();
+    const list = get();
+    let changed = false;
+    for (const r of list) {
+      if (r.time === hhmm && r.lastFired !== today && appliesToday(r)) {
+        fire(r); r.lastFired = today; changed = true;
+        if (r.repeat === "once") r._remove = true;
+      }
+    }
+    if (changed) { set(list.filter((r) => !r._remove)); render(); }
+  }
+
+  let started = false;
+  function init() {
+    const form = $("#reminderForm");
+    if (form && !form.dataset.bound) {
+      form.dataset.bound = "1";
+      form.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const time = $("#reminderTime").value;
+        const label = ($("#reminderLabel").value || "").trim();
+        const repeat = $("#reminderRepeat").value || "daily";
+        if (!time || !label) { announce("Please set a time and a reminder.", ""); return; }
+        const list = get();
+        list.push({ id: "rem_" + Date.now(), time, label: label.slice(0, 120), repeat, lastFired: "" });
+        set(list);
+        $("#reminderLabel").value = "";
+        announce(`Reminder set for ${speak12h(time)}: ${label}.`, "ok");
+        // Ask once for notification permission so nudges show if the tab is in the background.
+        try { if ("Notification" in window && Notification.permission === "default") Notification.requestPermission(); } catch (_) {}
+        render();
+      });
+    }
+    render();
+    if (!started) { started = true; setInterval(check, 20000); check(); }  // global ticker
+  }
+
+  return { init };
+})();
+
 function accStatus(msg, kind) {
   const s = $("#accountStatus");
   s.textContent = msg;
@@ -1135,7 +1287,7 @@ function showTab(panelId) {
     if (on) label = t.textContent.trim();
   });
   if (panelId === "booksPanel") loadRecordings();   // refresh saved recordings
-  if (panelId === "dayPanel") { renderMyDay(); Assistant.init(); }  // greeting + assistant
+  if (panelId === "dayPanel") { renderMyDay(); Assistant.init(); Reminders.init(); }  // greeting + assistant + reminders
   if (label) announce(label + " selected", "ok");     // speaks when voice guidance is on
 }
 document.querySelectorAll(".tab").forEach((t) =>
@@ -1272,7 +1424,7 @@ $("#docReadBtn")?.addEventListener("click", async () => {
 function enterApp() {
   showView("capture");
   loadLibrary();
-  loadPrefs().then(() => { initReaderControls(); renderMyDay(); Assistant.init(); });
+  loadPrefs().then(() => { initReaderControls(); renderMyDay(); Assistant.init(); Reminders.init(); });
 }
 
 // Handle the return from a social sign-in redirect (/app#token=... or #auth_error=...).
