@@ -36,6 +36,9 @@ class Users(Document):
     pref_language = StringField(max_length=10, default="ur-PK")
     pref_voice = StringField(default="ur-PK-UzmaNeural")
     pref_rate = FloatField(default=1.0)                            # speed multiplier
+    # Morning-assistant to-do lists
+    todo_weekday = StringField(default="")
+    todo_weekend = StringField(default="")
     objects = QuerySetManager()
 
     def preferences(self):

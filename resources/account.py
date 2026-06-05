@@ -23,6 +23,8 @@ class ProfileAPI(Resource):
         return _resp({
             "name": user.name, "email": user.email, "phone": user.phone,
             "preferences": user.preferences(),
+            "todo_weekday": user.todo_weekday or "",
+            "todo_weekend": user.todo_weekend or "",
         }, 200)
 
     @jwt_required()
@@ -33,6 +35,10 @@ class ProfileAPI(Resource):
             user.name = (data["name"] or "")[:30]
         if "phone" in data:
             user.phone = (data["phone"] or "")[:12]
+        if "todo_weekday" in data:
+            user.todo_weekday = (data["todo_weekday"] or "")[:4000]
+        if "todo_weekend" in data:
+            user.todo_weekend = (data["todo_weekend"] or "")[:4000]
         prefs = data.get("preferences") or {}
         if prefs.get("engine") in ("azure", "browser"):
             user.pref_engine = prefs["engine"]

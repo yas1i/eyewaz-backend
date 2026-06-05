@@ -730,13 +730,56 @@ function escapeHtml(s) {
 let userPrefs = { engine: "azure", language: "ur-PK", voice: "ur-PK-UzmaNeural", rate: 1.0 };
 let azureVoices = null;
 
+let userProfile = {};
 async function loadPrefs() {
   try {
     const p = await api("/profile", { method: "GET" });
+    userProfile = p || {};
     if (p && p.preferences) userPrefs = p.preferences;
     return p;
   } catch (_) { return null; }
 }
+
+/* ------------------------------ My Day assistant ---------------------------- */
+function greetingFor(d) {
+  const h = d.getHours();
+  return h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
+}
+function todayListText() {
+  const day = new Date().getDay();           // 0 Sun … 6 Sat
+  const weekend = day === 0 || day === 6;
+  return ((weekend ? userProfile.todo_weekend : userProfile.todo_weekday) || "").trim();
+}
+function renderMyDay() {
+  const name = (userProfile.name || "").split(" ")[0];
+  if ($("#dayGreeting")) $("#dayGreeting").textContent = greetingFor(new Date()) + (name ? ", " + name : "") + "!";
+  if ($("#dayDate")) $("#dayDate").textContent =
+    new Date().toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+  const list = todayListText();
+  if ($("#dayList")) $("#dayList").textContent = list || "No list set for today — add one in ⚙ Account.";
+}
+$("#startDayBtn")?.addEventListener("click", async () => {
+  const st = $("#dayStatus"), btn = $("#startDayBtn");
+  const name = (userProfile.name || "").split(" ")[0];
+  const greeting = greetingFor(new Date()) + (name ? ", " + name : "") + ".";
+  const dateStr = "Today is " + new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" }) + ".";
+  const list = todayListText();
+  const listText = list
+    ? "Here is your list for today. " + list.split(/\n+/).filter(Boolean).join(". ") + "."
+    : "You have no list set for today.";
+  const brief = `${greeting} ${dateStr} ${listText}`;
+  btn.disabled = true; st.className = "status busy"; st.textContent = "Preparing your morning…";
+  try {
+    const tr = await api("/translate", { method: "POST", body: { text: brief, to: userPrefs.language } });
+    const speech = tr.translated || brief;
+    const sp = await api("/speak", { method: "POST", body: { text: speech, voiceName: userPrefs.voice, rate: userPrefs.rate } });
+    const a = $("#dayAudio"); a.src = sp.audio_url; a.hidden = false;
+    st.className = "status ok"; st.textContent = "Playing your morning brief.";
+    a.play().catch(() => (st.textContent = "Ready — press play to listen."));
+  } catch (err) {
+    st.className = "status error"; st.textContent = err.message || "Could not start your day.";
+  } finally { btn.disabled = false; }
+});
 
 function accStatus(msg, kind) {
   const s = $("#accountStatus");
@@ -810,7 +853,12 @@ async function openAccount() {
   showView("account");
   accStatus("Loading your settings…", "busy");
   const profile = await loadPrefs();
-  if (profile) { $("#accName").value = profile.name || ""; $("#accEmail").value = profile.email || ""; }
+  if (profile) {
+    $("#accName").value = profile.name || "";
+    $("#accEmail").value = profile.email || "";
+    $("#accTodoWeekday").value = profile.todo_weekday || "";
+    $("#accTodoWeekend").value = profile.todo_weekend || "";
+  }
   const engineRadio = document.querySelector(`input[name="engine"][value="${userPrefs.engine}"]`)
     || document.querySelector('input[name="engine"][value="azure"]');
   engineRadio.checked = true;
@@ -864,8 +912,14 @@ $("#accountForm").addEventListener("submit", async (e) => {
   };
   accStatus("Saving…", "busy");
   try {
-    const d = await api("/profile", { method: "PUT", body: { name: $("#accName").value.trim(), preferences: prefs } });
+    const d = await api("/profile", { method: "PUT", body: {
+      name: $("#accName").value.trim(), preferences: prefs,
+      todo_weekday: $("#accTodoWeekday").value, todo_weekend: $("#accTodoWeekend").value,
+    } });
     userPrefs = d.preferences || prefs;
+    userProfile.todo_weekday = $("#accTodoWeekday").value;
+    userProfile.todo_weekend = $("#accTodoWeekend").value;
+    renderMyDay();
     accStatus("Your settings have been saved.", "ok");
   } catch (err) {
     accStatus(err.message || "Could not save your settings.", "error");
@@ -901,6 +955,7 @@ function showTab(panelId) {
     if (on) label = t.textContent.trim();
   });
   if (panelId === "booksPanel") loadRecordings();   // refresh saved recordings
+  if (panelId === "dayPanel") renderMyDay();        // refresh greeting/date/list
   if (label) announce(label + " selected", "ok");     // speaks when voice guidance is on
 }
 document.querySelectorAll(".tab").forEach((t) =>
@@ -1037,7 +1092,7 @@ $("#docReadBtn")?.addEventListener("click", async () => {
 function enterApp() {
   showView("capture");
   loadLibrary();
-  loadPrefs().then(initReaderControls);   // saved voice/speed apply + inline controls populate
+  loadPrefs().then(() => { initReaderControls(); renderMyDay(); });
 }
 
 // Handle the return from a social sign-in redirect (/app#token=... or #auth_error=...).
