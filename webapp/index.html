@@ -197,6 +197,24 @@
           <p id="dayList" class="page-text"></p>
           <p class="hint">Set your weekday &amp; weekend lists in ⚙ Account. EYEWAZ greets you, reads the date, and reads today's list aloud.</p>
         </div>
+
+        <!-- ===== Ask Eyewaz: hands-free conversational assistant ===== -->
+        <div class="card" id="assistantCard">
+          <h3>💬 Ask Eyewaz</h3>
+          <p class="hint">Tap the microphone and speak — ask about your day, your list, or anything else. Eyewaz listens and answers aloud.</p>
+          <div class="player-bar">
+            <button id="asstMicBtn" class="primary-btn" aria-label="Hold or tap to talk to Eyewaz">🎤 Talk to Eyewaz</button>
+            <button id="asstStopBtn" class="round-btn" aria-label="Stop speaking" hidden>⏹</button>
+          </div>
+          <p id="asstStatus" class="status" role="status"></p>
+          <div id="asstLog" class="assistant-log" aria-live="polite" aria-label="Conversation with Eyewaz"></div>
+          <form id="asstForm" class="assistant-typed">
+            <label class="sr-only" for="asstText">Type your message to Eyewaz</label>
+            <input id="asstText" type="text" autocomplete="off"
+              placeholder="…or type your message and press Enter" />
+            <button type="submit" class="round-btn" aria-label="Send message">➤</button>
+          </form>
+        </div>
       </div>
 
       <!-- ===== TEXT panel ===== -->

@@ -13,6 +13,7 @@ from resources.documents import UpdateDocumentFavAPI, UpdateDocumentUnFavAPI
 from resources.playback import PausePlaybackAPI
 from resources.folder import Folder, FolderApi
 from resources.web import ReadUrlAPI, TranslateTextAPI, SpeakAPI
+from resources.assistant import AssistantAPI
 
 
 def initialize_routes(api):
@@ -37,3 +38,4 @@ def initialize_routes(api):
     api.add_resource(SpeakAPI, "/api/speak")
     api.add_resource(ProfileAPI, "/api/profile")
     api.add_resource(VoicesAPI, "/api/voices")
+    api.add_resource(AssistantAPI, "/api/assistant")

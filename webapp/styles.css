@@ -380,3 +380,32 @@ body.dark .topbar { background: #0e1726; }
 @media (max-width: 380px) {
   .tab { flex: 1 1 45%; }
 }
+
+/* ---- Ask Eyewaz assistant ---- */
+#assistantCard { border-left: 4px solid var(--accent); }
+#asstMicBtn { min-width: 220px; }
+#asstMicBtn[aria-pressed="true"] { background: #c0392b; border-color: #c0392b; }
+.assistant-log {
+  display: flex; flex-direction: column; gap: 8px;
+  max-height: 320px; overflow-y: auto; margin: 12px 0;
+}
+.asst-bubble {
+  padding: 10px 14px; border-radius: 14px; line-height: 1.5;
+  max-width: 92%; word-wrap: break-word;
+}
+.asst-user {
+  align-self: flex-end; background: var(--accent); color: #fff;
+  border-bottom-right-radius: 4px;
+}
+.asst-assistant {
+  align-self: flex-start; background: var(--surface); color: var(--text);
+  border: 1px solid var(--border); border-bottom-left-radius: 4px;
+}
+body.dark .asst-assistant { border-color: #2c3a57; }
+.assistant-typed { display: flex; gap: 10px; margin-top: 12px; }
+.assistant-typed input {
+  flex: 1; padding: 12px 14px; font-size: 1rem;
+  border: 2px solid var(--border); border-radius: 10px;
+  background: var(--surface); color: var(--text);
+}
+.assistant-typed input:focus { outline: none; border-color: var(--accent); }
