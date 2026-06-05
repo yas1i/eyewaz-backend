@@ -18,6 +18,7 @@
     <div class="topbar-actions">
       <button id="ttsToggle" class="link-btn" aria-pressed="true"
               title="Speak prompts and results aloud using your device voice">🔊 Voice: on</button>
+      <button id="themeToggle" class="link-btn" aria-pressed="false" title="Toggle dark mode">🌙</button>
       <button id="accountBtn" class="link-btn" hidden>⚙ Account</button>
       <button id="logoutBtn" class="link-btn" hidden>Log out</button>
     </div>
@@ -156,73 +157,114 @@
 
     <!-- ===================== CAPTURE ===================== -->
     <section id="captureView" aria-labelledby="captureHeading" hidden>
-      <h2 id="captureHeading">Read a photo aloud</h2>
-      <p class="lede">Take or choose a photo of text. EYEWAZ reads it in your chosen language &amp; voice (set in ⚙ Account).</p>
+      <h2 id="captureHeading" class="sr-only">EYEWAZ reader</h2>
 
-      <!-- The big primary action. The hidden input opens the camera on phones. -->
-      <label for="photoInput" class="capture-btn" id="captureLabel">
-        <span aria-hidden="true" class="capture-icon">📷</span>
-        <span>Take or choose a photo</span>
-      </label>
-      <input id="photoInput" type="file" accept="image/*" capture="environment" class="sr-only" />
+      <!-- Mode tabs -->
+      <div class="tabs" role="tablist" aria-label="Reading mode">
+        <button class="tab is-active" id="tabText" role="tab" aria-selected="true" data-panel="textPanel">✍️ Text</button>
+        <button class="tab" id="tabPhoto" role="tab" aria-selected="false" data-panel="photoPanel">📷 Photo</button>
+        <button class="tab" id="tabWeb" role="tab" aria-selected="false" data-panel="webPanel">🌐 Web page</button>
+      </div>
 
-      <div id="previewWrap" hidden>
-        <img id="preview" alt="Selected photo, ready to read" />
-        <div class="row">
-          <button id="readBtn" class="primary-btn">Read it to me</button>
+      <!-- Shared inline voice / language / speed controls -->
+      <div class="reader-controls card">
+        <div class="rc-row">
+          <label for="rcLanguage">Reading language</label>
+          <select id="rcLanguage"></select>
+        </div>
+        <div class="rc-row">
+          <label for="rcVoice">Voice</label>
+          <select id="rcVoice"></select>
+        </div>
+        <div class="rc-row">
+          <label for="rcRate">Speed: <span id="rcRateVal">1.0×</span></label>
+          <input id="rcRate" type="range" min="0.5" max="2" step="0.05" value="1" aria-describedby="rcRateVal" />
         </div>
       </div>
 
-      <p id="status" class="status" role="status"></p>
-
-      <!-- Result -->
-      <article id="result" class="card" hidden aria-labelledby="resultHeading">
-        <h3 id="resultHeading">Result</h3>
-        <h4>Urdu audio (natural voice)</h4>
-        <audio id="player" controls preload="auto"></audio>
-        <button id="replayBtn" class="primary-btn">▶ Play Urdu again</button>
-
-        <h4>Read with your device voice</h4>
-        <div class="row">
-          <button id="speakUrduBtn" type="button" class="primary-btn">🔊 Speak translation</button>
-          <button id="speakEngBtn" type="button" class="primary-btn ghost">🔊 Speak original</button>
-          <button id="stopSpeakBtn" type="button" class="primary-btn ghost">⏹ Stop</button>
+      <!-- ===== TEXT panel ===== -->
+      <div id="textPanel" class="mode-panel" role="tabpanel" aria-labelledby="tabText">
+        <textarea id="textInput" class="reader-text"
+          placeholder="Type or paste text here, then press Play. EYEWAZ translates it to your reading language and reads it aloud."></textarea>
+        <div class="player-bar">
+          <button id="textPlayBtn" class="play-btn" aria-label="Play">▶</button>
+          <button id="textStopBtn" class="round-btn" aria-label="Stop">⏹</button>
+          <a id="textDownload" class="round-btn" download="eyewaz-audio.mp3" hidden aria-label="Download audio">⬇</a>
         </div>
-        <p id="ttsHint" class="hint" hidden></p>
-
-        <h4>Translation</h4>
-        <p id="urduText" class="urdu"></p>
-        <h4>Original text</h4>
-        <p id="engText" class="eng"></p>
-      </article>
-
-      <h3 class="section-title">Read a web page</h3>
-      <p class="lede">Paste a link to an English web page and have it read aloud.</p>
-      <form id="urlForm" class="card" novalidate>
-        <div class="field">
-          <label for="urlInput">Web page address</label>
-          <input id="urlInput" name="url" type="url" inputmode="url"
-                 placeholder="https://example.com/article" autocomplete="url" required />
+        <audio id="textAudio" controls preload="auto" hidden></audio>
+        <p id="textStatus" class="status" role="status"></p>
+        <div id="textTransWrap" hidden>
+          <h4>Translation</h4>
+          <p id="textTrans" class="urdu"></p>
         </div>
-        <button type="submit" class="primary-btn">Read this page aloud</button>
-      </form>
+      </div>
 
-      <article id="pageResult" class="card" hidden aria-labelledby="pageResultHeading">
-        <h3 id="pageResultHeading" tabindex="-1">Page</h3>
-        <div class="row">
-          <button id="pagePlayBtn" type="button" class="primary-btn">▶ Play (English)</button>
-          <button id="pagePauseBtn" type="button" class="primary-btn ghost">⏸ Pause</button>
-          <button id="pageStopBtn" type="button" class="primary-btn ghost">⏹ Stop</button>
-          <button id="pageUrduBtn" type="button" class="primary-btn">🌐 Translate &amp; read aloud</button>
-        </div>
-        <p id="pageText" class="page-text" lang="en"></p>
+      <!-- ===== PHOTO panel ===== -->
+      <div id="photoPanel" class="mode-panel" role="tabpanel" aria-labelledby="tabPhoto" hidden>
+        <label for="photoInput" class="capture-btn" id="captureLabel">
+          <span aria-hidden="true" class="capture-icon">📷</span>
+          <span>Take or choose a photo</span>
+        </label>
+        <input id="photoInput" type="file" accept="image/*" capture="environment" class="sr-only" />
 
-        <div id="pageUrduWrap" hidden>
-          <h4>Translation (natural voice)</h4>
-          <audio id="pageUrduAudio" controls preload="auto"></audio>
-          <p id="pageUrduText" class="page-text urdu"></p>
+        <div id="previewWrap" hidden>
+          <img id="preview" alt="Selected photo, ready to read" />
+          <div class="row">
+            <button id="readBtn" class="primary-btn">Read it to me</button>
+          </div>
         </div>
-      </article>
+
+        <p id="status" class="status" role="status"></p>
+
+        <article id="result" class="card" hidden aria-labelledby="resultHeading">
+          <h3 id="resultHeading">Result</h3>
+          <h4>Audio (natural voice)</h4>
+          <audio id="player" controls preload="auto"></audio>
+          <button id="replayBtn" class="primary-btn">▶ Play again</button>
+
+          <h4>Read with your device voice</h4>
+          <div class="row">
+            <button id="speakUrduBtn" type="button" class="primary-btn">🔊 Speak translation</button>
+            <button id="speakEngBtn" type="button" class="primary-btn ghost">🔊 Speak original</button>
+            <button id="stopSpeakBtn" type="button" class="primary-btn ghost">⏹ Stop</button>
+          </div>
+          <p id="ttsHint" class="hint" hidden></p>
+
+          <h4>Translation</h4>
+          <p id="urduText" class="urdu"></p>
+          <h4>Original text</h4>
+          <p id="engText" class="eng"></p>
+        </article>
+      </div>
+
+      <!-- ===== WEB panel ===== -->
+      <div id="webPanel" class="mode-panel" role="tabpanel" aria-labelledby="tabWeb" hidden>
+        <form id="urlForm" class="card" novalidate>
+          <div class="field">
+            <label for="urlInput">Web page address</label>
+            <input id="urlInput" name="url" type="url" inputmode="url"
+                   placeholder="https://example.com/article" autocomplete="url" required />
+          </div>
+          <button type="submit" class="primary-btn">Read this page aloud</button>
+        </form>
+
+        <article id="pageResult" class="card" hidden aria-labelledby="pageResultHeading">
+          <h3 id="pageResultHeading" tabindex="-1">Page</h3>
+          <div class="row">
+            <button id="pagePlayBtn" type="button" class="primary-btn">▶ Play (original)</button>
+            <button id="pagePauseBtn" type="button" class="primary-btn ghost">⏸ Pause</button>
+            <button id="pageStopBtn" type="button" class="primary-btn ghost">⏹ Stop</button>
+            <button id="pageUrduBtn" type="button" class="primary-btn">🌐 Translate &amp; read aloud</button>
+          </div>
+          <p id="pageText" class="page-text" lang="en"></p>
+
+          <div id="pageUrduWrap" hidden>
+            <h4>Translation (natural voice)</h4>
+            <audio id="pageUrduAudio" controls preload="auto"></audio>
+            <p id="pageUrduText" class="page-text urdu"></p>
+          </div>
+        </article>
+      </div>
 
       <h3 class="section-title">Your library</h3>
       <ul id="library" class="library" aria-label="Previously read documents"></ul>
