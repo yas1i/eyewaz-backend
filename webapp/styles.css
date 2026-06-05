@@ -412,6 +412,34 @@ body.dark .topbar { background: #102826; }
 .rec-move:focus { outline: none; border-color: var(--accent-strong); }
 body.dark .rec-move { background: #10211f; }
 
+/* Favourite star on a recording */
+.rec-fav { font-size: 1.3rem; line-height: 1; color: var(--muted); flex: 0 0 auto; }
+.rec-fav.is-fav { color: #e6a700; border-color: #e6a700; }
+.rec-fav:hover { background: var(--accent-strong); color: #fff; }
+
+/* Reminders */
+.reminder-form { display: grid; gap: 10px; margin-bottom: 14px; }
+.reminder-form input, .reminder-form select {
+  padding: 12px 14px; font: inherit; font-size: 1rem;
+  border: 2px solid var(--border); border-radius: 10px;
+  background: var(--surface); color: var(--text); min-height: 48px;
+}
+.reminder-form input:focus, .reminder-form select:focus { outline: none; border-color: var(--accent-strong); }
+.reminder-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
+.reminder-item {
+  display: flex; align-items: center; gap: 14px; padding: 12px 14px;
+  border: 1px solid var(--border); border-radius: var(--radius); background: #fff;
+}
+.reminder-when {
+  flex: 0 0 auto; min-width: 92px; font-weight: 800; font-size: 1.05rem; color: var(--accent-strong);
+}
+.reminder-info { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.reminder-info strong { overflow: hidden; text-overflow: ellipsis; }
+body.dark .reminder-item,
+body.dark .reminder-form input,
+body.dark .reminder-form select { background: #10211f; }
+body.dark .reminder-when { color: var(--accent); }
+
 @media (max-width: 600px) {
   html, body { font-size: 17px; }
   .topbar { padding: 10px 12px; }

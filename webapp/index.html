@@ -233,6 +233,25 @@
             <button type="submit" class="round-btn" aria-label="Send message">➤</button>
           </form>
         </div>
+
+        <!-- ===== Reminders: time-based spoken nudges (medication, prayers…) ===== -->
+        <div class="card" id="remindersCard">
+          <h3>⏰ Reminders</h3>
+          <p class="hint">Spoken nudges for medicines, prayers, or appointments. EYEWAZ reads them aloud at the set time while the app is open.</p>
+          <form id="reminderForm" class="reminder-form">
+            <input type="time" id="reminderTime" aria-label="Reminder time" required />
+            <input type="text" id="reminderLabel" maxlength="120" required
+              placeholder="e.g. Take blood-pressure medicine" aria-label="What to remind you" />
+            <select id="reminderRepeat" aria-label="How often to repeat">
+              <option value="daily">Every day</option>
+              <option value="weekdays">Weekdays</option>
+              <option value="weekends">Weekends</option>
+              <option value="once">Just once</option>
+            </select>
+            <button type="submit" class="primary-btn">➕ Add reminder</button>
+          </form>
+          <ul id="reminderList" class="reminder-list" aria-live="polite"></ul>
+        </div>
       </div>
 
       <!-- ===== TEXT panel ===== -->
