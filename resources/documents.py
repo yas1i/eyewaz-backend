@@ -1,7 +1,9 @@
 import io, requests
 import os
+import tempfile
 import storage
-from helpers import ConvertText, synthesize, UploadOnAzure, ImagetoText
+from bs4 import BeautifulSoup
+from helpers import ConvertText, synthesize, synthesize_long, UploadOnAzure, ImagetoText
 from azure.storage.blob import BlobServiceClient, ContainerClient
 from flask import request, jsonify, Response
 from flask_restful import Resource
@@ -25,116 +27,58 @@ def get_audio_duration_from_bytes(audio_bytes):
     duration = len(data) / samplerate
     return duration
 
+DOC_MAX_CHARS = 8000  # cap long documents/books so translate+TTS stay bounded
+
+
+def _extract_epub(raw):
+    """Extract readable text from an EPUB (a zip of (x)html chapters)."""
+    import zipfile
+    parts = []
+    with zipfile.ZipFile(io.BytesIO(raw)) as z:
+        for name in sorted(z.namelist()):
+            if name.lower().endswith((".xhtml", ".html", ".htm")):
+                soup = BeautifulSoup(z.read(name), "html.parser")
+                for t in soup(["script", "style"]):
+                    t.decompose()
+                parts.append(soup.get_text(" "))
+    return "\n".join(parts)
+
+
 def translationSpeechTask(f, target_lang="ur-PK", voice="ur-PK-UzmaNeural", rate=1.0):
     blob_client = UploadOnAzure(f, f.filename)
-
-    data = blob_client.download_blob()
+    raw = blob_client.read_bytes()
     ext = blob_client.blob_name.split(".")[-1].lower()
-    url = blob_client.url
     text = ""
-    if ext == "docx":
-        # Create a directory named '.temp' in the current working directory
-        temp_folder = ".temp"
-        os.makedirs(temp_folder, exist_ok=True)
 
-        # Get the filename from the download URL
-        filename = url.split("/")[-1]
-
-        # Construct the full path to save the downloaded file
-        download_path = os.path.join(temp_folder, filename)
-
-        # Download the file from the URL and save it to the download path
-        response = requests.get(url)
-        if response.status_code == 200:
-            with open(download_path, "wb") as file:
-                file.write(response.content)
-            print(f"File downloaded and saved to: {download_path}")
-        else:
-            print("Failed to download the file.")
-
-        # Path to the DOCX file
-        docx_file_path = download_path
-
-        # Extract text from the DOCX file as a UTF-8 encoded string
-        utf8_text = docx2txt.process(docx_file_path)
-
-        # Print or do something with the UTF-8 encoded text
-        print(utf8_text)
-        text = utf8_text
-        # Clean up: Delete the .temp folder and its contents
-        try:
-            shutil.rmtree(temp_folder)
-            print(f"Deleted {temp_folder} and its contents.")
-        except Exception as e:
-            print(f"An error occurred while deleting {temp_folder}: {e}")
-
-    elif ext == "txt":
-        text = data.read()
-        text = str(text, encoding="utf-8")
-        print(text)
-    # print(clean_text(text))
+    if ext == "txt":
+        text = raw.decode("utf-8", errors="ignore")
     elif ext == "pdf":
-        # Define the URL of the PDF file you want to download
-        pdf_download_url = url
-        # Create a directory named '.temp' in the current working directory
-        temp_folder = ".temp"
-        os.makedirs(temp_folder, exist_ok=True)
-
-        # Get the filename from the download URL
-        filename = pdf_download_url.split("/")[-1]
-
-        # Construct the full path to save the downloaded PDF file
-        pdf_download_path = os.path.join(temp_folder, filename)
-
-        # Download the PDF file from the URL and save it to the download path
-        response = requests.get(pdf_download_url)
-        if response.status_code == 200:
-            with open(pdf_download_path, "wb") as file:
-                file.write(response.content)
-            print(f"PDF file downloaded and saved to: {pdf_download_path}")
-        else:
-            print("Failed to download the PDF file.")
-
-        # Open the downloaded PDF file in binary mode
-        with open(pdf_download_path, "rb") as pdf_file:
-            # Create a PDF reader object
-            pdf_reader = PyPDF2.PdfReader(pdf_file)
-
-            # Initialize an empty string to store the extracted text
-            text_content = ""
-
-            # Iterate through pages in the PDF and extract text
-            for page_number in range(len(pdf_reader.pages)):
-                page = pdf_reader.pages[page_number]
-                text_content += page.extract_text()
-
-        # Convert the text content to UTF-8 encoded string
-        utf8_text = text_content.encode("utf-8")
-
-        # Print or do something with the UTF-8 encoded text
-        print(utf8_text.decode("utf-8"))
-        text = utf8_text.decode("utf-8")
-        # Clean up: Delete the .temp folder and its contents
+        reader = PyPDF2.PdfReader(io.BytesIO(raw))
+        text = "".join((page.extract_text() or "") for page in reader.pages)
+    elif ext in ("docx", "doc"):
+        with tempfile.NamedTemporaryFile(suffix=".docx", delete=False) as tmp:
+            tmp.write(raw)
+            tmp_path = tmp.name
         try:
-            shutil.rmtree(temp_folder)
-            print(f"Deleted {temp_folder} and its contents.")
-        except Exception as e:
-            print(f"An error occurred while deleting {temp_folder}: {e}")
-    elif ext == "png" or ext == "jpg" or ext == "jpeg":
-        # Send raw image bytes to Azure Vision (the file is stored locally,
-        # so a localhost URL would be unreachable by Azure's cloud service).
-        text = ImagetoText(blob_client.read_bytes())
-        print(text)
+            text = docx2txt.process(tmp_path)
+        finally:
+            os.unlink(tmp_path)
+    elif ext == "epub":
+        text = _extract_epub(raw)
+    elif ext in ("png", "jpg", "jpeg"):
+        # Send raw image bytes to Azure Vision (local files aren't a public URL).
+        text = ImagetoText(raw)
     else:
         raise ValueError(f"Unsupported file type: .{ext}")
 
     if not text or not text.strip():
         raise ValueError("No readable text was found in this file.")
 
+    text = text[:DOC_MAX_CHARS]  # bound very long books
+
     # Translate into the user's chosen language and speak with their chosen voice.
     Trans_text, lang = ConvertText(text, target_lang)
-    audio = synthesize(Trans_text, voice, rate)
-    audio_data = audio.audio_data
+    audio_data = synthesize_long(Trans_text, voice, rate)
     audio_duration = get_audio_duration_from_bytes(audio_data)
     audio_filename = blob_client.blob_name.split(".")[0] + "_audio.mp3"
     audio_blob_client = UploadOnAzure(audio_data, audio_filename)
