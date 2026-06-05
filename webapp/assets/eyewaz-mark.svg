@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="EYEWAZ logo" style="color:#7BB2BE">
+  <g fill="none" stroke="currentColor" stroke-width="8.5" stroke-linecap="round" stroke-linejoin="round">
+    <!-- radiating "alert / hearing" lines above the ear -->
+    <line x1="74" y1="20" x2="74" y2="9"/>
+    <line x1="90" y1="24" x2="95" y2="14"/>
+    <line x1="58" y1="24" x2="53" y2="14"/>
+
+    <!-- outer ear: open C with an earlobe tail at the bottom-left -->
+    <path d="M58 31
+             a31 31 0 1 1 -1 62
+             q-9 1 -13 -7"/>
+    <!-- inner ear ridge -->
+    <path d="M62 44
+             a18 19 0 1 1 -2 37" stroke-width="7"/>
+
+    <!-- soundwave flowing toward the ear -->
+    <path d="M14 78 L24 66 L33 88 L43 64 L52 84 L60 74" stroke-width="7.5"/>
+
+    <!-- four-point sparkle -->
+    <path d="M34 40 L37 49 L46 52 L37 55 L34 64 L31 55 L22 52 L31 49 Z"
+          fill="currentColor" stroke-width="3"/>
+  </g>
+
+  <!-- the eye, nestled in the ear -->
+  <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="78" cy="62" r="13" stroke-width="7"/>
+    <path d="M67 56 q11 -9 22 0" stroke-width="5"/>
+    <circle cx="78" cy="62" r="4.5" fill="currentColor" stroke="none"/>
+  </g>
+</svg>
