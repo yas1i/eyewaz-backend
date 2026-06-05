@@ -1,16 +1,21 @@
 # EYEWAZ brand assets
 
-## Logo
-- `eyewaz-mark.svg` — the ear+eye logo mark, recreated as a scalable, themeable
-  SVG (uses `currentColor`, so CSS controls its colour). Used in the header and
-  as the favicon.
+## Logo  ← drop your logo here
+The header and favicon load **`eyewaz-logo.svg`** from this folder. Save your
+logo (the square icon mark works best on the blue bar) as:
 
-**To use your original raster artwork instead**, drop the files here:
-- `eyewaz-mark.png` — the square icon (the standalone ear/eye mark)
-- `eyewaz-wordmark.png` — the full "eyewaz — SEE BETTER. LIVE BETTER." banner
+    webapp/assets/eyewaz-logo.svg
 
-…then in `webapp/index.html` swap the header `<img>` `src` from
-`/app/assets/eyewaz-mark.svg` to `/app/assets/eyewaz-mark.png`.
+If you only have a PNG, save it as `eyewaz-logo.png` and change the two
+references in `webapp/index.html` (the favicon `<link>` and the header `<img>`)
+from `eyewaz-logo.svg` to `eyewaz-logo.png`.
+
+Until the file exists, the header hides the icon and shows just the `eyewaz`
+wordmark — nothing looks broken. Once you add the file and the image is rebuilt,
+your logo appears automatically.
+
+> Note: the logo is a static asset baked into the Docker image, so after adding
+> the file the image must be rebuilt + pushed (see `../../DEPLOY.md`).
 
 ## Font — GoodDogNew
 The brand wordmark and headings are designed for **GoodDogNew**. We don't have
