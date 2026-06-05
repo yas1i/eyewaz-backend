@@ -24,3 +24,4 @@ pycryptodome
 # flower
 beautifulsoup4
 anthropic
+stripe

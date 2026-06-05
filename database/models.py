@@ -44,7 +44,9 @@ class Users(Document):
     plan_until = DateTimeField()                          # paid plan expiry (None = free/forever)
     usage_day = StringField(max_length=10, default="")    # "YYYY-MM-DD" of the current count
     usage_count = IntField(default=0)                     # commands used today
-    paypal_sub_id = StringField()                         # PayPal subscription id (Phase 2)
+    paypal_sub_id = StringField()                         # PayPal subscription id
+    stripe_customer_id = StringField()                    # Stripe customer (card / Klarna)
+    stripe_sub_id = StringField()                         # Stripe subscription id
     objects = QuerySetManager()
 
     def preferences(self):

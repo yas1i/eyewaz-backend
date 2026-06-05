@@ -172,3 +172,13 @@ Production env vars (Render): `MONGO_URI`, `JWT_SECRET_KEY`, `FLASK_SECRET_KEY`,
    - Register a webhook at developer.paypal.com → `https://<host>/api/paypal/webhook`
      for the BILLING.SUBSCRIPTION.* and PAYMENT.SALE.COMPLETED events; set its
      `PAYPAL_WEBHOOK_ID`. Card data never touches the app (hosted Smart Buttons).
+11. **Stripe = card + Klarna** (one integration provides both). Dormant until set:
+   - Create two recurring **Prices** in the Stripe Dashboard (Monthly, Super Max);
+     set `STRIPE_SECRET_KEY`, `STRIPE_PRICE_MONTHLY`, `STRIPE_PRICE_SUPERMAX`.
+   - In Stripe Dashboard → Settings → **Payment methods**, enable **Card** and
+     **Klarna** (Klarna then appears automatically in Checkout). To force a set,
+     optionally `STRIPE_PMT_METHODS=card,klarna`.
+   - Add a webhook → `https://<host>/api/stripe/webhook` for
+     `checkout.session.completed`, `invoice.paid`, `customer.subscription.deleted`;
+     set its signing secret as `STRIPE_WEBHOOK_SECRET`.
+   - Checkout is Stripe-hosted (redirect) — card/Klarna details never touch the app.
