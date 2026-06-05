@@ -240,6 +240,8 @@ h4 { font-size: 1.15rem; margin: 18px 0 6px; }
 .primary-btn:hover { background: var(--accent-hover); }
 .primary-btn:disabled { opacity: .6; cursor: progress; }
 .primary-btn.ghost { background: #fff; color: var(--accent); }
+.primary-btn.danger { color: var(--danger); border-color: var(--danger); }
+.primary-btn.danger:hover { background: var(--danger); color: #fff; }
 .primary-btn.ghost:hover { background: var(--surface); }
 .primary-btn.speaking { background: var(--success); border-color: var(--success); }
 
