@@ -14,6 +14,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from database.models import Users
 import usage
 import paypal_api
+import stripe_api
 
 
 def _resp(payload, status):
@@ -183,4 +184,90 @@ class PayPalWebhookAPI(Resource):
             user.plan_until = None
             user.paypal_sub_id = None
             user.save()
+        return _resp({"message": "ok"}, 200)
+
+
+# -------------------------- Stripe (card + Klarna) --------------------------- #
+
+class StripeConfigAPI(Resource):
+    def get(self):
+        return _resp({"enabled": stripe_api.enabled()}, 200)
+
+
+class StripeCheckoutAPI(Resource):
+    """Create a hosted Checkout Session (card / Klarna) and return its URL."""
+
+    @jwt_required()
+    def post(self):
+        if not stripe_api.enabled():
+            return _resp({"message": "Card/Klarna payments are not set up yet."}, 503)
+        data = request.get_json(force=True, silent=True) or {}
+        plan = data.get("plan")
+        if plan not in ("monthly", "supermax"):
+            return _resp({"message": "Unknown plan."}, 400)
+        user = Users.objects.get(email=get_jwt_identity())
+        base = os.getenv("PUBLIC_BASE_URL") or request.host_url.rstrip("/")
+        try:
+            session = stripe_api.create_checkout(
+                plan, user.email,
+                success_url=base + "/app?checkout=success",
+                cancel_url=base + "/app?checkout=cancel",
+                customer_id=user.stripe_customer_id or None,
+            )
+        except Exception as e:
+            return _resp({"message": f"Could not start checkout: {e}"}, 502)
+        return _resp({"url": session.url}, 200)
+
+
+class StripeWebhookAPI(Resource):
+    """Stripe subscription lifecycle → keep the user's plan in sync."""
+
+    def post(self):
+        if not stripe_api.configured():
+            return _resp({"message": "ok"}, 200)
+        try:
+            event = stripe_api.construct_event(request.get_data(), request.headers.get("Stripe-Signature"))
+        except Exception:
+            return _resp({"message": "Invalid signature."}, 400)
+
+        etype = event.get("type", "")
+        obj = (event.get("data") or {}).get("object", {}) or {}
+
+        def _grant(user, plan, sub_id=None, cust=None):
+            if plan in ("monthly", "supermax"):
+                user.plan = plan
+            user.plan_until = datetime.utcnow() + timedelta(days=_PAID_DAYS)
+            if sub_id:
+                user.stripe_sub_id = sub_id
+            if cust:
+                user.stripe_customer_id = cust
+            user.save()
+
+        if etype == "checkout.session.completed":
+            email = ((obj.get("metadata") or {}).get("email")
+                     or (obj.get("customer_details") or {}).get("email"))
+            plan = (obj.get("metadata") or {}).get("plan")
+            user = Users.objects(email=email).first() if email else None
+            if user:
+                _grant(user, plan, obj.get("subscription"), obj.get("customer"))
+
+        elif etype in ("invoice.paid", "invoice.payment_succeeded"):
+            cust = obj.get("customer")
+            user = Users.objects(stripe_customer_id=cust).first() if cust else None
+            if user:
+                price_id = None
+                try:
+                    price_id = obj["lines"]["data"][0]["price"]["id"]
+                except Exception:
+                    pass
+                _grant(user, stripe_api.price_to_plan(price_id) or user.plan,
+                       obj.get("subscription"), cust)
+
+        elif etype == "customer.subscription.deleted":
+            sub_id = obj.get("id")
+            user = Users.objects(stripe_sub_id=sub_id).first() if sub_id else None
+            if user:
+                user.plan = "free"; user.plan_until = None; user.stripe_sub_id = None
+                user.save()
+
         return _resp({"message": "ok"}, 200)

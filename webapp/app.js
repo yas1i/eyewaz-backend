@@ -901,8 +901,30 @@ const Plan = (() => {
       cancel.dataset.bound = "1";
       cancel.addEventListener("click", cancelSubscription);
     }
+    document.querySelectorAll(".stripe-btn").forEach((b) => {
+      if (b.dataset.bound) return;
+      b.dataset.bound = "1";
+      b.addEventListener("click", () => stripeCheckout(b.dataset.plan));
+    });
     Billing.render();
     setupPayPal();
+    setupStripe();
+  }
+
+  async function setupStripe() {
+    let sc = null;
+    try { sc = await api("/stripe/config", { auth: false }); } catch (_) {}
+    if (sc && sc.enabled) {
+      document.querySelectorAll(".stripe-btn").forEach((b) => (b.hidden = false));
+    }
+  }
+
+  async function stripeCheckout(plan) {
+    announce("Opening secure card and Klarna checkout…", "busy");
+    try {
+      const d = await api("/stripe/checkout", { method: "POST", body: { plan } });
+      if (d && d.url) { window.location.href = d.url; }   // redirect to Stripe
+    } catch (e) { announce(e.message || "Could not start checkout.", "error"); }
   }
 
   function placeholder(plan) {
@@ -1579,7 +1601,21 @@ $("#docReadBtn")?.addEventListener("click", async () => {
 function enterApp() {
   showView("capture");
   loadLibrary();
-  loadPrefs().then(() => { initReaderControls(); renderMyDay(); Assistant.init(); Reminders.init(); });
+  loadPrefs().then(() => { initReaderControls(); renderMyDay(); Assistant.init(); Reminders.init(); checkoutReturn(); });
+}
+
+// React to a return from Stripe Checkout (?checkout=success|cancel).
+function checkoutReturn() {
+  const params = new URLSearchParams(window.location.search);
+  const c = params.get("checkout");
+  if (!c) return;
+  history.replaceState({}, "", "/app");
+  if (c === "success") {
+    announce("Thank you! Your payment is being confirmed. Your plan will update shortly.", "ok");
+    setTimeout(() => Billing.refresh(), 4000);   // give the webhook a moment
+  } else {
+    announce("Checkout was cancelled. You can upgrade any time from Account.", "");
+  }
 }
 
 // Handle the return from a social sign-in redirect (/app#token=... or #auth_error=...).

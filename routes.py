@@ -17,6 +17,7 @@ from resources.assistant import AssistantAPI
 from resources.billing import (
     UsageAPI, DevPlanAPI,
     PayPalConfigAPI, PayPalActivateAPI, PayPalCancelAPI, PayPalSetupAPI, PayPalWebhookAPI,
+    StripeConfigAPI, StripeCheckoutAPI, StripeWebhookAPI,
 )
 
 
@@ -50,3 +51,6 @@ def initialize_routes(api):
     api.add_resource(PayPalCancelAPI, "/api/paypal/cancel")
     api.add_resource(PayPalSetupAPI, "/api/paypal/setup")
     api.add_resource(PayPalWebhookAPI, "/api/paypal/webhook")
+    api.add_resource(StripeConfigAPI, "/api/stripe/config")
+    api.add_resource(StripeCheckoutAPI, "/api/stripe/checkout")
+    api.add_resource(StripeWebhookAPI, "/api/stripe/webhook")
