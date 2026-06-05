@@ -14,6 +14,7 @@ from resources.playback import PausePlaybackAPI
 from resources.folder import Folder, FolderApi
 from resources.web import ReadUrlAPI, TranslateTextAPI, SpeakAPI
 from resources.assistant import AssistantAPI
+from resources.billing import UsageAPI, DevPlanAPI
 
 
 def initialize_routes(api):
@@ -39,3 +40,5 @@ def initialize_routes(api):
     api.add_resource(ProfileAPI, "/api/profile")
     api.add_resource(VoicesAPI, "/api/voices")
     api.add_resource(AssistantAPI, "/api/assistant")
+    api.add_resource(UsageAPI, "/api/usage")
+    api.add_resource(DevPlanAPI, "/api/dev/plan")

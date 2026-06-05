@@ -8,6 +8,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 
 from database.models import Users
 from helpers import list_voices
+import usage
 
 _VOICES_CACHE = None  # the catalogue is large and static; fetch once.
 
@@ -25,6 +26,7 @@ class ProfileAPI(Resource):
             "preferences": user.preferences(),
             "todo_weekday": user.todo_weekday or "",
             "todo_weekend": user.todo_weekend or "",
+            "usage": usage.snapshot(user),
         }, 200)
 
     @jwt_required()

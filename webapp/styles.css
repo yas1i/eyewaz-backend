@@ -440,6 +440,24 @@ body.dark .reminder-form input,
 body.dark .reminder-form select { background: #10211f; }
 body.dark .reminder-when { color: var(--accent); }
 
+/* Membership / plan */
+.plan-line { color: var(--accent-strong); font-weight: 700; margin: 2px 0 14px; }
+body.dark .plan-line { color: var(--accent); }
+.plan-grid { display: grid; gap: 14px; grid-template-columns: 1fr; margin: 12px 0; }
+@media (min-width: 560px) { .plan-grid { grid-template-columns: repeat(3, 1fr); } }
+.plan-card {
+  border: 2px solid var(--border); border-radius: var(--radius); padding: 16px;
+  background: var(--surface); display: flex; flex-direction: column;
+}
+.plan-card.is-current { border-color: var(--accent-strong); box-shadow: 0 0 0 3px rgba(46,102,117,.18); }
+.plan-card h4 { margin: 0 0 4px; font-family: var(--font-brand); font-size: 1.2rem; }
+.plan-price { font-size: 1.6rem; font-weight: 800; margin: 0 0 10px; }
+.plan-price small { font-size: .9rem; font-weight: 600; color: var(--muted); }
+.plan-feats { list-style: none; padding: 0; margin: 0 0 14px; display: flex; flex-direction: column; gap: 6px; }
+.plan-feats li::before { content: "✓ "; color: var(--accent-strong); font-weight: 800; }
+.plan-card .plan-upgrade { margin-top: auto; }
+body.dark .plan-card { background: #10211f; }
+
 @media (max-width: 600px) {
   html, body { font-size: 17px; }
   .topbar { padding: 10px 12px; }
