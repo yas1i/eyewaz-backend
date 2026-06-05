@@ -58,7 +58,10 @@ class StoredFile:
 
     @property
     def url(self):
-        return f"{_public_base_url()}/files/{self.blob_name}"
+        # Always relative: the web client is same-origin, so /files/<name>
+        # resolves to whatever host serves the page. This avoids any chance of a
+        # stale absolute host (e.g. localhost) breaking audio playback.
+        return f"/files/{self.blob_name}"
 
     def read_bytes(self):
         with open(self.path, "rb") as fh:
