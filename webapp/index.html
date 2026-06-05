@@ -165,6 +165,7 @@
         <button class="tab" id="tabDoc" role="tab" aria-selected="false" data-panel="docPanel">📄 Document</button>
         <button class="tab" id="tabPhoto" role="tab" aria-selected="false" data-panel="photoPanel">📷 Photo</button>
         <button class="tab" id="tabWeb" role="tab" aria-selected="false" data-panel="webPanel">🌐 Web page</button>
+        <button class="tab" id="tabBooks" role="tab" aria-selected="false" data-panel="booksPanel">📚 My Books</button>
       </div>
 
       <!-- Shared inline voice / language / speed controls -->
@@ -291,8 +292,28 @@
         </article>
       </div>
 
-      <h3 class="section-title">Your library</h3>
-      <ul id="library" class="library" aria-label="Previously read documents"></ul>
+      <!-- ===== MY BOOKS panel ===== -->
+      <div id="booksPanel" class="mode-panel" role="tabpanel" aria-labelledby="tabBooks" hidden>
+        <p class="lede">Everything you've read is saved here. Tap a title to read it again in your current voice.</p>
+        <ul id="booksList" class="library" aria-label="Your saved documents and books"></ul>
+
+        <article id="bookDetail" class="card" hidden aria-labelledby="bookTitle">
+          <button id="bookBack" type="button" class="link-btn">← Back to shelf</button>
+          <h3 id="bookTitle" tabindex="-1"></h3>
+          <div class="row">
+            <button id="bookPlayBtn" type="button" class="primary-btn">▶ Read aloud</button>
+            <button id="bookStopBtn" type="button" class="primary-btn ghost">⏹ Stop</button>
+            <a id="bookDownload" class="round-btn" download="eyewaz-audio.mp3" hidden aria-label="Download audio">⬇</a>
+            <button id="bookDeleteBtn" type="button" class="primary-btn ghost danger">🗑 Delete</button>
+          </div>
+          <audio id="bookAudio" controls preload="auto" hidden></audio>
+          <p id="bookStatus" class="status" role="status"></p>
+          <h4>Translation</h4>
+          <p id="bookTrans" class="urdu"></p>
+          <h4>Original text</h4>
+          <p id="bookOrig" class="eng"></p>
+        </article>
+      </div>
     </section>
 
     <!-- ===================== ACCOUNT ===================== -->

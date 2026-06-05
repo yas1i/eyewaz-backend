@@ -601,33 +601,104 @@ $("#pageUrduBtn")?.addEventListener("click", async (e) => {
   }
 });
 
-/* -------------------------------- Library ----------------------------------- */
+/* -------------------------------- My Books ---------------------------------- */
 
-async function loadLibrary() {
+function bookTitle(doc) {
+  const name = (doc.doc_name || "").replace(/^[a-f0-9]{8}_/i, "");
+  return name || (doc.eng_text || doc.trans_text || "Document").slice(0, 50);
+}
+
+async function loadLibrary() {  // loads the book shelf
   try {
     const data = await api("/document-translation-and-speech", { method: "GET" });
     const files = (data && data.myFiles) || [];
-    const ul = $("#library");
+    const ul = $("#booksList");
+    if (!ul) return;
     ul.innerHTML = "";
     if (!files.length) {
-      ul.innerHTML = '<li class="lede">Nothing yet — read your first photo above.</li>';
+      ul.innerHTML = '<li class="lede">Your shelf is empty. Read a document, photo, or web page and it appears here.</li>';
       return;
     }
-    // Newest first.
-    files.reverse().forEach((doc) => {
+    files.reverse().forEach((doc) => {  // newest first
       const li = document.createElement("li");
       const btn = document.createElement("button");
       btn.className = "lib-item";
       btn.type = "button";
-      const ur = (doc.trans_text || doc.doc_name || "Document").slice(0, 60);
-      btn.innerHTML = `<span class="lib-ur" lang="ur" dir="rtl">${escapeHtml(ur)}</span><span class="lib-play" aria-hidden="true">▶</span>`;
-      btn.setAttribute("aria-label", "Play: " + ur);
-      btn.addEventListener("click", () => { showTab("photoPanel"); renderResult(doc); });
+      const title = bookTitle(doc);
+      const lang = (doc.trans_lang || "").toUpperCase();
+      btn.innerHTML =
+        `<span><strong>${escapeHtml(title)}</strong>` +
+        (lang ? `<br><span class="hint">${escapeHtml(lang)}</span>` : "") + `</span>` +
+        `<span class="lib-play" aria-hidden="true">›</span>`;
+      btn.setAttribute("aria-label", "Open " + title);
+      btn.addEventListener("click", () => openBook(doc));
       li.appendChild(btn);
       ul.appendChild(li);
     });
-  } catch (_) { /* library is best-effort */ }
+  } catch (_) { /* best-effort */ }
 }
+
+let currentBook = null;
+
+function openBook(doc) {
+  currentBook = doc;
+  $("#bookTitle").textContent = bookTitle(doc);
+  $("#bookTrans").textContent = doc.trans_text || "";
+  applyLangDir($("#bookTrans"), doc.trans_lang);
+  $("#bookOrig").textContent = doc.eng_text || "";
+  const a = $("#bookAudio"); a.hidden = true; a.removeAttribute("src");
+  $("#bookDownload").hidden = true;
+  $("#bookStatus").textContent = "";
+  $("#booksList").hidden = true;
+  $("#bookDetail").hidden = false;
+  $("#bookTitle").focus();
+}
+
+function voiceForLang(lang) {
+  const p = (lang || "").slice(0, 2).toLowerCase();
+  if ((userPrefs.voice || "").toLowerCase().startsWith(p)) return userPrefs.voice;
+  const list = azureVoices || [];
+  const v = list.find((x) => x.locale === lang) || list.find((x) => x.locale.slice(0, 2).toLowerCase() === p);
+  return v ? v.shortName : (userPrefs.voice || "ur-PK-UzmaNeural");
+}
+
+$("#bookBack")?.addEventListener("click", () => {
+  $("#bookDetail").hidden = true;
+  $("#booksList").hidden = false;
+});
+$("#bookPlayBtn")?.addEventListener("click", async () => {
+  if (!currentBook) return;
+  const text = currentBook.trans_text || currentBook.eng_text || "";
+  const st = $("#bookStatus"), btn = $("#bookPlayBtn");
+  if (!text) { st.className = "status error"; st.textContent = "No text to read."; return; }
+  btn.disabled = true; st.className = "status busy"; st.textContent = "Preparing audio…";
+  try {
+    await getAzureVoices().catch(() => {});
+    const voice = voiceForLang(currentBook.trans_lang);
+    const sp = await api("/speak", { method: "POST", body: { text, voiceName: voice, rate: userPrefs.rate } });
+    const a = $("#bookAudio"); a.src = sp.audio_url; a.hidden = false;
+    $("#bookDownload").href = sp.audio_url; $("#bookDownload").hidden = false;
+    st.className = "status ok"; st.textContent = "Playing.";
+    a.play().catch(() => (st.textContent = "Ready — press the player to listen."));
+  } catch (err) {
+    st.className = "status error"; st.textContent = err.message || "Could not read this book.";
+  } finally { btn.disabled = false; }
+});
+$("#bookStopBtn")?.addEventListener("click", () => {
+  const a = $("#bookAudio"); if (a) { a.pause(); a.currentTime = 0; }
+});
+$("#bookDeleteBtn")?.addEventListener("click", async () => {
+  if (!currentBook) return;
+  if (!window.confirm("Remove this from your shelf?")) return;
+  try {
+    await api("/document", { method: "DELETE", body: { id: currentBook._id || currentBook.id } });
+    $("#bookDetail").hidden = true; $("#booksList").hidden = false;
+    loadLibrary();
+  } catch (err) {
+    $("#bookStatus").className = "status error";
+    $("#bookStatus").textContent = err.message || "Could not delete.";
+  }
+});
 
 function escapeHtml(s) {
   return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
