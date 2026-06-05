@@ -1,16 +1,18 @@
 /* EYEWAZ web client — plain, high-contrast, large-text design for low vision. */
 
 :root {
-  --bg: #ffffff;
-  --surface: #f4f6fb;
-  --border: #1b2a4a;
-  --text: #111418;
-  --muted: #41506b;
-  --accent: #0b3d91;       /* deep blue, white text passes WCAG AAA */
-  --accent-hover: #093070;
-  --danger: #a3000f;       /* dark red, AAA on white */
-  --success: #0a6b3b;
-  --focus: #111418;
+  --bg: #eef1f3;           /* soft grey page background */
+  --surface: #ffffff;      /* white cards */
+  --border: #c3ccd4;       /* light input border */
+  --text: #1d2730;
+  --muted: #67767f;
+  --accent: #15a06f;       /* EYEWAZ emerald green */
+  --accent-hover: #11875d;
+  --accent-soft: #40c79b;  /* lighter mint for highlights/progress */
+  --danger: #c0392b;
+  --success: #15a06f;
+  --focus: #0e7a55;        /* dark-green keyboard focus ring */
+  --radius: 14px;
 }
 
 * { box-sizing: border-box; }
@@ -302,3 +304,46 @@ audio { width: 100%; margin-bottom: 14px; }
 .lib-item:hover { background: #e9eef9; }
 .lib-item .lib-ur { font-size: 1.25rem; }
 .lib-item .lib-play { font-size: 1.4rem; }
+
+/* ===== EYEWAZ green-theme refinements (match the original mockups) ===== */
+.brand { font-weight: 800; }
+.topbar { background: var(--accent); }
+.tab.is-active { background: var(--accent); border-color: var(--accent); }
+.play-btn { background: var(--accent); }
+.play-btn:hover { background: var(--accent-hover); }
+
+/* Social sign-in as a centered round-icon row (like the mockup) */
+#socialBlock { text-align: center; }
+.social-btn {
+  position: relative;
+  display: inline-flex; width: 60px; height: 60px; min-height: 60px;
+  padding: 0; margin: 6px 10px; border-radius: 50%;
+  border: 2px solid var(--border); background: #fff;
+  align-items: center; justify-content: center;
+}
+.social-btn:hover { background: var(--surface); }
+.social-btn > span:last-child {        /* keep the label for screen readers only */
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip: rect(0 0 0 0); margin: -1px; padding: 0; border: 0; white-space: nowrap;
+}
+.social-btn .social-logo { width: auto; margin: 0; }
+
+/* Library / My Books cards: play triangle + info + favourite heart */
+.lib-item {
+  display: flex; align-items: center; gap: 14px; padding: 14px 16px;
+  border: 1px solid #e1e7ec; border-radius: var(--radius); background: #fff;
+}
+.lib-play-icon {
+  flex: 0 0 auto; width: 46px; height: 46px; border-radius: 50%;
+  background: var(--accent); color: #fff;
+  display: flex; align-items: center; justify-content: center; font-size: 1.1rem;
+}
+.lib-info { flex: 1; display: flex; flex-direction: column; gap: 3px; text-align: left; min-width: 0; }
+.lib-info strong { font-size: 1.1rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lib-snippet { color: var(--muted); font-size: .95rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lib-fav { flex: 0 0 auto; color: var(--accent); font-size: 1.4rem; }
+
+/* Softer, rounder inputs/cards to match */
+.field input, .field select, .rc-row select, .reader-text { border-radius: 10px; }
+.card, .reader-controls { border-radius: var(--radius); border-color: #e1e7ec; }
+body.dark .topbar { background: #0e1726; }

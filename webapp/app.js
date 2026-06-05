@@ -625,11 +625,13 @@ async function loadLibrary() {  // loads the book shelf
       btn.className = "lib-item";
       btn.type = "button";
       const title = bookTitle(doc);
-      const lang = (doc.trans_lang || "").toUpperCase();
+      const snippet = (doc.trans_text || doc.eng_text || "").slice(0, 60);
+      const rtl = isRTL(doc.trans_lang) ? ` dir="rtl" lang="${(doc.trans_lang || "").slice(0, 2)}"` : "";
       btn.innerHTML =
-        `<span><strong>${escapeHtml(title)}</strong>` +
-        (lang ? `<br><span class="hint">${escapeHtml(lang)}</span>` : "") + `</span>` +
-        `<span class="lib-play" aria-hidden="true">›</span>`;
+        `<span class="lib-play-icon" aria-hidden="true">▶</span>` +
+        `<span class="lib-info"><strong>${escapeHtml(title)}</strong>` +
+        `<span class="lib-snippet"${rtl}>${escapeHtml(snippet)}</span></span>` +
+        `<span class="lib-fav" aria-hidden="true">♡</span>`;
       btn.setAttribute("aria-label", "Open " + title);
       btn.addEventListener("click", () => openBook(doc));
       li.appendChild(btn);
