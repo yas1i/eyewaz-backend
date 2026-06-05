@@ -18,6 +18,7 @@ soundfile
 numpy
 docx2txt
 PyPDF2
+pycryptodome
 # celery
 # redis
 # flower
