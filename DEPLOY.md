@@ -162,4 +162,13 @@ Production env vars (Render): `MONGO_URI`, `JWT_SECRET_KEY`, `FLASK_SECRET_KEY`,
    Monthly = 50/day, Super Max = 100/day. Enforced server-side in `usage.py`.
    Optional `DEV_PLAN_KEY` env enables `POST /api/dev/plan` to switch a user's
    plan for testing before PayPal is wired (leave unset in production once live).
-   PayPal env vars (`PAYPAL_CLIENT_ID`, `PAYPAL_SECRET`, …) come in Phase 2.
+10. **PayPal subscriptions** — dormant until configured (buttons fall back to a
+   "coming soon" placeholder). To switch on:
+   - Set `PAYPAL_CLIENT_ID`, `PAYPAL_SECRET`, `PAYPAL_ENV=sandbox` (then `live`),
+     `PAYPAL_CURRENCY=GBP`.
+   - Create the billing plans once: with `DEV_PLAN_KEY` set, `POST /api/paypal/setup`
+     `{ "key": "...", "prices": {"monthly":"4.99","supermax":"9.99"} }` → it returns
+     `PAYPAL_PLAN_MONTHLY` / `PAYPAL_PLAN_SUPERMAX`; put those in env + redeploy.
+   - Register a webhook at developer.paypal.com → `https://<host>/api/paypal/webhook`
+     for the BILLING.SUBSCRIPTION.* and PAYMENT.SALE.COMPLETED events; set its
+     `PAYPAL_WEBHOOK_ID`. Card data never touches the app (hosted Smart Buttons).
