@@ -622,7 +622,7 @@ async function loadLibrary() {
       const ur = (doc.trans_text || doc.doc_name || "Document").slice(0, 60);
       btn.innerHTML = `<span class="lib-ur" lang="ur" dir="rtl">${escapeHtml(ur)}</span><span class="lib-play" aria-hidden="true">▶</span>`;
       btn.setAttribute("aria-label", "Play: " + ur);
-      btn.addEventListener("click", () => renderResult(doc));
+      btn.addEventListener("click", () => { showTab("photoPanel"); renderResult(doc); });
       li.appendChild(btn);
       ul.appendChild(li);
     });
@@ -780,12 +780,113 @@ $("#accountForm").addEventListener("submit", async (e) => {
   }
 });
 
+/* ----------------------------- Reader (tabs + text) ------------------------- */
+
+// Dark mode
+const themeToggle = $("#themeToggle");
+function applyTheme(dark) {
+  document.body.classList.toggle("dark", dark);
+  if (themeToggle) {
+    themeToggle.textContent = dark ? "☀️" : "🌙";
+    themeToggle.setAttribute("aria-pressed", String(dark));
+  }
+}
+applyTheme(localStorage.getItem("eyewaz_theme") === "dark");
+themeToggle?.addEventListener("click", () => {
+  const dark = !document.body.classList.contains("dark");
+  localStorage.setItem("eyewaz_theme", dark ? "dark" : "light");
+  applyTheme(dark);
+});
+
+// Tab switching
+function showTab(panelId) {
+  document.querySelectorAll(".mode-panel").forEach((p) => (p.hidden = p.id !== panelId));
+  document.querySelectorAll(".tab").forEach((t) => {
+    const on = t.dataset.panel === panelId;
+    t.classList.toggle("is-active", on);
+    t.setAttribute("aria-selected", String(on));
+  });
+}
+document.querySelectorAll(".tab").forEach((t) =>
+  t.addEventListener("click", () => showTab(t.dataset.panel)));
+
+// Inline reader controls (language / voice / speed), kept in sync with prefs.
+let readerControlsReady = false;
+async function initReaderControls() {
+  if (readerControlsReady || !$("#rcLanguage")) return;
+  let voices;
+  try { voices = userPrefs.engine === "browser" ? browserVoiceList() : await getAzureVoices(); }
+  catch (_) { return; }
+  const byLocale = {};
+  voices.forEach((v) => (byLocale[v.locale] = byLocale[v.locale] || []).push(v));
+  const locales = Object.keys(byLocale).sort((a, b) =>
+    (byLocale[a][0].localeName || a).localeCompare(byLocale[b][0].localeName || b));
+  const langSel = $("#rcLanguage");
+  langSel.innerHTML = "";
+  locales.forEach((loc) => {
+    const o = document.createElement("option");
+    o.value = loc; o.textContent = `${byLocale[loc][0].localeName || loc} (${loc})`;
+    langSel.appendChild(o);
+  });
+  langSel.value = byLocale[userPrefs.language] ? userPrefs.language : (locales[0] || "");
+  const fillVoices = () => {
+    const vs = $("#rcVoice"); vs.innerHTML = "";
+    (byLocale[langSel.value] || []).forEach((v) => {
+      const o = document.createElement("option");
+      o.value = v.shortName; o.textContent = v.displayName + (v.gender ? " — " + v.gender : "");
+      vs.appendChild(o);
+    });
+    if ([...vs.options].some((o) => o.value === userPrefs.voice)) vs.value = userPrefs.voice;
+  };
+  fillVoices();
+  langSel.onchange = () => { fillVoices(); saveReaderPrefs(); };
+  $("#rcVoice").onchange = saveReaderPrefs;
+  $("#rcRate").value = userPrefs.rate;
+  $("#rcRateVal").textContent = Number(userPrefs.rate).toFixed(2) + "×";
+  $("#rcRate").oninput = () => ($("#rcRateVal").textContent = Number($("#rcRate").value).toFixed(2) + "×");
+  $("#rcRate").onchange = saveReaderPrefs;
+  readerControlsReady = true;
+}
+async function saveReaderPrefs() {
+  userPrefs = {
+    engine: userPrefs.engine || "azure",
+    language: $("#rcLanguage").value, voice: $("#rcVoice").value, rate: Number($("#rcRate").value),
+  };
+  try { await api("/profile", { method: "PUT", body: { preferences: userPrefs } }); } catch (_) {}
+}
+
+// Text reader: translate to the reading language, synthesize, play + offer download.
+$("#textPlayBtn")?.addEventListener("click", async () => {
+  const text = $("#textInput").value.trim();
+  const ts = $("#textStatus");
+  if (!text) { ts.className = "status error"; ts.textContent = "Type or paste some text first."; return; }
+  const btn = $("#textPlayBtn");
+  btn.disabled = true; ts.className = "status busy"; ts.textContent = "Preparing your audio…";
+  try {
+    const lang = $("#rcLanguage").value, voice = $("#rcVoice").value, rate = Number($("#rcRate").value);
+    const tr = await api("/translate", { method: "POST", body: { text, to: lang } });
+    const toRead = tr.translated || text;
+    $("#textTrans").textContent = toRead; applyLangDir($("#textTrans"), lang); $("#textTransWrap").hidden = false;
+    const sp = await api("/speak", { method: "POST", body: { text: toRead, voiceName: voice, rate } });
+    const audio = $("#textAudio");
+    audio.src = sp.audio_url; audio.hidden = false;
+    $("#textDownload").href = sp.audio_url; $("#textDownload").hidden = false;
+    ts.className = "status ok"; ts.textContent = "Playing.";
+    audio.play().catch(() => (ts.textContent = "Ready — press the player to listen."));
+  } catch (err) {
+    ts.className = "status error"; ts.textContent = err.message || "Could not read the text.";
+  } finally { btn.disabled = false; }
+});
+$("#textStopBtn")?.addEventListener("click", () => {
+  const a = $("#textAudio"); if (a) { a.pause(); a.currentTime = 0; }
+});
+
 /* --------------------------------- Boot ------------------------------------- */
 
 function enterApp() {
   showView("capture");
   loadLibrary();
-  loadPrefs();   // so saved speed/voice apply to reading right away
+  loadPrefs().then(initReaderControls);   // saved voice/speed apply + inline controls populate
 }
 
 // Handle the return from a social sign-in redirect (/app#token=... or #auth_error=...).
