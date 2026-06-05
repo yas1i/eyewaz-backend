@@ -60,6 +60,13 @@ def _extract(html, fallback_title):
 class ReadUrlAPI(Resource):
     @jwt_required()
     def post(self):
+        import usage
+        user = Users.objects(email=get_jwt_identity()).first()
+        if user:
+            ok, snap = usage.consume(user)
+            if not ok:
+                return usage.quota_response(snap)
+
         data = request.get_json(force=True, silent=True) or {}
         url = (data.get("url") or "").strip()
         parsed = urlparse(url)

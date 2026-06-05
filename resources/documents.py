@@ -98,6 +98,12 @@ class DocumentTransSpeechAPI(Resource):
         f = request.files["file"]
         email = get_jwt_identity()
         user = Users.objects.get(email=email)
+
+        import usage
+        ok, snap = usage.consume(user)
+        if not ok:
+            return usage.quota_response(snap)
+
         prefs = user.preferences()
         target_lang = prefs.get("language", "ur-PK")
         voice = prefs.get("voice", "ur-PK-UzmaNeural")

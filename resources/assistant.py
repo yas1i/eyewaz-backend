@@ -134,6 +134,12 @@ class AssistantAPI(Resource):
 
         user = Users.objects(email=get_jwt_identity()).first()
 
+        import usage
+        if user:
+            ok, snap = usage.consume(user)
+            if not ok:
+                return usage.quota_response(snap)
+
         # Build the conversation: per-user context, then prior turns, then the
         # new message. The context goes in the first user turn so the cached
         # system prefix stays identical for every user.

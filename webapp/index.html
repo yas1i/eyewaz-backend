@@ -207,6 +207,7 @@
       <div id="dayPanel" class="mode-panel" role="tabpanel" aria-labelledby="tabDay">
         <h2 id="dayGreeting">Good day</h2>
         <p class="lede" id="dayDate"></p>
+        <p class="plan-line" id="planLine"></p>
         <button id="startDayBtn" class="primary-btn">🌅 Start my day</button>
         <p id="dayStatus" class="status" role="status"></p>
         <audio id="dayAudio" controls preload="auto" hidden></audio>
@@ -381,6 +382,44 @@
     <section id="accountView" aria-labelledby="accountHeading" hidden>
       <h2 id="accountHeading">Account &amp; voice settings</h2>
       <p class="status" id="accountStatus" role="status"></p>
+
+      <!-- ===== Membership / plan ===== -->
+      <div class="card" id="planCard">
+        <h3>Your plan</h3>
+        <p id="currentPlanText" class="hint">Loading your plan…</p>
+        <div class="plan-grid">
+          <div class="plan-card" data-plan="free">
+            <h4>Free</h4>
+            <p class="plan-price">£0</p>
+            <ul class="plan-feats">
+              <li>3 commands per day</li>
+              <li>1 reminder</li>
+              <li>3 saved recordings</li>
+            </ul>
+          </div>
+          <div class="plan-card" data-plan="monthly">
+            <h4>Monthly</h4>
+            <p class="plan-price">£<span data-price="monthly">—</span><small>/mo</small></p>
+            <ul class="plan-feats">
+              <li>50 commands per day</li>
+              <li>Unlimited reminders</li>
+              <li>Unlimited recordings</li>
+            </ul>
+            <button type="button" class="primary-btn plan-upgrade" data-plan="monthly">Upgrade with PayPal</button>
+          </div>
+          <div class="plan-card" data-plan="supermax">
+            <h4>Super Max</h4>
+            <p class="plan-price">£<span data-price="supermax">—</span><small>/mo</small></p>
+            <ul class="plan-feats">
+              <li>100 commands per day</li>
+              <li>Unlimited reminders</li>
+              <li>Unlimited recordings</li>
+            </ul>
+            <button type="button" class="primary-btn plan-upgrade" data-plan="supermax">Upgrade with PayPal</button>
+          </div>
+        </div>
+        <p class="hint">Payments via PayPal (Klarna &amp; card coming soon). Cancel anytime.</p>
+      </div>
 
       <form id="accountForm" class="card" novalidate>
         <h3>Your details</h3>

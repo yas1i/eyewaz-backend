@@ -148,7 +148,11 @@ async function api(path, { method = "GET", body, auth = true, isForm = false } =
   try { data = await res.json(); } catch (_) { /* non-JSON error page */ }
   if (!res.ok) {
     const msg = (data && (data.message || data.error)) || `Request failed (${res.status})`;
-    throw new Error(msg);
+    if (res.status === 402 && data && data.quota_exceeded) {
+      try { Billing.onQuota(data); } catch (_) {}
+    }
+    const err = new Error(msg); err.status = res.status; err.data = data;
+    throw err;
   }
   return data;
 }
@@ -649,6 +653,11 @@ let activeFolder = "All";
 // Fetch the audio and store it on the device, in the active folder.
 async function saveRecording(audioUrl, title, lang) {
   if (!audioUrl) throw new Error("Nothing to save yet.");
+  const limit = Billing.recordingsLimit();
+  const existing = await recAll().catch(() => []);
+  if (existing.length >= limit) {
+    throw new Error(`Your plan saves up to ${limit} recordings. Upgrade to keep more.`);
+  }
   const blob = await (await fetch(audioUrl)).blob();
   const folder = activeFolder === "All" ? "Unfiled" : activeFolder;
   await recPut({
@@ -834,9 +843,74 @@ async function loadPrefs() {
     const p = await api("/profile", { method: "GET" });
     userProfile = p || {};
     if (p && p.preferences) userPrefs = p.preferences;
+    Billing.set(p && p.usage);
     return p;
   } catch (_) { return null; }
 }
+
+/* ------------------------------ Membership / quota -------------------------- */
+let userUsage = null;
+const Billing = (() => {
+  function set(u) { userUsage = u || null; render(); }
+  function render() {
+    if (userUsage) {
+      const line = document.getElementById("planLine");
+      if (line) line.textContent =
+        `Plan: ${userUsage.plan_label} — ${userUsage.remaining} of ${userUsage.daily_limit} commands left today.`;
+      const cur = document.getElementById("currentPlanText");
+      if (cur) cur.textContent =
+        `You're on the ${userUsage.plan_label} plan — ${userUsage.remaining} of ${userUsage.daily_limit} commands left today.`;
+    }
+    document.querySelectorAll(".plan-card").forEach((c) =>
+      c.classList.toggle("is-current", !!userUsage && c.dataset.plan === userUsage.plan));
+  }
+  async function refresh() { try { const d = await api("/usage"); set(d.usage); } catch (_) {} }
+  function onQuota(data) {
+    if (data && data.usage) set(data.usage);
+    announce(data && data.message ? data.message
+      : "You've reached today's command limit. Upgrade for more.", "error");
+  }
+  function recordingsLimit() { return userUsage ? userUsage.recordings_limit : 3; }
+  function remindersLimit() { return userUsage ? userUsage.reminders_limit : 1; }
+  // Charge one command for the text reader (its only server calls are shared utilities).
+  async function consumeOne() {
+    try { const d = await api("/usage", { method: "POST" }); set(d.usage); return true; }
+    catch (_) { return false; }   // api() already surfaced the upgrade prompt on 402
+  }
+  return { set, render, refresh, onQuota, recordingsLimit, remindersLimit, consumeOne };
+})();
+
+// Prices shown on the plan cards (£/month). Set the real figures here.
+const PLAN_PRICES = { monthly: "4.99", supermax: "9.99" };
+
+const Plan = (() => {
+  function init() {
+    // Fill prices.
+    document.querySelectorAll("[data-price]").forEach((el) => {
+      const p = PLAN_PRICES[el.dataset.price]; if (p) el.textContent = p;
+    });
+    // Wire upgrade buttons once.
+    document.querySelectorAll(".plan-upgrade").forEach((b) => {
+      if (b.dataset.bound) return;
+      b.dataset.bound = "1";
+      b.addEventListener("click", () => upgrade(b.dataset.plan));
+    });
+    Billing.render();
+  }
+  function upgrade(plan) {
+    // Phase 2 will start a PayPal checkout here. For now, guide the user.
+    announce("PayPal checkout is being set up. Your upgrade will be available here shortly.", "");
+    window.alert("PayPal checkout for the " + plan + " plan is being set up and will appear here soon.");
+  }
+  return { init, upgrade };
+})();
+
+// Console helper for testing tiers before payments (needs DEV_PLAN_KEY on the server).
+// Usage:  setPlan("monthly", "your-dev-key")
+window.setPlan = (plan, key) =>
+  api("/dev/plan", { method: "POST", body: { plan, key } })
+    .then((d) => { Billing.set(d.usage); announce("Plan set to " + plan + ".", "ok"); return d; })
+    .catch((e) => { announce(e.message || "Could not set plan.", "error"); });
 
 /* ------------------------------ My Day assistant ---------------------------- */
 function greetingFor(d) {
@@ -1097,6 +1171,11 @@ const Reminders = (() => {
         const repeat = $("#reminderRepeat").value || "daily";
         if (!time || !label) { announce("Please set a time and a reminder.", ""); return; }
         const list = get();
+        const rlimit = Billing.remindersLimit();
+        if (list.length >= rlimit) {
+          announce(`Your plan allows ${rlimit} reminder${rlimit === 1 ? "" : "s"}. Upgrade to add more.`, "error");
+          return;
+        }
         list.push({ id: "rem_" + Date.now(), time, label: label.slice(0, 120), repeat, lastFired: "" });
         set(list);
         $("#reminderLabel").value = "";
@@ -1184,7 +1263,8 @@ async function populateVoiceControls() {
 async function openAccount() {
   showView("account");
   accStatus("Loading your settings…", "busy");
-  const profile = await loadPrefs();
+  Plan.init();
+  const profile = await loadPrefs();   // also refreshes the plan card via Billing.set
   if (profile) {
     $("#accName").value = profile.name || "";
     $("#accEmail").value = profile.email || "";
@@ -1287,7 +1367,7 @@ function showTab(panelId) {
     if (on) label = t.textContent.trim();
   });
   if (panelId === "booksPanel") loadRecordings();   // refresh saved recordings
-  if (panelId === "dayPanel") { renderMyDay(); Assistant.init(); Reminders.init(); }  // greeting + assistant + reminders
+  if (panelId === "dayPanel") { renderMyDay(); Assistant.init(); Reminders.init(); Billing.refresh(); }  // greeting + assistant + reminders + plan
   if (label) announce(label + " selected", "ok");     // speaks when voice guidance is on
 }
 document.querySelectorAll(".tab").forEach((t) =>
@@ -1346,6 +1426,11 @@ $("#textPlayBtn")?.addEventListener("click", async () => {
   const btn = $("#textPlayBtn");
   btn.disabled = true; ts.className = "status busy"; ts.textContent = "Preparing your audio…";
   try {
+    // Reading typed text counts as one command (it has no heavy server endpoint).
+    if (!(await Billing.consumeOne())) {
+      ts.className = "status error"; ts.textContent = "Daily command limit reached — upgrade for more.";
+      return;
+    }
     const lang = $("#rcLanguage").value, voice = $("#rcVoice").value, rate = Number($("#rcRate").value);
     const tr = await api("/translate", { method: "POST", body: { text, to: lang } });
     const toRead = tr.translated || text;
