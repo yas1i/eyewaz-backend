@@ -781,6 +781,128 @@ $("#startDayBtn")?.addEventListener("click", async () => {
   } finally { btn.disabled = false; }
 });
 
+/* ----------------------- Ask Eyewaz: voice assistant ------------------------ */
+// Hands-free conversational AI. Speech in (Web Speech Recognition) → /api/assistant
+// (Claude) → spoken reply (browser TTS, or Azure for languages the browser
+// can't voice, like Urdu). Falls back to typed input where speech isn't available.
+const Assistant = (() => {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let history = [];            // [{role, content}] short rolling context
+  let recog = null, listening = false, busy = false;
+
+  const el = (id) => document.getElementById(id);
+  function status(msg, kind = "") {
+    const s = el("asstStatus");
+    if (s) { s.textContent = msg || ""; s.className = "status" + (kind ? " " + kind : ""); }
+  }
+  function bubble(role, text) {
+    const log = el("asstLog");
+    if (!log) return;
+    const div = document.createElement("div");
+    div.className = "asst-bubble asst-" + role;
+    div.textContent = (role === "user" ? "You: " : "Eyewaz: ") + text;
+    applyLangDir(div, userPrefs.language);
+    log.appendChild(div);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  // Speak the reply in the user's language. Prefer the browser voice; if none
+  // exists (typical for Urdu), use Azure via /api/speak for a natural voice.
+  async function speakReply(text) {
+    const lang = userPrefs.language || "en";
+    const stopBtn = el("asstStopBtn");
+    if (TTS.supported && TTS.hasVoice(lang)) {
+      stopBtn.hidden = false;
+      TTS.speakLong(text, lang, { rate: userPrefs.rate, onend: () => (stopBtn.hidden = true) });
+      return;
+    }
+    try {
+      const sp = await api("/speak", { method: "POST",
+        body: { text, voiceName: userPrefs.voice, rate: userPrefs.rate } });
+      const a = el("dayAudio");
+      a.src = sp.audio_url; a.hidden = false;
+      a.play().catch(() => {});
+    } catch (_) { /* speaking is best-effort; the text is already on screen */ }
+  }
+
+  async function send(message) {
+    if (!message || busy) return;
+    busy = true;
+    bubble("user", message);
+    history.push({ role: "user", content: message });
+    status("Eyewaz is thinking…", "busy");
+    try {
+      const d = await api("/assistant", { method: "POST",
+        body: { message, history: history.slice(-12) } });
+      const reply = (d && d.reply) || "Sorry, I have nothing to say.";
+      history.push({ role: "assistant", content: reply });
+      if (history.length > 16) history = history.slice(-16);
+      bubble("assistant", reply);
+      status("");
+      await speakReply(reply);
+    } catch (err) {
+      status(err.message || "The assistant is unavailable right now.", "error");
+    } finally { busy = false; }
+  }
+
+  function startListening() {
+    if (!SR) {
+      status("Voice input isn't supported in this browser — type your message instead.", "");
+      el("asstText")?.focus();
+      return;
+    }
+    if (listening) { recog && recog.stop(); return; }
+    TTS.stop();
+    recog = new SR();
+    recog.lang = userPrefs.language || "en-US";
+    recog.interimResults = false;
+    recog.maxAlternatives = 1;
+    recog.onstart = () => { listening = true; setMic(true); status("Listening… speak now.", "busy"); };
+    recog.onerror = (e) => {
+      listening = false; setMic(false);
+      status(e.error === "not-allowed"
+        ? "Microphone permission is needed to talk to Eyewaz."
+        : "I didn't hear anything. Tap the microphone to try again.", "");
+    };
+    recog.onend = () => { listening = false; setMic(false); };
+    recog.onresult = (e) => {
+      const said = e.results[0][0].transcript.trim();
+      if (said) send(said);
+    };
+    try { recog.start(); } catch (_) { /* already started */ }
+  }
+
+  function setMic(on) {
+    const btn = el("asstMicBtn");
+    if (!btn) return;
+    btn.textContent = on ? "🔴 Listening…" : "🎤 Talk to Eyewaz";
+    btn.setAttribute("aria-pressed", String(on));
+  }
+
+  function init() {
+    const mic = el("asstMicBtn"), stop = el("asstStopBtn"), form = el("asstForm");
+    if (mic && !mic.dataset.bound) {
+      mic.dataset.bound = "1";
+      mic.addEventListener("click", startListening);
+    }
+    if (stop && !stop.dataset.bound) {
+      stop.dataset.bound = "1";
+      stop.addEventListener("click", () => { TTS.stop(); const a = el("dayAudio"); if (a) a.pause(); stop.hidden = true; });
+    }
+    if (form && !form.dataset.bound) {
+      form.dataset.bound = "1";
+      form.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const input = el("asstText");
+        const msg = (input.value || "").trim();
+        if (msg) { input.value = ""; send(msg); }
+      });
+    }
+  }
+
+  return { init };
+})();
+
 function accStatus(msg, kind) {
   const s = $("#accountStatus");
   s.textContent = msg;
@@ -955,7 +1077,7 @@ function showTab(panelId) {
     if (on) label = t.textContent.trim();
   });
   if (panelId === "booksPanel") loadRecordings();   // refresh saved recordings
-  if (panelId === "dayPanel") renderMyDay();        // refresh greeting/date/list
+  if (panelId === "dayPanel") { renderMyDay(); Assistant.init(); }  // greeting + assistant
   if (label) announce(label + " selected", "ok");     // speaks when voice guidance is on
 }
 document.querySelectorAll(".tab").forEach((t) =>
@@ -1092,7 +1214,7 @@ $("#docReadBtn")?.addEventListener("click", async () => {
 function enterApp() {
   showView("capture");
   loadLibrary();
-  loadPrefs().then(() => { initReaderControls(); renderMyDay(); });
+  loadPrefs().then(() => { initReaderControls(); renderMyDay(); Assistant.init(); });
 }
 
 // Handle the return from a social sign-in redirect (/app#token=... or #auth_error=...).

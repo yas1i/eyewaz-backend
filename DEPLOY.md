@@ -153,4 +153,8 @@ Bugs that bit us once, and how to avoid them:
 Production env vars (Render): `MONGO_URI`, `JWT_SECRET_KEY`, `FLASK_SECRET_KEY`,
 `STATIC_DIR=templates/`, `REGION`, `VISION_KEY`, `VISION_ENDPOINT`,
 `TRANSLATION_KEY`, `TEXT_TRANSLATION_ENDPOINT`, `SPEECH_KEY`,
-`SENDGRID_API_KEY`, `SENDGRID_FROM`.
+`SENDGRID_API_KEY`, `SENDGRID_FROM`, `ANTHROPIC_API_KEY`.
+
+8. **Ask Eyewaz assistant** — `/api/assistant` calls Claude (`anthropic` SDK,
+   model `claude-opus-4-8`). Set `ANTHROPIC_API_KEY`. Without it the endpoint
+   returns a friendly 503 and the rest of the app keeps working.
