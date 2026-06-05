@@ -13,13 +13,19 @@
 `/app/assets/eyewaz-mark.svg` to `/app/assets/eyewaz-mark.png`.
 
 ## Font — GoodDogNew
-The brand wordmark and headings use **GoodDogNew**. Drop the font file(s) here:
+The brand wordmark and headings are designed for **GoodDogNew**. We don't have
+that font file, so the app currently loads **Baloo 2** (a rounded, friendly
+GoodDogNew look-alike) from Google Fonts via a `<link>` in `index.html`.
+
+To switch to the real GoodDogNew, drop the font file(s) here:
 - `fonts/GoodDogNew.woff2`  (preferred — smallest)
 - `fonts/GoodDogNew.woff`   (fallback)
 - `fonts/GoodDogNew.ttf`    (fallback)
 
-The `@font-face` in `styles.css` already points at these paths. Until a file is
-present, the app falls back to a friendly rounded system font so nothing breaks.
+The `@font-face` in `styles.css` already points at these paths and lists
+`GoodDogNew` first in the font stack, so it takes over automatically the moment
+a file is present — no other change needed (the Baloo 2 `<link>` can then be
+removed from `index.html` if you like).
 
 ## Colours
 - `#7BB2BE` — EYEWAZ blue (brand / accents)

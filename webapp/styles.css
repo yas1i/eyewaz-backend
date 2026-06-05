@@ -30,8 +30,10 @@
   --success: #2e7d52;
   --focus: #224f5b;        /* deep-blue keyboard focus ring (visible on cream) */
   --radius: 14px;
-  /* Brand display font, with a rounded, friendly fallback stack. */
-  --font-brand: "GoodDogNew", "Comic Sans MS", "Chalkboard SE", "Quicksand",
+  /* Brand display font. "GoodDogNew" first (if its file is ever added at
+     assets/fonts/), then a rounded GoodDogNew look-alike from Google Fonts,
+     then rounded system fallbacks. */
+  --font-brand: "GoodDogNew", "Baloo 2", "Comic Sans MS", "Chalkboard SE",
                 ui-rounded, system-ui, sans-serif;
 }
 
@@ -143,7 +145,7 @@ html, body {
 .brand-text { display: flex; flex-direction: column; line-height: 1; }
 .brand {
   margin: 0; color: var(--brand-cream);
-  font-family: var(--font-brand); font-weight: 400;
+  font-family: var(--font-brand); font-weight: 700;
   font-size: 2.1rem; letter-spacing: .5px; text-transform: lowercase;
 }
 .brand-tag {
@@ -155,7 +157,7 @@ html, body {
 .topbar-actions .link-btn[aria-pressed="false"] { text-decoration: line-through; opacity: .7; }
 
 /* Headings carry the brand font for personality; body stays a legible sans. */
-h2, h3, .auth h2 { font-family: var(--font-brand); font-weight: 400; letter-spacing: .3px; }
+h2, h3, .auth h2 { font-family: var(--font-brand); font-weight: 600; letter-spacing: .3px; }
 
 main { max-width: 640px; margin: 0 auto; padding: 20px 16px 64px; }
 
