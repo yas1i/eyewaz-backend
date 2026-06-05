@@ -667,22 +667,69 @@ function playRecording(rec) {
   announce("Playing " + rec.title, "ok");
 }
 
+// Every folder name the user has, whether created empty or in use by a recording.
+function allFolderNames(recs) {
+  return [...new Set([...getFolders(), ...recs.map((r) => r.folder)])]
+    .filter((f) => f && f !== "Unfiled")
+    .sort((a, b) => a.localeCompare(b));
+}
+
+// Move a recording into another folder (re-stores the same blob with a new folder).
+async function moveRecording(rec, folder) {
+  rec.folder = folder || "Unfiled";
+  await recPut(rec);
+  announce(`Moved “${rec.title}” to ${rec.folder}.`, "ok");
+  loadRecordings();
+}
+
+// Delete a folder: its recordings fall back to Unfiled, the folder is removed.
+async function deleteFolder(name) {
+  if (!name || name === "All" || name === "Unfiled") return;
+  if (!window.confirm(`Delete the folder “${name}”? Its recordings move to Unfiled.`)) return;
+  let recs = [];
+  try { recs = await recAll(); } catch (_) {}
+  for (const r of recs.filter((r) => r.folder === name)) {
+    r.folder = "Unfiled"; await recPut(r);
+  }
+  setFolders(getFolders().filter((f) => f !== name));
+  activeFolder = "All";
+  announce(`Folder “${name}” deleted.`, "ok");
+  loadRecordings();
+}
+
 async function loadRecordings() {
   const ul = $("#recList"); if (!ul) return;
   let recs = [];
   try { recs = await recAll(); } catch (_) {}
-  const folders = ["All", ...new Set([...getFolders(), ...recs.map((r) => r.folder)])].filter(Boolean);
-  if (!folders.includes(activeFolder)) activeFolder = "All";
+  const custom = allFolderNames(recs);
+  const chipFolders = ["All", ...custom, "Unfiled"];
+  if (!chipFolders.includes(activeFolder)) activeFolder = "All";
+
+  // Folder chips (with counts), plus a delete control for the active custom folder.
   const bar = $("#folderBar"); bar.innerHTML = "";
-  folders.forEach((f) => {
+  chipFolders.forEach((f) => {
     const b = document.createElement("button");
     b.type = "button";
     b.className = "folder-chip" + (f === activeFolder ? " is-active" : "");
     const count = recs.filter((r) => r.folder === f).length;
-    b.textContent = f === "All" ? "All" : `${f} (${count})`;
+    b.textContent = f === "All" ? `All (${recs.length})` : `${f} (${count})`;
+    b.setAttribute("aria-pressed", String(f === activeFolder));
     b.addEventListener("click", () => { activeFolder = f; loadRecordings(); });
     bar.appendChild(b);
   });
+  if (activeFolder !== "All" && activeFolder !== "Unfiled") {
+    const del = document.createElement("button");
+    del.type = "button";
+    del.className = "folder-chip folder-del";
+    del.textContent = `🗑 Delete “${activeFolder}”`;
+    del.setAttribute("aria-label", `Delete folder ${activeFolder}`);
+    del.addEventListener("click", () => deleteFolder(activeFolder));
+    bar.appendChild(del);
+  }
+
+  // Build the shared "move to folder" option list once.
+  const moveOptions = ["Unfiled", ...custom];
+
   ul.innerHTML = "";
   const shown = recs.filter((r) => activeFolder === "All" || r.folder === activeFolder)
     .sort((a, b) => b.createdAt - a.createdAt);
@@ -694,12 +741,19 @@ async function loadRecordings() {
     const li = document.createElement("li");
     const card = document.createElement("div");
     card.className = "lib-item";
+    const opts = moveOptions.map((f) =>
+      `<option value="${escapeHtml(f)}"${f === rec.folder ? " selected" : ""}>${escapeHtml(f)}</option>`
+    ).join("");
     card.innerHTML =
       `<button class="lib-play-icon" aria-label="Play ${escapeHtml(rec.title)}">▶</button>` +
       `<span class="lib-info"><strong>${escapeHtml(rec.title)}</strong>` +
-      `<span class="lib-snippet">${escapeHtml(rec.folder)} · ${new Date(rec.createdAt).toLocaleDateString()}</span></span>` +
+      `<span class="lib-snippet">${new Date(rec.createdAt).toLocaleDateString()}</span>` +
+      `<label class="sr-only" for="mv_${rec.id}">Move ${escapeHtml(rec.title)} to a folder</label>` +
+      `<select class="rec-move" id="mv_${rec.id}" aria-label="Move ${escapeHtml(rec.title)} to a folder">${opts}</select>` +
+      `</span>` +
       `<button class="round-btn rec-del" aria-label="Delete recording">🗑</button>`;
     card.querySelector(".lib-play-icon").addEventListener("click", () => playRecording(rec));
+    card.querySelector(".rec-move").addEventListener("change", (e) => moveRecording(rec, e.target.value));
     card.querySelector(".rec-del").addEventListener("click", async () => {
       if (!window.confirm("Delete this recording from your device?")) return;
       await recDel(rec.id); loadRecordings();
@@ -708,15 +762,19 @@ async function loadRecordings() {
   });
 }
 
-$("#newFolderBtn")?.addEventListener("click", () => {
-  const name = ($("#newFolderName").value || "").trim();
-  if (!name) return;
+function createFolder() {
+  const name = ($("#newFolderName").value || "").trim().slice(0, 30);
+  if (!name) { announce("Type a folder name first.", ""); return; }
+  if (name === "All" || name === "Unfiled") { announce("Please choose a different name.", ""); return; }
   const folders = getFolders();
   if (!folders.includes(name)) { folders.push(name); setFolders(folders); }
   $("#newFolderName").value = "";
   activeFolder = name;
+  announce(`Folder “${name}” created.`, "ok");
   loadRecordings();
-});
+}
+$("#newFolderBtn")?.addEventListener("click", createFolder);
+$("#newFolderName")?.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); createFolder(); } });
 
 // Old callers used loadLibrary() (the server shelf) — keep them working.
 function loadLibrary() { loadRecordings(); }
