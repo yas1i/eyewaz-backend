@@ -192,6 +192,7 @@
           <button id="textPlayBtn" class="play-btn" aria-label="Play">▶</button>
           <button id="textStopBtn" class="round-btn" aria-label="Stop">⏹</button>
           <a id="textDownload" class="round-btn" download="eyewaz-audio.mp3" hidden aria-label="Download audio">⬇</a>
+          <button id="textSaveBtn" class="round-btn" hidden aria-label="Save to my device">💾</button>
         </div>
         <audio id="textAudio" controls preload="auto" hidden></audio>
         <p id="textStatus" class="status" role="status"></p>
@@ -218,6 +219,7 @@
           <audio id="docAudio" controls preload="auto"></audio>
           <div class="row">
             <a id="docDownload" class="round-btn" download="eyewaz-audio.mp3" hidden aria-label="Download audio">⬇</a>
+            <button id="docSaveBtn" class="round-btn" hidden aria-label="Save to my device">💾</button>
           </div>
           <h4>Translation</h4>
           <p id="docTrans" class="urdu"></p>
@@ -292,27 +294,16 @@
         </article>
       </div>
 
-      <!-- ===== MY BOOKS panel ===== -->
+      <!-- ===== MY BOOKS panel (saved recordings, on-device, in folders) ===== -->
       <div id="booksPanel" class="mode-panel" role="tabpanel" aria-labelledby="tabBooks" hidden>
-        <p class="lede">Everything you've read is saved here. Tap a title to read it again in your current voice.</p>
-        <ul id="booksList" class="library" aria-label="Your saved documents and books"></ul>
-
-        <article id="bookDetail" class="card" hidden aria-labelledby="bookTitle">
-          <button id="bookBack" type="button" class="link-btn">← Back to shelf</button>
-          <h3 id="bookTitle" tabindex="-1"></h3>
-          <div class="row">
-            <button id="bookPlayBtn" type="button" class="primary-btn">▶ Read aloud</button>
-            <button id="bookStopBtn" type="button" class="primary-btn ghost">⏹ Stop</button>
-            <a id="bookDownload" class="round-btn" download="eyewaz-audio.mp3" hidden aria-label="Download audio">⬇</a>
-            <button id="bookDeleteBtn" type="button" class="primary-btn ghost danger">🗑 Delete</button>
-          </div>
-          <audio id="bookAudio" controls preload="auto" hidden></audio>
-          <p id="bookStatus" class="status" role="status"></p>
-          <h4>Translation</h4>
-          <p id="bookTrans" class="urdu"></p>
-          <h4>Original text</h4>
-          <p id="bookOrig" class="eng"></p>
-        </article>
+        <p class="lede">Your saved recordings — stored on <strong>this device</strong> for offline replay.</p>
+        <div class="row">
+          <input id="newFolderName" type="text" placeholder="New folder name" aria-label="New folder name" />
+          <button id="newFolderBtn" type="button" class="primary-btn">+ Folder</button>
+        </div>
+        <div id="folderBar" class="folder-bar" role="tablist" aria-label="Folders"></div>
+        <audio id="recAudio" controls preload="auto" hidden></audio>
+        <ul id="recList" class="library" aria-label="Saved recordings"></ul>
       </div>
     </section>
 

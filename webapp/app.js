@@ -104,8 +104,11 @@ function guide(text) {
 const ttsToggle = $("#ttsToggle");
 function renderToggle() {
   if (!ttsToggle) return;
-  ttsToggle.textContent = guidanceOn ? "🔊 Voice: on" : "🔇 Voice: off";
+  ttsToggle.textContent = guidanceOn ? "🔊" : "🔇";
   ttsToggle.setAttribute("aria-pressed", String(guidanceOn));
+  const label = guidanceOn ? "Voice guidance on" : "Voice guidance off";
+  ttsToggle.setAttribute("aria-label", label);
+  ttsToggle.title = label;
 }
 if (ttsToggle) {
   renderToggle();
@@ -601,106 +604,122 @@ $("#pageUrduBtn")?.addEventListener("click", async (e) => {
   }
 });
 
-/* -------------------------------- My Books ---------------------------------- */
+/* ------------------- My Books: on-device recordings + folders --------------- */
 
-function bookTitle(doc) {
-  const name = (doc.doc_name || "").replace(/^[a-f0-9]{8}_/i, "");
-  return name || (doc.eng_text || doc.trans_text || "Document").slice(0, 50);
+// IndexedDB store for audio blobs (so recordings replay offline, no server).
+function idbOpen() {
+  return new Promise((res, rej) => {
+    const r = indexedDB.open("eyewaz", 1);
+    r.onupgradeneeded = () => {
+      if (!r.result.objectStoreNames.contains("recordings"))
+        r.result.createObjectStore("recordings", { keyPath: "id" });
+    };
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  });
+}
+async function recPut(rec) {
+  const db = await idbOpen();
+  return new Promise((res, rej) => {
+    const t = db.transaction("recordings", "readwrite");
+    t.objectStore("recordings").put(rec);
+    t.oncomplete = res; t.onerror = () => rej(t.error);
+  });
+}
+async function recAll() {
+  const db = await idbOpen();
+  return new Promise((res, rej) => {
+    const q = db.transaction("recordings").objectStore("recordings").getAll();
+    q.onsuccess = () => res(q.result || []); q.onerror = () => rej(q.error);
+  });
+}
+async function recDel(id) {
+  const db = await idbOpen();
+  return new Promise((res, rej) => {
+    const t = db.transaction("recordings", "readwrite");
+    t.objectStore("recordings").delete(id);
+    t.oncomplete = res; t.onerror = () => rej(t.error);
+  });
 }
 
-async function loadLibrary() {  // loads the book shelf
-  try {
-    const data = await api("/document-translation-and-speech", { method: "GET" });
-    const files = (data && data.myFiles) || [];
-    const ul = $("#booksList");
-    if (!ul) return;
-    ul.innerHTML = "";
-    if (!files.length) {
-      ul.innerHTML = '<li class="lede">Your shelf is empty. Read a document, photo, or web page and it appears here.</li>';
-      return;
-    }
-    files.reverse().forEach((doc) => {  // newest first
-      const li = document.createElement("li");
-      const btn = document.createElement("button");
-      btn.className = "lib-item";
-      btn.type = "button";
-      const title = bookTitle(doc);
-      const snippet = (doc.trans_text || doc.eng_text || "").slice(0, 60);
-      const rtl = isRTL(doc.trans_lang) ? ` dir="rtl" lang="${(doc.trans_lang || "").slice(0, 2)}"` : "";
-      btn.innerHTML =
-        `<span class="lib-play-icon" aria-hidden="true">▶</span>` +
-        `<span class="lib-info"><strong>${escapeHtml(title)}</strong>` +
-        `<span class="lib-snippet"${rtl}>${escapeHtml(snippet)}</span></span>` +
-        `<span class="lib-fav" aria-hidden="true">♡</span>`;
-      btn.setAttribute("aria-label", "Open " + title);
-      btn.addEventListener("click", () => openBook(doc));
-      li.appendChild(btn);
-      ul.appendChild(li);
-    });
-  } catch (_) { /* best-effort */ }
+function getFolders() { try { return JSON.parse(localStorage.getItem("eyewaz_folders") || "[]"); } catch (_) { return []; } }
+function setFolders(list) { localStorage.setItem("eyewaz_folders", JSON.stringify(list)); }
+let activeFolder = "All";
+
+// Fetch the audio and store it on the device, in the active folder.
+async function saveRecording(audioUrl, title, lang) {
+  if (!audioUrl) throw new Error("Nothing to save yet.");
+  const blob = await (await fetch(audioUrl)).blob();
+  const folder = activeFolder === "All" ? "Unfiled" : activeFolder;
+  await recPut({
+    id: "rec_" + Date.now() + "_" + Math.random().toString(36).slice(2, 7),
+    title: (title || "Recording").trim().slice(0, 80) || "Recording",
+    lang: lang || "", folder, createdAt: Date.now(), blob,
+  });
 }
 
-let currentBook = null;
-
-function openBook(doc) {
-  currentBook = doc;
-  $("#bookTitle").textContent = bookTitle(doc);
-  $("#bookTrans").textContent = doc.trans_text || "";
-  applyLangDir($("#bookTrans"), doc.trans_lang);
-  $("#bookOrig").textContent = doc.eng_text || "";
-  const a = $("#bookAudio"); a.hidden = true; a.removeAttribute("src");
-  $("#bookDownload").hidden = true;
-  $("#bookStatus").textContent = "";
-  $("#booksList").hidden = true;
-  $("#bookDetail").hidden = false;
-  $("#bookTitle").focus();
+let recObjectUrl = null;
+function playRecording(rec) {
+  const a = $("#recAudio");
+  if (recObjectUrl) URL.revokeObjectURL(recObjectUrl);
+  recObjectUrl = URL.createObjectURL(rec.blob);
+  a.src = recObjectUrl; a.hidden = false; a.play().catch(() => {});
+  announce("Playing " + rec.title, "ok");
 }
 
-function voiceForLang(lang) {
-  const p = (lang || "").slice(0, 2).toLowerCase();
-  if ((userPrefs.voice || "").toLowerCase().startsWith(p)) return userPrefs.voice;
-  const list = azureVoices || [];
-  const v = list.find((x) => x.locale === lang) || list.find((x) => x.locale.slice(0, 2).toLowerCase() === p);
-  return v ? v.shortName : (userPrefs.voice || "ur-PK-UzmaNeural");
-}
-
-$("#bookBack")?.addEventListener("click", () => {
-  $("#bookDetail").hidden = true;
-  $("#booksList").hidden = false;
-});
-$("#bookPlayBtn")?.addEventListener("click", async () => {
-  if (!currentBook) return;
-  const text = currentBook.trans_text || currentBook.eng_text || "";
-  const st = $("#bookStatus"), btn = $("#bookPlayBtn");
-  if (!text) { st.className = "status error"; st.textContent = "No text to read."; return; }
-  btn.disabled = true; st.className = "status busy"; st.textContent = "Preparing audio…";
-  try {
-    await getAzureVoices().catch(() => {});
-    const voice = voiceForLang(currentBook.trans_lang);
-    const sp = await api("/speak", { method: "POST", body: { text, voiceName: voice, rate: userPrefs.rate } });
-    const a = $("#bookAudio"); a.src = sp.audio_url; a.hidden = false;
-    $("#bookDownload").href = sp.audio_url; $("#bookDownload").hidden = false;
-    st.className = "status ok"; st.textContent = "Playing.";
-    a.play().catch(() => (st.textContent = "Ready — press the player to listen."));
-  } catch (err) {
-    st.className = "status error"; st.textContent = err.message || "Could not read this book.";
-  } finally { btn.disabled = false; }
-});
-$("#bookStopBtn")?.addEventListener("click", () => {
-  const a = $("#bookAudio"); if (a) { a.pause(); a.currentTime = 0; }
-});
-$("#bookDeleteBtn")?.addEventListener("click", async () => {
-  if (!currentBook) return;
-  if (!window.confirm("Remove this from your shelf?")) return;
-  try {
-    await api("/document", { method: "DELETE", body: { id: currentBook._id || currentBook.id } });
-    $("#bookDetail").hidden = true; $("#booksList").hidden = false;
-    loadLibrary();
-  } catch (err) {
-    $("#bookStatus").className = "status error";
-    $("#bookStatus").textContent = err.message || "Could not delete.";
+async function loadRecordings() {
+  const ul = $("#recList"); if (!ul) return;
+  let recs = [];
+  try { recs = await recAll(); } catch (_) {}
+  const folders = ["All", ...new Set([...getFolders(), ...recs.map((r) => r.folder)])].filter(Boolean);
+  if (!folders.includes(activeFolder)) activeFolder = "All";
+  const bar = $("#folderBar"); bar.innerHTML = "";
+  folders.forEach((f) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "folder-chip" + (f === activeFolder ? " is-active" : "");
+    const count = recs.filter((r) => r.folder === f).length;
+    b.textContent = f === "All" ? "All" : `${f} (${count})`;
+    b.addEventListener("click", () => { activeFolder = f; loadRecordings(); });
+    bar.appendChild(b);
+  });
+  ul.innerHTML = "";
+  const shown = recs.filter((r) => activeFolder === "All" || r.folder === activeFolder)
+    .sort((a, b) => b.createdAt - a.createdAt);
+  if (!shown.length) {
+    ul.innerHTML = '<li class="lede">No saved recordings here yet. Read something, then press “💾 Save offline”.</li>';
+    return;
   }
+  shown.forEach((rec) => {
+    const li = document.createElement("li");
+    const card = document.createElement("div");
+    card.className = "lib-item";
+    card.innerHTML =
+      `<button class="lib-play-icon" aria-label="Play ${escapeHtml(rec.title)}">▶</button>` +
+      `<span class="lib-info"><strong>${escapeHtml(rec.title)}</strong>` +
+      `<span class="lib-snippet">${escapeHtml(rec.folder)} · ${new Date(rec.createdAt).toLocaleDateString()}</span></span>` +
+      `<button class="round-btn rec-del" aria-label="Delete recording">🗑</button>`;
+    card.querySelector(".lib-play-icon").addEventListener("click", () => playRecording(rec));
+    card.querySelector(".rec-del").addEventListener("click", async () => {
+      if (!window.confirm("Delete this recording from your device?")) return;
+      await recDel(rec.id); loadRecordings();
+    });
+    li.appendChild(card); ul.appendChild(li);
+  });
+}
+
+$("#newFolderBtn")?.addEventListener("click", () => {
+  const name = ($("#newFolderName").value || "").trim();
+  if (!name) return;
+  const folders = getFolders();
+  if (!folders.includes(name)) { folders.push(name); setFolders(folders); }
+  $("#newFolderName").value = "";
+  activeFolder = name;
+  loadRecordings();
 });
+
+// Old callers used loadLibrary() (the server shelf) — keep them working.
+function loadLibrary() { loadRecordings(); }
 
 function escapeHtml(s) {
   return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -874,11 +893,15 @@ themeToggle?.addEventListener("click", () => {
 // Tab switching
 function showTab(panelId) {
   document.querySelectorAll(".mode-panel").forEach((p) => (p.hidden = p.id !== panelId));
+  let label = "";
   document.querySelectorAll(".tab").forEach((t) => {
     const on = t.dataset.panel === panelId;
     t.classList.toggle("is-active", on);
     t.setAttribute("aria-selected", String(on));
+    if (on) label = t.textContent.trim();
   });
+  if (panelId === "booksPanel") loadRecordings();   // refresh saved recordings
+  if (label) announce(label + " selected", "ok");     // speaks when voice guidance is on
 }
 document.querySelectorAll(".tab").forEach((t) =>
   t.addEventListener("click", () => showTab(t.dataset.panel)));
@@ -944,6 +967,7 @@ $("#textPlayBtn")?.addEventListener("click", async () => {
     const audio = $("#textAudio");
     audio.src = sp.audio_url; audio.hidden = false;
     $("#textDownload").href = sp.audio_url; $("#textDownload").hidden = false;
+    $("#textSaveBtn").hidden = false;
     ts.className = "status ok"; ts.textContent = "Playing.";
     audio.play().catch(() => (ts.textContent = "Ready — press the player to listen."));
   } catch (err) {
@@ -952,6 +976,13 @@ $("#textPlayBtn")?.addEventListener("click", async () => {
 });
 $("#textStopBtn")?.addEventListener("click", () => {
   const a = $("#textAudio"); if (a) { a.pause(); a.currentTime = 0; }
+});
+$("#textSaveBtn")?.addEventListener("click", async () => {
+  const ts = $("#textStatus");
+  try {
+    await saveRecording($("#textAudio").src, $("#textInput").value || "Text", $("#rcLanguage").value);
+    ts.className = "status ok"; ts.textContent = "Saved on your device — find it in 📚 My Books.";
+  } catch (e) { ts.className = "status error"; ts.textContent = "Could not save: " + (e.message || e); }
 });
 
 // Document reader: upload PDF / Word / EPUB / TXT -> extract -> translate -> read.
@@ -964,6 +995,13 @@ $("#docInput")?.addEventListener("change", (e) => {
   $("#docResult").hidden = true;
   $("#docStatus").textContent = "";
   $("#docReadBtn").focus();
+});
+$("#docSaveBtn")?.addEventListener("click", async () => {
+  const st = $("#docStatus");
+  try {
+    await saveRecording($("#docAudio").src, docFile ? docFile.name : "Document", $("#docSaveBtn").dataset.lang || "");
+    st.className = "status ok"; st.textContent = "Saved on your device — find it in 📚 My Books.";
+  } catch (e) { st.className = "status error"; st.textContent = "Could not save: " + (e.message || e); }
 });
 $("#docReadBtn")?.addEventListener("click", async () => {
   if (!docFile) return;
@@ -980,6 +1018,8 @@ $("#docReadBtn")?.addEventListener("click", async () => {
     a.src = doc.female_audio_url;
     $("#docDownload").href = doc.female_audio_url;
     $("#docDownload").hidden = false;
+    $("#docSaveBtn").hidden = false;
+    $("#docSaveBtn").dataset.lang = doc.trans_lang || "";
     $("#docResult").hidden = false;
     st.className = "status ok"; st.textContent = "Done.";
     a.play().catch(() => {});

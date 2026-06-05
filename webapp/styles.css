@@ -347,3 +347,36 @@ audio { width: 100%; margin-bottom: 14px; }
 .field input, .field select, .rc-row select, .reader-text { border-radius: 10px; }
 .card, .reader-controls { border-radius: var(--radius); border-color: #e1e7ec; }
 body.dark .topbar { background: #0e1726; }
+
+/* ===== Header/voice toggle polish + responsive ===== */
+#ttsToggle, #themeToggle { font-size: 1.35rem; padding: 6px 8px; line-height: 1; }
+/* never strike-through the voice icon (looked broken) */
+.topbar-actions .link-btn[aria-pressed="false"] { text-decoration: none; opacity: .85; }
+.brand { font-size: 1.4rem; letter-spacing: 1px; white-space: nowrap; }
+
+/* Saved-recordings folder chips */
+.folder-bar { display: flex; gap: 8px; flex-wrap: wrap; margin: 4px 0 16px; }
+.folder-chip {
+  padding: 8px 14px; border-radius: 999px; border: 2px solid var(--border);
+  background: #fff; color: var(--text); font: inherit; font-weight: 700; cursor: pointer; min-height: 40px;
+}
+.folder-chip.is-active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+@media (max-width: 600px) {
+  html, body { font-size: 17px; }
+  .topbar { padding: 10px 12px; }
+  .brand { font-size: 1.15rem; letter-spacing: .5px; }
+  .topbar-actions { gap: 2px; }
+  .topbar-actions .link-btn { padding: 6px 5px; font-size: .9rem; min-height: 40px; }
+  #accountBtn, #logoutBtn { font-size: .85rem; }
+  main { padding: 14px 12px 56px; }
+  .tabs { flex-wrap: wrap; gap: 6px; }
+  .tab { flex: 1 1 28%; min-height: 60px; font-size: .9rem; padding: 8px 4px; min-width: 0; }
+  .card, .reader-controls { padding: 16px; }
+  .row { gap: 10px; }
+  .row .primary-btn { min-width: 140px; }
+  .play-btn { width: 64px; height: 64px; }
+}
+@media (max-width: 380px) {
+  .tab { flex: 1 1 45%; }
+}
