@@ -1,32 +1,53 @@
 /* EYEWAZ web client — plain, high-contrast, large-text design for low vision. */
 
+/* Brand display font. Drop the real file at /app/assets/fonts/GoodDogNew.*
+   (see assets/README.md). Until then, a friendly rounded fallback is used. */
+@font-face {
+  font-family: "GoodDogNew";
+  src: url("/app/assets/fonts/GoodDogNew.woff2") format("woff2"),
+       url("/app/assets/fonts/GoodDogNew.woff") format("woff"),
+       url("/app/assets/fonts/GoodDogNew.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
-  --bg: #eef1f3;           /* soft grey page background */
-  --surface: #ffffff;      /* white cards */
-  --border: #c3ccd4;       /* light input border */
-  --text: #1d2730;
-  --muted: #67767f;
-  --accent: #15a06f;       /* EYEWAZ emerald green */
-  --accent-hover: #11875d;
-  --accent-soft: #40c79b;  /* lighter mint for highlights/progress */
+  /* EYEWAZ brand: #7BB2BE blue, #F7F6E9 cream. Darker/lighter shades below are
+     derived from the brand blue so text stays legible (WCAG AA) for low vision. */
+  --brand-blue: #7BB2BE;   /* brand accent (decorative fills) */
+  --brand-cream: #F7F6E9;  /* brand background */
+  --bg: #F7F6E9;           /* cream page background */
+  --surface: #ffffff;      /* white cards on cream */
+  --border: #cdd9d7;       /* soft blue-grey input border */
+  --text: #1f2b2e;
+  --muted: #5f7176;
+  --accent: #7BB2BE;       /* EYEWAZ blue */
+  --accent-strong: #2e6675;/* deep blue for buttons/CTAs (white text passes AA) */
+  --accent-hover: #224f5b; /* darker still, for hover */
+  --accent-soft: #a9cdd4;  /* light blue for highlights/progress */
   --danger: #c0392b;
-  --success: #15a06f;
-  --focus: #0e7a55;        /* dark-green keyboard focus ring */
+  --success: #2e7d52;
+  --focus: #224f5b;        /* deep-blue keyboard focus ring (visible on cream) */
   --radius: 14px;
+  /* Brand display font, with a rounded, friendly fallback stack. */
+  --font-brand: "GoodDogNew", "Comic Sans MS", "Chalkboard SE", "Quicksand",
+                ui-rounded, system-ui, sans-serif;
 }
 
 * { box-sizing: border-box; }
 
 /* Dark mode — toggled by body.dark */
 body.dark {
-  --bg: #0e1726;
-  --surface: #182338;
-  --border: #9fb3d6;
-  --text: #eef3fb;
-  --muted: #aab8d4;
-  --accent: #4da3ff;
-  --accent-hover: #6cb4ff;
-  --focus: #ffd166;
+  --bg: #10211f;
+  --surface: #18302f;
+  --border: #5a8a92;
+  --text: #eef6f4;
+  --muted: #aac6c9;
+  --accent: #7BB2BE;
+  --accent-strong: #3a7080;
+  --accent-hover: #4f93a3;
+  --focus: #a9cdd4;
 }
 body.dark .card,
 body.dark .reader-controls,
@@ -44,7 +65,7 @@ body.dark .field input, body.dark .field select, body.dark .reader-text { backgr
   border: 2px solid #d4dbe9; background: var(--surface);
   font: inherit; font-weight: 700; font-size: 1.05rem; color: var(--text); cursor: pointer;
 }
-.tab.is-active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.tab.is-active { background: var(--accent-strong); color: #fff; border-color: var(--accent-strong); }
 
 /* Inline reader controls */
 .reader-controls { display: grid; gap: 14px; }
@@ -67,7 +88,7 @@ body.dark .field input, body.dark .field select, body.dark .reader-text { backgr
 .player-bar { display: flex; align-items: center; justify-content: center; gap: 16px; margin: 18px 0; }
 .play-btn {
   width: 76px; height: 76px; border-radius: 50%; border: none;
-  background: var(--accent); color: #fff; font-size: 2rem; cursor: pointer;
+  background: var(--accent-strong); color: #fff; font-size: 2rem; cursor: pointer;
   display: flex; align-items: center; justify-content: center;
 }
 .play-btn:hover { background: var(--accent-hover); }
@@ -78,7 +99,7 @@ body.dark .field input, body.dark .field select, body.dark .reader-text { backgr
   font-size: 1.4rem; cursor: pointer; display: flex; align-items: center; justify-content: center;
   text-decoration: none;
 }
-.round-btn:hover { background: var(--accent); color: #fff; }
+.round-btn:hover { background: var(--accent-strong); color: #fff; }
 
 html, body {
   margin: 0;
@@ -113,12 +134,28 @@ html, body {
 
 .topbar {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 14px 20px; background: var(--accent); color: #fff;
+  padding: 12px 20px; background: var(--accent); color: var(--brand-cream);
 }
-.brand { margin: 0; font-size: 1.5rem; letter-spacing: 2px; }
+/* Brand lockup: ear/eye mark + GoodDogNew wordmark + tagline */
+.brand-lockup { display: flex; align-items: center; gap: 12px; }
+.brand-mark { width: 46px; height: 46px; color: var(--brand-cream); flex: none; }
+.brand-mark svg, .brand-mark img { width: 100%; height: 100%; display: block; }
+.brand-text { display: flex; flex-direction: column; line-height: 1; }
+.brand {
+  margin: 0; color: var(--brand-cream);
+  font-family: var(--font-brand); font-weight: 400;
+  font-size: 2.1rem; letter-spacing: .5px; text-transform: lowercase;
+}
+.brand-tag {
+  margin: 2px 0 0; color: var(--brand-cream); opacity: .85;
+  font-size: .62rem; letter-spacing: 2px; text-transform: uppercase;
+}
 .topbar-actions { display: flex; align-items: center; gap: 10px; }
-.topbar-actions .link-btn { color: #fff; }
-.topbar-actions .link-btn[aria-pressed="false"] { text-decoration: line-through; opacity: .8; }
+.topbar-actions .link-btn { color: #143b44; font-weight: 700; }
+.topbar-actions .link-btn[aria-pressed="false"] { text-decoration: line-through; opacity: .7; }
+
+/* Headings carry the brand font for personality; body stays a legible sans. */
+h2, h3, .auth h2 { font-family: var(--font-brand); font-weight: 400; letter-spacing: .3px; }
 
 main { max-width: 640px; margin: 0 auto; padding: 20px 16px 64px; }
 
@@ -233,15 +270,15 @@ h4 { font-size: 1.15rem; margin: 18px 0 6px; }
   font-size: 1.15rem;
   font-weight: 800;
   color: #fff;
-  background: var(--accent);
-  border: 2px solid var(--accent);
+  background: var(--accent-strong);
+  border: 2px solid var(--accent-strong);
   border-radius: 10px;
   cursor: pointer;
   min-height: 56px;
 }
-.primary-btn:hover { background: var(--accent-hover); }
+.primary-btn:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
 .primary-btn:disabled { opacity: .6; cursor: progress; }
-.primary-btn.ghost { background: #fff; color: var(--accent); }
+.primary-btn.ghost { background: #fff; color: var(--accent-strong); border-color: var(--accent-strong); }
 .primary-btn.danger { color: var(--danger); border-color: var(--danger); }
 .primary-btn.danger:hover { background: var(--danger); color: #fff; }
 .primary-btn.ghost:hover { background: var(--surface); }
@@ -305,11 +342,10 @@ audio { width: 100%; margin-bottom: 14px; }
 .lib-item .lib-ur { font-size: 1.25rem; }
 .lib-item .lib-play { font-size: 1.4rem; }
 
-/* ===== EYEWAZ green-theme refinements (match the original mockups) ===== */
-.brand { font-weight: 800; }
+/* ===== EYEWAZ brand refinements (blue/cream identity) ===== */
 .topbar { background: var(--accent); }
-.tab.is-active { background: var(--accent); border-color: var(--accent); }
-.play-btn { background: var(--accent); }
+.tab.is-active { background: var(--accent-strong); border-color: var(--accent-strong); }
+.play-btn { background: var(--accent-strong); }
 .play-btn:hover { background: var(--accent-hover); }
 
 /* Social sign-in as a centered round-icon row (like the mockup) */
@@ -335,24 +371,24 @@ audio { width: 100%; margin-bottom: 14px; }
 }
 .lib-play-icon {
   flex: 0 0 auto; width: 46px; height: 46px; border-radius: 50%;
-  background: var(--accent); color: #fff;
+  background: var(--accent-strong); color: #fff;
   display: flex; align-items: center; justify-content: center; font-size: 1.1rem;
 }
 .lib-info { flex: 1; display: flex; flex-direction: column; gap: 3px; text-align: left; min-width: 0; }
 .lib-info strong { font-size: 1.1rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lib-snippet { color: var(--muted); font-size: .95rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.lib-fav { flex: 0 0 auto; color: var(--accent); font-size: 1.4rem; }
+.lib-fav { flex: 0 0 auto; color: var(--accent-strong); font-size: 1.4rem; }
 
 /* Softer, rounder inputs/cards to match */
 .field input, .field select, .rc-row select, .reader-text { border-radius: 10px; }
 .card, .reader-controls { border-radius: var(--radius); border-color: #e1e7ec; }
-body.dark .topbar { background: #0e1726; }
+body.dark .topbar { background: #102826; }
 
 /* ===== Header/voice toggle polish + responsive ===== */
 #ttsToggle, #themeToggle { font-size: 1.35rem; padding: 6px 8px; line-height: 1; }
 /* never strike-through the voice icon (looked broken) */
 .topbar-actions .link-btn[aria-pressed="false"] { text-decoration: none; opacity: .85; }
-.brand { font-size: 1.4rem; letter-spacing: 1px; white-space: nowrap; }
+.brand { font-size: 1.95rem; letter-spacing: .5px; white-space: nowrap; }
 
 /* Saved-recordings folder chips */
 .folder-bar { display: flex; gap: 8px; flex-wrap: wrap; margin: 4px 0 16px; }
@@ -360,7 +396,7 @@ body.dark .topbar { background: #0e1726; }
   padding: 8px 14px; border-radius: 999px; border: 2px solid var(--border);
   background: #fff; color: var(--text); font: inherit; font-weight: 700; cursor: pointer; min-height: 40px;
 }
-.folder-chip.is-active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.folder-chip.is-active { background: var(--accent-strong); color: #fff; border-color: var(--accent-strong); }
 
 @media (max-width: 600px) {
   html, body { font-size: 17px; }
@@ -394,7 +430,7 @@ body.dark .topbar { background: #0e1726; }
   max-width: 92%; word-wrap: break-word;
 }
 .asst-user {
-  align-self: flex-end; background: var(--accent); color: #fff;
+  align-self: flex-end; background: var(--accent-strong); color: #fff;
   border-bottom-right-radius: 4px;
 }
 .asst-assistant {
