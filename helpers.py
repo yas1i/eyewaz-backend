@@ -229,6 +229,27 @@ def synthesize(text, voice_name, rate=1.0):
     return synth.speak_ssml_async(ssml).get()
 
 
+def synthesize_long(text, voice_name, rate=1.0, max_chunk=2500):
+    """Synthesize long text by chunking on word boundaries and concatenating the
+    MP3 output, so documents/books don't exceed a single TTS request's limits.
+    Returns raw audio bytes."""
+    words = (text or "").split(" ")
+    chunks, cur = [], ""
+    for w in words:
+        if len(cur) + len(w) + 1 > max_chunk:
+            if cur:
+                chunks.append(cur)
+            cur = w
+        else:
+            cur = (cur + " " + w) if cur else w
+    if cur:
+        chunks.append(cur)
+    audio = b""
+    for c in chunks:
+        audio += synthesize(c, voice_name, rate).audio_data
+    return audio
+
+
 def UploadOnAzure(file, filename):
     """Store a file and return a blob-like handle.
 

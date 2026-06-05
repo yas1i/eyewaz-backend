@@ -162,6 +162,7 @@
       <!-- Mode tabs -->
       <div class="tabs" role="tablist" aria-label="Reading mode">
         <button class="tab is-active" id="tabText" role="tab" aria-selected="true" data-panel="textPanel">✍️ Text</button>
+        <button class="tab" id="tabDoc" role="tab" aria-selected="false" data-panel="docPanel">📄 Document</button>
         <button class="tab" id="tabPhoto" role="tab" aria-selected="false" data-panel="photoPanel">📷 Photo</button>
         <button class="tab" id="tabWeb" role="tab" aria-selected="false" data-panel="webPanel">🌐 Web page</button>
       </div>
@@ -197,6 +198,30 @@
           <h4>Translation</h4>
           <p id="textTrans" class="urdu"></p>
         </div>
+      </div>
+
+      <!-- ===== DOCUMENT panel ===== -->
+      <div id="docPanel" class="mode-panel" role="tabpanel" aria-labelledby="tabDoc" hidden>
+        <label for="docInput" class="capture-btn">
+          <span aria-hidden="true" class="capture-icon">📄</span>
+          <span>Choose a PDF, Word, EPUB, or text file</span>
+        </label>
+        <input id="docInput" type="file" accept=".pdf,.docx,.doc,.txt,.epub" class="sr-only" />
+        <div id="docPreview" hidden>
+          <p id="docName" class="hint"></p>
+          <button id="docReadBtn" class="primary-btn">Read it to me</button>
+        </div>
+        <p id="docStatus" class="status" role="status"></p>
+        <article id="docResult" class="card" hidden>
+          <h4>Audio (natural voice)</h4>
+          <audio id="docAudio" controls preload="auto"></audio>
+          <div class="row">
+            <a id="docDownload" class="round-btn" download="eyewaz-audio.mp3" hidden aria-label="Download audio">⬇</a>
+          </div>
+          <h4>Translation</h4>
+          <p id="docTrans" class="urdu"></p>
+        </article>
+        <p class="hint">Long books are read from the beginning (up to ~8,000 characters per file for now).</p>
       </div>
 
       <!-- ===== PHOTO panel ===== -->

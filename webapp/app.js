@@ -881,6 +881,44 @@ $("#textStopBtn")?.addEventListener("click", () => {
   const a = $("#textAudio"); if (a) { a.pause(); a.currentTime = 0; }
 });
 
+// Document reader: upload PDF / Word / EPUB / TXT -> extract -> translate -> read.
+let docFile = null;
+$("#docInput")?.addEventListener("change", (e) => {
+  docFile = e.target.files && e.target.files[0];
+  if (!docFile) return;
+  $("#docName").textContent = "Selected: " + docFile.name;
+  $("#docPreview").hidden = false;
+  $("#docResult").hidden = true;
+  $("#docStatus").textContent = "";
+  $("#docReadBtn").focus();
+});
+$("#docReadBtn")?.addEventListener("click", async () => {
+  if (!docFile) return;
+  const st = $("#docStatus"), btn = $("#docReadBtn");
+  btn.disabled = true; st.className = "status busy";
+  st.textContent = "Extracting text, translating, and creating audio… larger files take longer.";
+  try {
+    const form = new FormData();
+    form.append("file", docFile);
+    const doc = await api("/document-translation-and-speech", { method: "POST", isForm: true, body: form });
+    $("#docTrans").textContent = doc.trans_text || "";
+    applyLangDir($("#docTrans"), doc.trans_lang);
+    const a = $("#docAudio");
+    a.src = doc.female_audio_url;
+    $("#docDownload").href = doc.female_audio_url;
+    $("#docDownload").hidden = false;
+    $("#docResult").hidden = false;
+    st.className = "status ok"; st.textContent = "Done.";
+    a.play().catch(() => {});
+    loadLibrary();
+  } catch (err) {
+    st.className = "status error";
+    st.textContent = err.message || "Could not read that file.";
+  } finally {
+    btn.disabled = false;
+  }
+});
+
 /* --------------------------------- Boot ------------------------------------- */
 
 function enterApp() {
