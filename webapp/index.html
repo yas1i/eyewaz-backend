@@ -455,6 +455,7 @@
     <section id="accountView" aria-labelledby="accountHeading" hidden>
       <h2 id="accountHeading">Account &amp; voice settings</h2>
       <p class="status" id="accountStatus" role="status"></p>
+      <button type="button" id="installBtn" class="primary-btn" hidden><svg class="ic" aria-hidden="true"><use href="#ic-add"/></svg> Install the EYEWAZ app</button>
 
       <!-- ===== Fast sign-in (Face ID / Touch ID) ===== -->
       <div class="card" id="faceIdCard" hidden>
@@ -588,6 +589,14 @@
         </div>
       </form>
       <button type="button" id="accountBackBtn" class="link-btn">← Back to reading</button>
+
+      <div class="card" id="dangerZone">
+        <h3>Delete account</h3>
+        <p class="hint">Permanently delete your EYEWAZ account and all its data. This cannot be undone. Recordings saved on this device are also removed.</p>
+        <button type="button" id="deleteAccountBtn" class="primary-btn danger"><svg class="ic" aria-hidden="true"><use href="#ic-trash"/></svg> Delete my account &amp; data</button>
+        <p id="deleteStatus" class="status" role="status"></p>
+      </div>
+
       <p class="hint"><a href="/privacy" target="_blank" rel="noopener">Privacy policy</a></p>
     </section>
 
