@@ -11,12 +11,16 @@ read-aloud pipeline (photo, document, web, My Day, assistant) speaks it.
 """
 
 import json
+import os
+from datetime import datetime
 
-from flask import Response
+from flask import Response, request
 from flask_restful import Resource
 from flask_jwt_extended import jwt_required
 
 from helpers import list_voices
+from database.models import DialectVoice
+import elevenlabs_api
 
 FALLBACK_VOICE = "ur-PK-UzmaNeural"
 FALLBACK_LOCALE = "ur-PK"
@@ -52,22 +56,81 @@ class DialectsAPI(Resource):
             except Exception:
                 _VOICE_CACHE = []
         by_name = {v.get("shortName"): v for v in (_VOICE_CACHE or [])}
+        cloned = {dv.dialect_id: dv for dv in DialectVoice.objects()}
 
         out = []
         for d in CATALOG:
+            dv = cloned.get(d["id"])
             present = [by_name[n] for n in d["voices"] if n in by_name]
+            if dv and dv.voice_id:
+                # A cloned dialect voice exists — it wins. Voice value is "el:<id>";
+                # text is still translated to Urdu, the clone speaks it in-dialect.
+                voices = [{"shortName": "el:" + dv.voice_id, "gender": "", "engine": "clone",
+                           "name": (dv.speaker or d["label"]) + " (cloned)"}]
+                status, locale = "live", FALLBACK_LOCALE
+            elif present:
+                voices = [{"shortName": v.get("shortName"), "gender": v.get("gender", ""),
+                           "engine": "azure", "name": v.get("displayName", v.get("shortName"))} for v in present]
+                status, locale = "live", d["locale"]
+            else:
+                voices, status, locale = [], "soon", FALLBACK_LOCALE
             out.append({
-                "id": d["id"],
-                "label": d["label"],
-                "region": d["region"],
-                "locale": d["locale"] if present else FALLBACK_LOCALE,
-                "status": "live" if present else "soon",
-                "voices": [{
-                    "shortName": v.get("shortName"),
-                    "gender": v.get("gender", ""),
-                    "name": v.get("displayName", v.get("shortName")),
-                } for v in present],
-                "fallback_voice": FALLBACK_VOICE,
-                "fallback_locale": FALLBACK_LOCALE,
+                "id": d["id"], "label": d["label"], "region": d["region"],
+                "locale": locale, "status": status, "voices": voices,
+                "cloned": bool(dv and dv.voice_id),
+                "fallback_voice": FALLBACK_VOICE, "fallback_locale": FALLBACK_LOCALE,
             })
         return _resp({"dialects": out}, 200)
+
+
+_CATALOG_IDS = {d["id"]: d for d in CATALOG}
+
+
+class DialectCloneAPI(Resource):
+    """Owner tool: turn a consenting native-speaker recording into a cloned
+    dialect voice. Guarded by DEV_PLAN_KEY; needs ELEVENLABS_API_KEY."""
+
+    @jwt_required()
+    def post(self):
+        secret = os.getenv("DEV_PLAN_KEY")
+        key = request.form.get("key")
+        if not secret or key != secret:
+            return _resp({"message": "Not available."}, 403)
+        if not elevenlabs_api.configured():
+            return _resp({"message": "Set ELEVENLABS_API_KEY first."}, 400)
+        dialect_id = request.form.get("dialect_id", "")
+        if dialect_id not in _CATALOG_IDS:
+            return _resp({"message": "Unknown dialect."}, 400)
+        if request.form.get("consent") != "true":
+            return _resp({"message": "Speaker consent is required."}, 400)
+        if "audio" not in request.files:
+            return _resp({"message": "Please attach an audio sample."}, 400)
+        f = request.files["audio"]
+        speaker = (request.form.get("speaker") or "").strip()[:80]
+        label = _CATALOG_IDS[dialect_id]["label"]
+        try:
+            voice_id = elevenlabs_api.add_voice(
+                f"EYEWAZ {label}", f.read(), filename=f.filename or "sample.webm",
+                content_type=f.mimetype or "application/octet-stream",
+                description=f"EYEWAZ {label} dialect voice; speaker: {speaker}; consented.",
+            )
+        except Exception as e:
+            return _resp({"message": f"Cloning failed: {e}"}, 502)
+        DialectVoice(dialect_id=dialect_id, engine="elevenlabs", voice_id=voice_id,
+                     speaker=speaker, consent_at=datetime.utcnow()).save()
+        return _resp({"message": f"{label} voice created and is now live.",
+                      "dialect_id": dialect_id, "voice_id": voice_id}, 200)
+
+    @jwt_required()
+    def delete(self):
+        secret = os.getenv("DEV_PLAN_KEY")
+        data = request.get_json(force=True, silent=True) or {}
+        if not secret or data.get("key") != secret:
+            return _resp({"message": "Not available."}, 403)
+        dialect_id = data.get("dialect_id")
+        dv = DialectVoice.objects(dialect_id=dialect_id).first()
+        if dv:
+            if dv.voice_id:
+                elevenlabs_api.delete_voice(dv.voice_id)
+            dv.delete()
+        return _resp({"message": "Removed."}, 200)

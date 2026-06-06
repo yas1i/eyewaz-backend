@@ -705,3 +705,9 @@ body.dark .lib-menu-item.current, body.dark .lib-menu-item.accent { color: var(-
 .dialect-badge.soon { background: var(--border); color: var(--muted); }
 body.dark .dialect-item { background: #10211f; }
 body.dark .dialect-badge.live { color: #06222a; }
+
+/* Voice bank (admin) */
+.vb-consent { display: flex; align-items: flex-start; gap: 10px; margin: 10px 0 14px; font-size: .98rem; }
+.vb-consent input { width: 22px; height: 22px; margin-top: 2px; accent-color: var(--accent-strong); }
+.vb-list { margin-top: 14px; }
+.vb-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 0; border-top: 1px solid var(--border); }

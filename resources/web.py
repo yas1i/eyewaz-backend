@@ -158,6 +158,23 @@ class SpeakAPI(Resource):
         rate = data.get("rate", prefs.get("rate", 1.0))
 
         capped = text[:SPEAK_MAX_CHARS]
+        # Cloned dialect voices are stored as "el:<voice_id>" → synthesize via
+        # ElevenLabs; everything else uses Azure.
+        if isinstance(voice, str) and voice.startswith("el:"):
+            import elevenlabs_api
+            if not elevenlabs_api.configured():
+                voice = "ur-PK-UzmaNeural"   # graceful fallback if key absent
+            else:
+                try:
+                    audio = b""
+                    for piece in _split_for_translate(capped, 2200):
+                        audio += elevenlabs_api.tts(voice[3:], piece)
+                    stored = storage.save_file(audio, "speech.mp3")
+                    return _json({"audio_url": stored.url,
+                                  "truncated": len(text) > SPEAK_MAX_CHARS, "voice": voice}, 200)
+                except Exception as e:
+                    return _json({"message": f"Could not generate audio: {e}"}, 502)
+
         try:
             audio = b""
             for piece in _split_for_translate(capped, 2500):

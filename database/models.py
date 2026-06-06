@@ -71,6 +71,18 @@ class AppSettings(Document):
     objects = QuerySetManager()
 
 
+class DialectVoice(Document):
+    """A cloned dialect voice in the EYEWAZ voice bank (Phase 2).
+    dialect_id matches an entry in resources/dialects.CATALOG."""
+    dialect_id = StringField(primary_key=True)
+    engine = StringField(max_length=20, default="elevenlabs")
+    voice_id = StringField()                  # provider voice id
+    speaker = StringField(max_length=80)      # who recorded it
+    consent_at = DateTimeField()              # when consent was confirmed
+    created_at = DateTimeField(default=datetime.utcnow)
+    objects = QuerySetManager()
+
+
 class Docs(Document):
     id = StringField(primary_key=True)
     user = ReferenceField(Users)

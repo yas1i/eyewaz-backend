@@ -1692,12 +1692,68 @@ async function loadDialects() {
     });
     wrap.appendChild(btn);
   });
+  renderVoiceBank(data.dialects || []);
+}
+
+// ---- Voice bank (admin) ----
+function vbStatus(msg, kind) {
+  const s = document.getElementById("vbStatus");
+  if (s) { s.textContent = msg || ""; s.className = "status" + (kind ? " " + kind : ""); }
+}
+function renderVoiceBank(dialects) {
+  const card = document.getElementById("voiceBankCard"); if (!card) return;
+  if (localStorage.getItem("eyewaz_admin") !== "1") { card.hidden = true; return; }
+  card.hidden = false;
+  const sel = document.getElementById("vbDialect");
+  if (sel) sel.innerHTML = dialects.map((d) =>
+    `<option value="${d.id}">${escapeHtml(d.label)} — ${escapeHtml(d.region)}${d.cloned ? " (cloned)" : ""}</option>`).join("");
+  const list = document.getElementById("vbList");
+  const cloned = dialects.filter((d) => d.cloned);
+  list.innerHTML = cloned.length
+    ? "<h4>Cloned voices</h4>" + cloned.map((d) =>
+        `<div class="vb-row"><span>${escapeHtml(d.label)}</span>` +
+        `<button type="button" class="round-btn vb-del" data-id="${d.id}" aria-label="Delete ${escapeHtml(d.label)} voice"><svg class="ic" aria-hidden="true"><use href="#ic-trash"/></svg></button></div>`).join("")
+    : "<p class='hint'>No cloned voices yet.</p>";
+  list.querySelectorAll(".vb-del").forEach((b) => b.addEventListener("click", async () => {
+    const key = (document.getElementById("vbKey").value || "").trim();
+    if (!key) { vbStatus("Enter your admin key first.", "error"); return; }
+    if (!window.confirm("Delete this cloned voice?")) return;
+    try { await api("/dialects/clone", { method: "DELETE", body: { key, dialect_id: b.dataset.id } }); vbStatus("Deleted.", "ok"); loadDialects(); }
+    catch (e) { vbStatus(e.message || "Delete failed.", "error"); }
+  }));
+}
+function bindVoiceBank() {
+  const btn = document.getElementById("vbCreateBtn");
+  if (!btn || btn.dataset.bound) return;
+  btn.dataset.bound = "1";
+  btn.addEventListener("click", async () => {
+    const dialect = document.getElementById("vbDialect").value;
+    const speaker = document.getElementById("vbSpeaker").value.trim();
+    const key = document.getElementById("vbKey").value.trim();
+    const consent = document.getElementById("vbConsent").checked;
+    const file = document.getElementById("vbAudio").files[0];
+    if (!key) { vbStatus("Enter your admin key.", "error"); return; }
+    if (!consent) { vbStatus("Confirm the speaker consented.", "error"); return; }
+    if (!file) { vbStatus("Attach an audio sample.", "error"); return; }
+    const fd = new FormData();
+    fd.append("key", key); fd.append("dialect_id", dialect);
+    fd.append("speaker", speaker); fd.append("consent", "true"); fd.append("audio", file);
+    btn.disabled = true; vbStatus("Creating voice… this can take a minute.", "busy");
+    try {
+      const d = await api("/dialects/clone", { method: "POST", body: fd, isForm: true });
+      vbStatus(d.message || "Voice created.", "ok");
+      document.getElementById("vbAudio").value = "";
+      loadDialects();
+    } catch (e) { vbStatus(e.message || "Cloning failed.", "error"); }
+    finally { btn.disabled = false; }
+  });
 }
 
 async function openAccount() {
   showView("account");
   accStatus("Loading your settings…", "busy");
   Plan.init();
+  bindVoiceBank();
   loadDialects();
   const profile = await loadPrefs();   // also refreshes the plan card via Billing.set
   if (profile) {
