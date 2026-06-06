@@ -505,6 +505,20 @@
         <p id="dialectStatus" class="status" role="status"></p>
       </div>
 
+      <!-- ===== Voice bank (admin only; shown when eyewaz_admin flag is set) ===== -->
+      <div class="card" id="voiceBankCard" hidden>
+        <h3>Voice bank · admin</h3>
+        <p class="hint">Turn a consenting native-speaker recording into a cloned dialect voice. Requires your <code>DEV_PLAN_KEY</code> and <code>ELEVENLABS_API_KEY</code> on the server.</p>
+        <div class="field"><label for="vbDialect">Dialect</label><select id="vbDialect"></select></div>
+        <div class="field"><label for="vbSpeaker">Speaker name</label><input id="vbSpeaker" type="text" autocomplete="off" placeholder="e.g. Ahmed K." /></div>
+        <div class="field"><label for="vbAudio">Voice sample (clear audio, ~1–2 min)</label><input id="vbAudio" type="file" accept="audio/*" /></div>
+        <div class="field"><label for="vbKey">Admin key (DEV_PLAN_KEY)</label><input id="vbKey" type="password" autocomplete="off" /></div>
+        <label class="vb-consent"><input id="vbConsent" type="checkbox" /> The speaker has consented to their voice being cloned for EYEWAZ.</label>
+        <button id="vbCreateBtn" type="button" class="primary-btn">Create dialect voice</button>
+        <p id="vbStatus" class="status" role="status"></p>
+        <div id="vbList" class="vb-list"></div>
+      </div>
+
       <form id="accountForm" class="card" novalidate>
         <h3>Your details</h3>
         <div class="field">

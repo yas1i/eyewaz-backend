@@ -187,6 +187,15 @@ Production env vars (Render): `MONGO_URI`, `JWT_SECRET_KEY`, `FLASK_SECRET_KEY`,
      `checkout.session.completed`, `invoice.paid`, `customer.subscription.deleted`;
      set its signing secret as `STRIPE_WEBHOOK_SECRET`.
    - Checkout is Stripe-hosted (redirect) — card/Klarna details never touch the app.
+12. **Dialect voice bank** — `/api/dialects` lists Pakistani regional voices
+   (live ones validated against the Azure catalogue; the rest "coming soon").
+   To clone real dialect voices from native-speaker recordings: set
+   `ELEVENLABS_API_KEY` (+ optional `ELEVENLABS_MODEL`) and `DEV_PLAN_KEY`, then
+   in the browser run `localStorage.eyewaz_admin='1'` to reveal **Account →
+   Voice bank · admin**: pick dialect → upload sample → tick consent → Create.
+   The clone is stored (DialectVoice) and that dialect goes live immediately;
+   reading routes `el:<id>` voices through ElevenLabs. Recording script + consent
+   form: `docs/voice-bank/`.
 12. **Face ID / passkey sign-in** (WebAuthn) — works out of the box over HTTPS
    (Render provides it). Passkeys are bound to the **domain** (RP ID), so if you
    serve on both the onrender.com URL and `eyewaz.com`, set `WEBAUTHN_RP_ID`
