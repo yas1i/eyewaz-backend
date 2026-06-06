@@ -47,6 +47,9 @@ class Users(Document):
     paypal_sub_id = StringField()                         # PayPal subscription id
     stripe_customer_id = StringField()                    # Stripe customer (card / Klarna)
     stripe_sub_id = StringField()                         # Stripe subscription id
+    # Passkeys (Face ID / Touch ID / fingerprint) — WebAuthn public-key creds.
+    # Each: {id, public_key, sign_count} (base64url strings + int).
+    webauthn_credentials = ListField(DictField())
     objects = QuerySetManager()
 
     def preferences(self):

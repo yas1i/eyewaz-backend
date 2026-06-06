@@ -50,6 +50,11 @@
       <p class="lede" id="authLede">Sign in to turn text into spoken Urdu.</p>
       <p id="authError" class="form-error" role="alert" hidden></p>
 
+      <!-- Fast biometric sign-in (shown only if the device supports it) -->
+      <button type="button" id="faceIdLoginBtn" class="primary-btn" hidden>
+        👤 Sign in with Face ID / Touch ID
+      </button>
+
       <!-- Social sign-in (shown on the login & signup steps) -->
       <div id="socialBlock">
         <button type="button" class="social-btn" data-provider="google">
@@ -382,6 +387,14 @@
     <section id="accountView" aria-labelledby="accountHeading" hidden>
       <h2 id="accountHeading">Account &amp; voice settings</h2>
       <p class="status" id="accountStatus" role="status"></p>
+
+      <!-- ===== Fast sign-in (Face ID / Touch ID) ===== -->
+      <div class="card" id="faceIdCard" hidden>
+        <h3>👤 Fast sign-in</h3>
+        <p class="hint">Turn on Face ID, Touch ID, or fingerprint to sign in instantly on this device — no password or code to type.</p>
+        <button type="button" id="faceIdEnableBtn" class="primary-btn">Enable Face ID on this device</button>
+        <p class="status" id="faceIdStatus" role="status"></p>
+      </div>
 
       <!-- ===== Membership / plan ===== -->
       <div class="card" id="planCard">

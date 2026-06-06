@@ -1004,6 +1004,104 @@ window.setPlan = (plan, key) =>
     .then((d) => { Billing.set(d.usage); announce("Plan set to " + plan + ".", "ok"); return d; })
     .catch((e) => { announce(e.message || "Could not set plan.", "error"); });
 
+/* ----------------- Passkeys: Face ID / Touch ID / fingerprint --------------- */
+const Passkey = (() => {
+  const supported = !!(window.PublicKeyCredential && navigator.credentials);
+
+  function b64urlToBuf(s) {
+    s = s.replace(/-/g, "+").replace(/_/g, "/");
+    const pad = s.length % 4 ? "=".repeat(4 - (s.length % 4)) : "";
+    const bin = atob(s + pad);
+    const u = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+    return u.buffer;
+  }
+  function bufToB64url(buf) {
+    const u = new Uint8Array(buf); let s = "";
+    for (const b of u) s += String.fromCharCode(b);
+    return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  }
+
+  // Enrol the current (signed-in) device.
+  async function enroll() {
+    if (!supported) { announce("This device doesn't support Face ID sign-in.", ""); return; }
+    const st = document.getElementById("faceIdStatus");
+    if (st) { st.className = "status busy"; st.textContent = "Follow your device's prompt…"; }
+    try {
+      const { options, token } = await api("/webauthn/register/options", { method: "POST" });
+      options.challenge = b64urlToBuf(options.challenge);
+      options.user.id = b64urlToBuf(options.user.id);
+      if (options.excludeCredentials)
+        options.excludeCredentials = options.excludeCredentials.map((c) => ({ ...c, id: b64urlToBuf(c.id) }));
+      const cred = await navigator.credentials.create({ publicKey: options });
+      const out = {
+        id: cred.id, rawId: bufToB64url(cred.rawId), type: cred.type,
+        authenticatorAttachment: cred.authenticatorAttachment || undefined,
+        clientExtensionResults: cred.getClientExtensionResults ? cred.getClientExtensionResults() : {},
+        response: {
+          clientDataJSON: bufToB64url(cred.response.clientDataJSON),
+          attestationObject: bufToB64url(cred.response.attestationObject),
+        },
+      };
+      const d = await api("/webauthn/register/verify", { method: "POST", body: { credential: out, token } });
+      if (st) { st.className = "status ok"; st.textContent = d.message || "Face ID enabled."; }
+      announce(d.message || "Face ID sign-in is enabled on this device.", "ok");
+    } catch (e) {
+      const msg = (e && e.name === "NotAllowedError") ? "Cancelled or timed out." : (e.message || "Could not enable Face ID.");
+      if (st) { st.className = "status error"; st.textContent = msg; }
+      announce(msg, "error");
+    }
+  }
+
+  // Sign in with a passkey (usernameless — the device offers the saved passkey).
+  async function login() {
+    if (!supported) { announce("This device doesn't support Face ID sign-in.", ""); return; }
+    announce("Follow your device's Face ID prompt…", "busy");
+    try {
+      const email = ($("#loginEmail")?.value || "").trim();
+      const { options, token } = await api("/webauthn/login/options", { method: "POST", auth: false, body: { email } });
+      options.challenge = b64urlToBuf(options.challenge);
+      if (options.allowCredentials)
+        options.allowCredentials = options.allowCredentials.map((c) => ({ ...c, id: b64urlToBuf(c.id) }));
+      const cred = await navigator.credentials.get({ publicKey: options });
+      const out = {
+        id: cred.id, rawId: bufToB64url(cred.rawId), type: cred.type,
+        authenticatorAttachment: cred.authenticatorAttachment || undefined,
+        clientExtensionResults: cred.getClientExtensionResults ? cred.getClientExtensionResults() : {},
+        response: {
+          clientDataJSON: bufToB64url(cred.response.clientDataJSON),
+          authenticatorData: bufToB64url(cred.response.authenticatorData),
+          signature: bufToB64url(cred.response.signature),
+          userHandle: cred.response.userHandle ? bufToB64url(cred.response.userHandle) : null,
+        },
+      };
+      const d = await api("/webauthn/login/verify", { method: "POST", auth: false, body: { credential: out, token } });
+      setToken(d.token);
+      announce("Signed in with Face ID. Welcome back" + (d.name ? ", " + d.name.split(" ")[0] : "") + ".", "ok");
+      enterApp();
+    } catch (e) {
+      const msg = (e && e.name === "NotAllowedError") ? "Cancelled or timed out." : (e.message || "Face ID sign-in didn't work.");
+      announce(msg, "error");
+    }
+  }
+
+  function init() {
+    if (!supported) return;
+    const loginBtn = document.getElementById("faceIdLoginBtn");
+    if (loginBtn) {
+      loginBtn.hidden = false;
+      if (!loginBtn.dataset.bound) { loginBtn.dataset.bound = "1"; loginBtn.addEventListener("click", login); }
+    }
+    const card = document.getElementById("faceIdCard");
+    if (card) card.hidden = false;
+    const enableBtn = document.getElementById("faceIdEnableBtn");
+    if (enableBtn && !enableBtn.dataset.bound) { enableBtn.dataset.bound = "1"; enableBtn.addEventListener("click", enroll); }
+  }
+
+  return { init, login, enroll, supported };
+})();
+Passkey.init();
+
 /* ------------------------------ My Day assistant ---------------------------- */
 function greetingFor(d) {
   const h = d.getHours();

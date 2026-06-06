@@ -19,6 +19,10 @@ from resources.billing import (
     PayPalConfigAPI, PayPalActivateAPI, PayPalCancelAPI, PayPalSetupAPI, PayPalWebhookAPI,
     StripeConfigAPI, StripeCheckoutAPI, StripeWebhookAPI,
 )
+from resources.webauthn_res import (
+    WebAuthnRegisterOptions, WebAuthnRegisterVerify,
+    WebAuthnLoginOptions, WebAuthnLoginVerify,
+)
 
 
 def initialize_routes(api):
@@ -54,3 +58,7 @@ def initialize_routes(api):
     api.add_resource(StripeConfigAPI, "/api/stripe/config")
     api.add_resource(StripeCheckoutAPI, "/api/stripe/checkout")
     api.add_resource(StripeWebhookAPI, "/api/stripe/webhook")
+    api.add_resource(WebAuthnRegisterOptions, "/api/webauthn/register/options")
+    api.add_resource(WebAuthnRegisterVerify, "/api/webauthn/register/verify")
+    api.add_resource(WebAuthnLoginOptions, "/api/webauthn/login/options")
+    api.add_resource(WebAuthnLoginVerify, "/api/webauthn/login/verify")
