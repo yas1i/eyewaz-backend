@@ -672,3 +672,16 @@ body.dark .sort-btn { background: #10211f; }
 .lib-menu-item.accent { color: var(--accent-strong); font-weight: 800; }
 .lib-menu-item.back { color: var(--muted); }
 body.dark .lib-menu-item.current, body.dark .lib-menu-item.accent { color: var(--accent); }
+
+/* In-button + contextual icons */
+.primary-btn .ic, .seg-btn .ic, .sort-btn .ic { width: 22px; height: 22px; vertical-align: -5px; margin-right: 7px; }
+.round-btn .ic { width: 24px; height: 24px; }
+.play-btn .ic { width: 30px; height: 30px; }
+.capture-icon .ic { width: 64px; height: 64px; color: var(--accent-strong); }
+.lib-cover-play .ic { width: 26px; height: 26px; color: #fff; }
+.lib-search-icon .ic { width: 20px; height: 20px; color: var(--muted); }
+.asst-bubble .ic, .reminder-when .ic { vertical-align: -4px; }
+/* Mic "listening" state */
+#asstMicBtn.is-listening { background: var(--danger); border-color: var(--danger); }
+#asstMicBtn.is-listening .ic { animation: pulse 1s ease-in-out infinite; }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .45; } }
