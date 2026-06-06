@@ -1722,27 +1722,56 @@ function renderVoiceBank(dialects) {
     catch (e) { vbStatus(e.message || "Delete failed.", "error"); }
   }));
 }
+let vbRecBlob = null, vbRec = null;
 function bindVoiceBank() {
   const btn = document.getElementById("vbCreateBtn");
   if (!btn || btn.dataset.bound) return;
   btn.dataset.bound = "1";
+
+  // In-browser recording
+  const recBtn = document.getElementById("vbRecBtn"), recStop = document.getElementById("vbRecStop");
+  if (recBtn) recBtn.addEventListener("click", async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const chunks = [];
+      vbRec = new MediaRecorder(stream);
+      vbRec.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
+      vbRec.onstop = () => {
+        stream.getTracks().forEach((t) => t.stop());
+        vbRecBlob = new Blob(chunks, { type: vbRec.mimeType || "audio/webm" });
+        const a = document.getElementById("vbRecAudio");
+        a.src = URL.createObjectURL(vbRecBlob); a.hidden = false;
+        recBtn.hidden = false; recStop.hidden = true;
+        vbStatus("Recording captured — ready to create.", "ok");
+      };
+      vbRec.start();
+      recBtn.hidden = true; recStop.hidden = false;
+      vbStatus("Recording… read the script, then press stop.", "busy");
+    } catch (_) { vbStatus("Microphone permission is needed to record.", "error"); }
+  });
+  if (recStop) recStop.addEventListener("click", () => { if (vbRec && vbRec.state !== "inactive") vbRec.stop(); });
+
   btn.addEventListener("click", async () => {
     const dialect = document.getElementById("vbDialect").value;
     const speaker = document.getElementById("vbSpeaker").value.trim();
     const key = document.getElementById("vbKey").value.trim();
     const consent = document.getElementById("vbConsent").checked;
     const file = document.getElementById("vbAudio").files[0];
+    const sample = vbRecBlob || file;   // recorded takes precedence
     if (!key) { vbStatus("Enter your admin key.", "error"); return; }
     if (!consent) { vbStatus("Confirm the speaker consented.", "error"); return; }
-    if (!file) { vbStatus("Attach an audio sample.", "error"); return; }
+    if (!sample) { vbStatus("Record or attach an audio sample.", "error"); return; }
     const fd = new FormData();
     fd.append("key", key); fd.append("dialect_id", dialect);
-    fd.append("speaker", speaker); fd.append("consent", "true"); fd.append("audio", file);
+    fd.append("speaker", speaker); fd.append("consent", "true");
+    fd.append("audio", sample, file ? file.name : "recording.webm");
     btn.disabled = true; vbStatus("Creating voice… this can take a minute.", "busy");
     try {
       const d = await api("/dialects/clone", { method: "POST", body: fd, isForm: true });
       vbStatus(d.message || "Voice created.", "ok");
       document.getElementById("vbAudio").value = "";
+      vbRecBlob = null;
+      const ra = document.getElementById("vbRecAudio"); if (ra) ra.hidden = true;
       loadDialects();
     } catch (e) { vbStatus(e.message || "Cloning failed.", "error"); }
     finally { btn.disabled = false; }
@@ -1903,12 +1932,48 @@ async function initReaderControls() {
   $("#rcRate").onchange = saveReaderPrefs;
   readerControlsReady = true;
 }
-async function saveReaderPrefs() {
+// On-the-go change: applies to this session only — does NOT change the saved
+// account default (set that in Account). Keeps Urdu as the default on next login.
+function saveReaderPrefs() {
   userPrefs = {
     engine: userPrefs.engine || "azure",
     language: $("#rcLanguage").value, voice: $("#rcVoice").value, rate: Number($("#rcRate").value),
   };
-  try { await api("/profile", { method: "PUT", body: { preferences: userPrefs } }); } catch (_) {}
+  syncDialectChips();
+}
+
+// Quick dialect switcher on the reading screen (session-only).
+let _rcDialects = null;
+async function initReaderDialects() {
+  const wrap = $("#rcDialects"); if (!wrap) return;
+  if (!_rcDialects) {
+    try { _rcDialects = (await api("/dialects")).dialects || []; } catch (_) { _rcDialects = []; }
+  }
+  wrap.innerHTML = "";
+  _rcDialects.forEach((d) => {
+    const voice = (d.voices[0] && d.voices[0].shortName) || d.fallback_voice;
+    const locale = d.status === "live" ? d.locale : d.fallback_locale;
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "rc-dialect-chip";
+    chip.dataset.voice = voice; chip.dataset.locale = locale;
+    chip.textContent = d.label + (d.status === "live" ? "" : " ·…");
+    chip.title = d.status === "live" ? d.region : d.region + " — coming soon (Urdu for now)";
+    chip.addEventListener("click", () => {
+      userPrefs.language = locale; userPrefs.voice = voice; userPrefs.engine = "azure";
+      // reflect in the rc selects if the option exists
+      const ls = $("#rcLanguage"); if (ls && [...ls.options].some((o) => o.value === locale)) { ls.value = locale; ls.onchange && ls.onchange(); }
+      const vs = $("#rcVoice"); if (vs && [...vs.options].some((o) => o.value === voice)) vs.value = voice;
+      announce("Reading in " + d.label + " for now.", "ok");
+      syncDialectChips();
+    });
+    wrap.appendChild(chip);
+  });
+  syncDialectChips();
+}
+function syncDialectChips() {
+  document.querySelectorAll("#rcDialects .rc-dialect-chip").forEach((c) =>
+    c.classList.toggle("is-active", c.dataset.voice === userPrefs.voice));
 }
 
 // Text reader: translate to the reading language, synthesize, play + offer download.
@@ -2002,7 +2067,7 @@ $("#docReadBtn")?.addEventListener("click", async () => {
 function enterApp() {
   showView("capture");
   loadLibrary();
-  loadPrefs().then(() => { initReaderControls(); renderMyDay(); Assistant.init(); Reminders.init(); checkoutReturn(); });
+  loadPrefs().then(() => { initReaderControls(); initReaderDialects(); renderMyDay(); Assistant.init(); Reminders.init(); checkoutReturn(); });
 }
 
 // React to a return from Stripe Checkout (?checkout=success|cancel).
