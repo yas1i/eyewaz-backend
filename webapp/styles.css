@@ -604,3 +604,54 @@ body.dark .lib-menu { background: #14302e; }
 
 .lib-empty { text-align: center; color: var(--muted); margin: 40px 8px; font-size: 1.05rem; line-height: 1.7; }
 .newfolder-row { margin: 4px 0 14px; }
+
+/* =============================== Custom icons ============================== */
+.ic { width: 24px; height: 24px; flex: none; display: inline-block; vertical-align: middle; }
+
+/* Header icon buttons (voice, theme, account, logout) */
+.icon-btn {
+  background: transparent; border: 0; cursor: pointer; color: #15454f;
+  padding: 8px; border-radius: 12px; min-width: 44px; min-height: 44px;
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: background .15s, transform .1s;
+}
+.icon-btn .ic { width: 26px; height: 26px; }
+.icon-btn:hover { background: rgba(255,255,255,.22); }
+.icon-btn:active { transform: scale(.92); }
+.icon-btn.is-off { opacity: .75; }
+body.dark .icon-btn { color: var(--brand-cream); }
+
+/* Reading-mode tabs: icon above a small label */
+.tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
+.tab .ic { width: 24px; height: 24px; }
+.tab span { font-size: .78rem; font-weight: 700; }
+
+/* =========================== Bottom navigation ============================ */
+.bottombar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
+  display: flex; align-items: flex-end; justify-content: space-around;
+  background: var(--surface); border-top: 1px solid var(--border);
+  padding: 8px 8px calc(8px + env(safe-area-inset-bottom, 0px));
+  box-shadow: 0 -2px 14px rgba(0,0,0,.08);
+}
+.bottombar[hidden] { display: none; }   /* [hidden] must beat display:flex */
+.bb-btn {
+  flex: 1; background: transparent; border: 0; cursor: pointer; color: var(--muted);
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  padding: 6px 2px; min-height: 54px; font: inherit; font-size: .72rem; font-weight: 700;
+  transition: color .15s, transform .1s;
+}
+.bb-btn .ic { width: 26px; height: 26px; }
+.bb-btn:active { transform: scale(.94); }
+.bb-btn.is-on { color: var(--accent-strong); }
+body.dark .bb-btn.is-on { color: var(--accent); }
+/* Raised central + button */
+.bb-add { color: #fff; justify-content: flex-end; }
+.bb-add .ic {
+  width: 56px; height: 56px; padding: 14px; margin-top: -26px; border-radius: 50%;
+  background: var(--accent-strong); color: #fff; box-shadow: 0 6px 16px rgba(46,102,117,.45);
+}
+.bb-add:active .ic { transform: scale(.94); }
+
+/* Keep page content clear of the fixed bottom bar */
+main { padding-bottom: 96px; }

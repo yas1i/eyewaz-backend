@@ -104,7 +104,9 @@ function guide(text) {
 const ttsToggle = $("#ttsToggle");
 function renderToggle() {
   if (!ttsToggle) return;
-  ttsToggle.textContent = guidanceOn ? "🔊" : "🔇";
+  const use = ttsToggle.querySelector("use");
+  if (use) use.setAttribute("href", guidanceOn ? "#ic-voice-on" : "#ic-voice-off");
+  ttsToggle.classList.toggle("is-off", !guidanceOn);
   ttsToggle.setAttribute("aria-pressed", String(guidanceOn));
   const label = guidanceOn ? "Voice guidance on" : "Voice guidance off";
   ttsToggle.setAttribute("aria-label", label);
@@ -118,6 +120,31 @@ if (ttsToggle) {
     renderToggle();
     if (guidanceOn) TTS.speak("Voice guidance on", "en");
     else TTS.stop();
+  });
+}
+
+/* When voice guidance is on, read out icon controls as they get focus, so a
+   blind user knows what each icon is. */
+document.addEventListener("focusin", (e) => {
+  if (!guidanceOn) return;
+  const btn = e.target.closest && e.target.closest(".tab, .icon-btn, .bb-btn");
+  if (!btn) return;
+  const name = btn.getAttribute("aria-label") || (btn.textContent || "").trim();
+  if (name) guide(name);
+});
+
+/* Bottom navigation bar */
+const bottomBar = $("#bottomBar");
+if (bottomBar) {
+  bottomBar.addEventListener("click", (e) => {
+    const btn = e.target.closest(".bb-btn"); if (!btn) return;
+    const nav = btn.dataset.nav;
+    document.querySelectorAll(".bb-btn").forEach((b) => b.classList.toggle("is-on", b === btn));
+    if (nav === "profile") { openAccount(); return; }
+    showView("capture");
+    if (nav === "favourites") { activeFolder = "★ Favourites"; showTab("booksPanel"); }
+    else if (nav === "add") { showTab("photoPanel"); announce("Add. Take a photo, or pick another reading mode at the top.", "ok"); }
+    else { showTab("booksPanel"); if (nav === "folders") announce("Folders", "ok"); }
   });
 }
 
@@ -166,6 +193,7 @@ function showView(name) {
   $("#accountView").hidden = name !== "account";
   $("#logoutBtn").hidden = !loggedIn;
   $("#accountBtn").hidden = !loggedIn;
+  const bb = $("#bottomBar"); if (bb) bb.hidden = !loggedIn;   // bottom nav only when signed in
   const headingMap = { auth: "#authHeading", capture: "#captureHeading", account: "#accountHeading" };
   $("#main").focus();
   const h = $(headingMap[name]);
