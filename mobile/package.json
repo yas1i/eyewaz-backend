@@ -1,0 +1,21 @@
+{
+  "name": "eyewaz-mobile",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Capacitor wrapper that publishes the EYEWAZ web app to the App Store and Play Store.",
+  "scripts": {
+    "sync": "cap sync",
+    "open:ios": "cap open ios",
+    "open:android": "cap open android"
+  },
+  "dependencies": {
+    "@capacitor/core": "^6",
+    "@capacitor/ios": "^6",
+    "@capacitor/android": "^6",
+    "@capacitor/local-notifications": "^6",
+    "@capacitor/splash-screen": "^6"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6"
+  }
+}

@@ -78,6 +78,12 @@ def webapp_static(filename):
     return _no_cache(send_from_directory(WEBAPP_DIR, filename))
 
 
+@app.route("/privacy")
+def privacy():
+    # Public privacy policy (required for the app stores).
+    return send_from_directory(WEBAPP_DIR, "privacy.html")
+
+
 # @celery.task
 # def divide(x, y):
 #     import time

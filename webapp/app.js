@@ -2132,3 +2132,10 @@ if (handleAuthRedirect() || getToken()) {
   showView("auth");
   annotateProviders();
 }
+
+/* PWA: register the service worker for install + offline app shell. */
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/app/sw.js", { scope: "/app/" }).catch(() => {});
+  });
+}
