@@ -722,3 +722,19 @@ body.dark .dialect-badge.live { color: #06222a; }
 .rc-dialect-chip:hover { border-color: var(--accent-strong); }
 .rc-dialect-chip.is-active { background: var(--accent-strong); color: #fff; border-color: var(--accent-strong); }
 body.dark .rc-dialect-chip { background: #10211f; }
+
+/* ---- Dark mode: make EVERY form control readable (fixes greyed-out fields) ---- */
+body.dark { color-scheme: dark; }   /* native date/time/select pickers render dark */
+body.dark input,
+body.dark select,
+body.dark textarea {
+  background-color: #10211f !important;
+  color: var(--text) !important;
+  border-color: var(--border);
+}
+body.dark input::placeholder,
+body.dark textarea::placeholder { color: var(--muted); opacity: 1; }
+body.dark option { background-color: #10211f; color: var(--text); }
+/* keep the search field transparent inside its pill */
+body.dark .lib-search { background: var(--surface); }
+body.dark .lib-search input { background-color: transparent !important; }
