@@ -182,3 +182,10 @@ Production env vars (Render): `MONGO_URI`, `JWT_SECRET_KEY`, `FLASK_SECRET_KEY`,
      `checkout.session.completed`, `invoice.paid`, `customer.subscription.deleted`;
      set its signing secret as `STRIPE_WEBHOOK_SECRET`.
    - Checkout is Stripe-hosted (redirect) — card/Klarna details never touch the app.
+12. **Face ID / passkey sign-in** (WebAuthn) — works out of the box over HTTPS
+   (Render provides it). Passkeys are bound to the **domain** (RP ID), so if you
+   serve on both the onrender.com URL and `eyewaz.com`, set `WEBAUTHN_RP_ID`
+   (e.g. `eyewaz.com`) and `WEBAUTHN_ORIGIN` (e.g. `https://eyewaz.com`) to the
+   canonical domain so enrolled passkeys keep working. Otherwise they're derived
+   from the request host automatically. Biometrics never leave the device — only
+   a public key is stored (`webauthn` lib).
