@@ -6,7 +6,7 @@ from flask import request, Response
 from flask_restful import Resource
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
-from database.models import Users
+from database.models import Users, Docs, Folders, Images
 from helpers import list_voices
 import usage
 
@@ -56,6 +56,36 @@ class ProfileAPI(Resource):
         user.save()
         return _resp({"message": "Your settings have been saved.",
                       "preferences": user.preferences()}, 200)
+
+    @jwt_required()
+    def delete(self):
+        """Permanently delete the account and all its server-side data
+        (required by the app stores)."""
+        user = Users.objects(email=get_jwt_identity()).first()
+        if not user:
+            return _resp({"message": "Account already removed."}, 200)
+        # Best-effort: stop any active subscription so they aren't billed again.
+        try:
+            import paypal_api
+            if user.paypal_sub_id and paypal_api.configured():
+                paypal_api.cancel_subscription(user.paypal_sub_id)
+        except Exception:
+            pass
+        try:
+            import stripe_api
+            if user.stripe_sub_id and stripe_api.configured():
+                stripe_api.cancel_subscription(user.stripe_sub_id)
+        except Exception:
+            pass
+        # Remove the user's content, then the account.
+        try:
+            Docs.objects(user=user).delete()
+            Folders.objects(user=user).delete()
+            Images.objects(user=user).delete()
+        except Exception:
+            pass
+        user.delete()
+        return _resp({"message": "Your account and data have been deleted."}, 200)
 
 
 class VoicesAPI(Resource):

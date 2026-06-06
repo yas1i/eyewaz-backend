@@ -63,6 +63,40 @@ Point `eyewaz.com` (and `www`) DNS at the Render service (CNAME/ALIAS), add the
 custom domain in Render, let it issue TLS. Update any absolute URLs to
 `https://eyewaz.com`. The PayPal/Stripe webhooks and PWA `start_url` then use it.
 
+## PWA capabilities (already shipped)
+The web app is a full **Progressive Web App**:
+- **Installable** — Add to Home Screen / "Install app" gives its own icon + a
+  standalone window (no browser chrome). An in-app **Install** button appears in
+  Account when the browser allows it.
+- **Offline** — a service worker (`webapp/sw.js`) caches the app shell, so it
+  loads and the UI works without a connection (actions needing the server show a
+  clear message).
+- **Cross-platform** — one codebase adapts to iOS, Android, and desktop.
+- **Always up-to-date** — updates apply silently on next launch (bump `CACHE` in
+  `sw.js` per release); no manual app-store update needed for web changes.
+
+## Google Play — TWA (Trusted Web Activity) — recommended for Android
+A TWA ships the **PWA itself** to Play (full-screen, no browser UI), so Android
+users get auto-updating web releases through the store.
+
+1. Verify domain ownership: the app's signing-key **SHA-256 fingerprint** must be
+   in `https://eyewaz.com/.well-known/assetlinks.json` (already served — replace
+   the placeholder fingerprint with your **Play App Signing** key's SHA-256 from
+   Play Console → Setup → App integrity).
+2. Generate the TWA project with Bubblewrap:
+   ```bash
+   npm i -g @bubblewrap/cli
+   bubblewrap init --manifest https://eyewaz.com/app/manifest.webmanifest
+   bubblewrap build      # produces a signed .aab
+   ```
+   (Package id `com.canvassolutions.eyewaz`, matching `assetlinks.json`.)
+3. Upload the `.aab` to Play Console. Once `assetlinks.json` verifies, the address
+   bar disappears and it behaves as a native app.
+
+**Use TWA for Play (Android).** Use **Capacitor for iOS** (Apple has no TWA
+equivalent; iOS users otherwise install the PWA via Safari → Add to Home Screen).
+Both load the same eyewaz.com PWA, so there's one codebase to maintain.
+
 ## Release flow each version
 1. Pass `docs/QA-REGRESSION.md` (all blockers green) on web.
 2. Bump `CACHE` in `webapp/sw.js`; deploy web (Render).

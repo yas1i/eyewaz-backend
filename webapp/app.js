@@ -1493,7 +1493,38 @@ function speakInUserLang(text) {
 /* ----------------------- Reminders: spoken time-based nudges ---------------- */
 const Reminders = (() => {
   function get() { try { return JSON.parse(localStorage.getItem("eyewaz_reminders") || "[]"); } catch (_) { return []; } }
-  function set(list) { localStorage.setItem("eyewaz_reminders", JSON.stringify(list)); }
+  function set(list) { localStorage.setItem("eyewaz_reminders", JSON.stringify(list)); syncNative(list); }
+
+  // In the native app (Capacitor), schedule OS notifications so reminders fire
+  // even when EYEWAZ is closed. No-op in a plain browser (the in-app timer covers that).
+  async function syncNative(list) {
+    const LN = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.LocalNotifications;
+    if (!LN) return;
+    try {
+      await LN.requestPermissions();
+      try {
+        const pend = await LN.getPending();
+        if (pend && pend.notifications && pend.notifications.length)
+          await LN.cancel({ notifications: pend.notifications.map((n) => ({ id: n.id })) });
+      } catch (_) {}
+      const notifs = []; let id = 1000;
+      list.forEach((r) => {
+        const [h, m] = r.time.split(":").map(Number);
+        const mk = (weekday) => ({
+          id: id++, title: "EYEWAZ reminder", body: r.label,
+          schedule: { on: weekday ? { weekday, hour: h, minute: m } : { hour: h, minute: m }, allowWhileIdle: true },
+        });
+        if (r.repeat === "weekdays") [2, 3, 4, 5, 6].forEach((w) => notifs.push(mk(w)));
+        else if (r.repeat === "weekends") [1, 7].forEach((w) => notifs.push(mk(w)));
+        else if (r.repeat === "once") {
+          const at = new Date(); at.setHours(h, m, 0, 0);
+          if (at <= new Date()) at.setDate(at.getDate() + 1);
+          notifs.push({ id: id++, title: "EYEWAZ reminder", body: r.label, schedule: { at, allowWhileIdle: true } });
+        } else notifs.push(mk(null));   // daily
+      });
+      if (notifs.length) await LN.schedule({ notifications: notifs });
+    } catch (_) {}
+  }
 
   const REPEAT_LABEL = { daily: "Every day", weekdays: "Weekdays", weekends: "Weekends", once: "Just once" };
 
@@ -1587,7 +1618,7 @@ const Reminders = (() => {
       });
     }
     render();
-    if (!started) { started = true; setInterval(check, 20000); check(); }  // global ticker
+    if (!started) { started = true; setInterval(check, 20000); check(); syncNative(get()); }  // ticker + native schedule
   }
 
   return { init };
@@ -1806,6 +1837,26 @@ async function openAccount() {
 
 $("#accountBtn").addEventListener("click", openAccount);
 $("#accountBackBtn").addEventListener("click", () => showView("capture"));
+
+// Delete account & all data (store requirement).
+$("#deleteAccountBtn")?.addEventListener("click", async () => {
+  if (!window.confirm("Delete your account and ALL your data permanently? This cannot be undone.")) return;
+  if (!window.confirm("Are you absolutely sure? Your account, recordings and settings will be erased.")) return;
+  const s = $("#deleteStatus");
+  if (s) { s.className = "status busy"; s.textContent = "Deleting your account…"; }
+  try {
+    await api("/profile", { method: "DELETE" });
+    try { indexedDB.deleteDatabase("eyewaz"); } catch (_) {}
+    ["eyewaz_folders", "eyewaz_reminders", "eyewaz_sort", "eyewaz_admin"].forEach((k) => localStorage.removeItem(k));
+    clearToken();
+    if (s) s.textContent = "";
+    announce("Your account has been deleted.", "ok");
+    showView("auth");
+  } catch (e) {
+    if (s) { s.className = "status error"; s.textContent = e.message || "Could not delete the account."; }
+  }
+});
+
 document.querySelectorAll('input[name="engine"]').forEach((r) =>
   r.addEventListener("change", () => populateVoiceControls().catch(() => {})));
 $("#accRate").addEventListener("input", () => {
@@ -2139,3 +2190,22 @@ if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("/app/sw.js", { scope: "/app/" }).catch(() => {});
   });
 }
+
+/* PWA install prompt — show an "Install" button when the browser allows it. */
+let _deferredInstall = null;
+if (typeof window !== "undefined" && window.addEventListener) {
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault(); _deferredInstall = e;
+    const b = document.getElementById("installBtn"); if (b) b.hidden = false;
+  });
+  window.addEventListener("appinstalled", () => {
+    const b = document.getElementById("installBtn"); if (b) b.hidden = true;
+  });
+}
+document.getElementById("installBtn")?.addEventListener("click", async () => {
+  if (!_deferredInstall) return;
+  _deferredInstall.prompt();
+  try { await _deferredInstall.userChoice; } catch (_) {}
+  _deferredInstall = null;
+  const b = document.getElementById("installBtn"); if (b) b.hidden = true;
+});

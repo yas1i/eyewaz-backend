@@ -84,6 +84,13 @@ def privacy():
     return send_from_directory(WEBAPP_DIR, "privacy.html")
 
 
+@app.route("/.well-known/assetlinks.json")
+def assetlinks():
+    # Digital Asset Links — verifies the Android TWA (Play Store) owns this domain.
+    return send_from_directory(os.path.join(WEBAPP_DIR, ".well-known"),
+                               "assetlinks.json", mimetype="application/json")
+
+
 # @celery.task
 # def divide(x, y):
 #     import time
