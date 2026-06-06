@@ -772,6 +772,18 @@ async function deleteFolder(name) {
 let activeSeg = "todo";   // "todo" | "done"
 let recQuery = "";        // search text
 let openMenuId = null;    // id of the card whose ⋮ menu is open
+let menuMode = "main";    // "main" | "move"  (which menu page is showing)
+let recSort = localStorage.getItem("eyewaz_sort") || "new";  // new|old|az|prog
+const SORT_LABELS = { new: "Newest", old: "Oldest", az: "A–Z", prog: "In progress" };
+const SORT_CYCLE = ["new", "old", "az", "prog"];
+function sortRecs(list) {
+  const a = list.slice();
+  if (recSort === "old") a.sort((x, y) => x.createdAt - y.createdAt);
+  else if (recSort === "az") a.sort((x, y) => (x.title || "").localeCompare(y.title || ""));
+  else if (recSort === "prog") a.sort((x, y) => recProgress(y) - recProgress(x) || y.createdAt - x.createdAt);
+  else a.sort((x, y) => y.createdAt - x.createdAt);   // newest
+  return a;
+}
 
 function _initials(t) {
   const parts = (t || "?").trim().split(/\s+/).slice(0, 2);
@@ -806,10 +818,20 @@ function bindLibraryControls() {
   const todo = $("#segTodo"), done = $("#segDone");
   if (todo && !todo.dataset.bound) { todo.dataset.bound = "1"; todo.addEventListener("click", () => { activeSeg = "todo"; loadRecordings(); }); }
   if (done && !done.dataset.bound) { done.dataset.bound = "1"; done.addEventListener("click", () => { activeSeg = "done"; loadRecordings(); }); }
+  const sortBtn = $("#recSort");
+  if (sortBtn && !sortBtn.dataset.bound) {
+    sortBtn.dataset.bound = "1";
+    sortBtn.addEventListener("click", () => {
+      recSort = SORT_CYCLE[(SORT_CYCLE.indexOf(recSort) + 1) % SORT_CYCLE.length];
+      localStorage.setItem("eyewaz_sort", recSort);
+      announce("Sorted by " + SORT_LABELS[recSort], "ok");
+      loadRecordings();
+    });
+  }
   if (!document._libMenuClose) {
     document._libMenuClose = true;
     document.addEventListener("click", (e) => {
-      if (openMenuId && !e.target.closest(".lib-card-wrap")) { openMenuId = null; loadRecordings(); }
+      if (openMenuId && !e.target.closest(".lib-card-wrap")) { openMenuId = null; menuMode = "main"; loadRecordings(); }
     });
   }
 }
@@ -828,6 +850,8 @@ async function loadRecordings() {
   const segTodo = $("#segTodo"), segDone = $("#segDone");
   if (segTodo) { segTodo.classList.toggle("is-on", activeSeg === "todo"); segTodo.setAttribute("aria-selected", String(activeSeg === "todo")); }
   if (segDone) { segDone.classList.toggle("is-on", activeSeg === "done"); segDone.setAttribute("aria-selected", String(activeSeg === "done")); }
+  const sortBtn = $("#recSort");
+  if (sortBtn) sortBtn.textContent = "Sort: " + SORT_LABELS[recSort];
 
   // Folder chips (counts) + delete control for a custom folder
   const bar = $("#folderBar"); bar.innerHTML = "";
@@ -852,12 +876,11 @@ async function loadRecordings() {
 
   const moveOptions = ["Unfiled", ...custom];
 
-  // Filter: folder -> segment (completed?) -> search
-  const shown = recs
+  // Filter: folder -> segment (completed?) -> search, then sort.
+  const shown = sortRecs(recs
     .filter((r) => activeFolder === "All" ? true : activeFolder === FAV ? r.fav : r.folder === activeFolder)
     .filter((r) => activeSeg === "done" ? !!r.completed : !r.completed)
-    .filter((r) => !recQuery || (r.title || "").toLowerCase().includes(recQuery))
-    .sort((a, b) => b.createdAt - a.createdAt);
+    .filter((r) => !recQuery || (r.title || "").toLowerCase().includes(recQuery)));
 
   ul.innerHTML = "";
   const empty = $("#recEmpty");
@@ -878,6 +901,25 @@ async function loadRecordings() {
     const opts = moveOptions.map((f) => `<option value="${escapeHtml(f)}"${f === rec.folder ? " selected" : ""}>${escapeHtml(f)}</option>`).join("");
     const menuOpen = openMenuId === rec.id;
     const resume = (rec.position > 5 && !rec.completed) ? " · resume " + fmtTime(rec.position) : "";
+    // Clean tap-menu — no native dropdowns. Two pages: main actions + folder picker.
+    let menuHtml = "";
+    if (menuOpen && menuMode === "move") {
+      menuHtml = `<div class="lib-menu" role="menu">` +
+        `<div class="lib-menu-head">Move to folder</div>` +
+        moveOptions.map((f) =>
+          `<button class="lib-menu-item${f === rec.folder ? " current" : ""}" data-mv="${escapeHtml(f)}" role="menuitem">${f === rec.folder ? "✓ " : ""}${escapeHtml(f)}</button>`
+        ).join("") +
+        `<button class="lib-menu-item accent" data-mv="__new" role="menuitem">＋ New folder…</button>` +
+        `<button class="lib-menu-item back" data-act="back" role="menuitem">‹ Back</button>` +
+      `</div>`;
+    } else if (menuOpen) {
+      menuHtml = `<div class="lib-menu" role="menu">` +
+        `<button class="lib-menu-item" data-act="fav" role="menuitem">${rec.fav ? "Remove from favourites" : "Add to favourites"}</button>` +
+        `<button class="lib-menu-item" data-act="move" role="menuitem">Move to folder…</button>` +
+        `<button class="lib-menu-item" data-act="toggle" role="menuitem">${rec.completed ? "Mark as to-do" : "Mark completed"}</button>` +
+        `<button class="lib-menu-item danger" data-act="delete" role="menuitem">Delete</button>` +
+      `</div>`;
+    }
     li.innerHTML =
       `<div class="lib-card">` +
         `<button class="lib-cover" aria-label="Play ${escapeHtml(rec.title)}" style="--cv:${_coverColor(rec.title)}">` +
@@ -896,13 +938,8 @@ async function loadRecordings() {
             `<button class="lib-heart${rec.fav ? " is-fav" : ""}" aria-pressed="${!!rec.fav}" aria-label="${rec.fav ? "Remove from" : "Add to"} favourites">${rec.fav ? "♥" : "♡"}</button>` +
           `</div>` +
         `</div>` +
-      `</div>` +
-      `<div class="lib-menu" role="menu"${menuOpen ? "" : " hidden"}>` +
-        `<label class="sr-only" for="mv_${rec.id}">Move ${escapeHtml(rec.title)} to a folder</label>` +
-        `<select class="rec-move" id="mv_${rec.id}" aria-label="Move ${escapeHtml(rec.title)} to a folder">${opts}</select>` +
-        `<button class="lib-menu-item" data-act="toggle" role="menuitem">${rec.completed ? "Mark as to-do" : "Mark completed"}</button>` +
-        `<button class="lib-menu-item danger" data-act="delete" role="menuitem">Delete</button>` +
-      `</div>`;
+      `</div>` + menuHtml;
+
     li.querySelector(".lib-cover").addEventListener("click", () => playRecording(rec));
     li.querySelector(".lib-heart").addEventListener("click", async () => {
       rec.fav = !rec.fav; await recPut(rec);
@@ -910,18 +947,39 @@ async function loadRecordings() {
       loadRecordings();
     });
     li.querySelector(".lib-kebab").addEventListener("click", (e) => {
-      e.stopPropagation(); openMenuId = menuOpen ? null : rec.id; loadRecordings();
+      e.stopPropagation();
+      openMenuId = menuOpen ? null : rec.id; menuMode = "main"; loadRecordings();
     });
-    const sel = li.querySelector(".rec-move");
-    if (sel) sel.addEventListener("change", (e) => { openMenuId = null; moveRecording(rec, e.target.value); });
-    li.querySelectorAll(".lib-menu-item").forEach((mi) => mi.addEventListener("click", async () => {
-      if (mi.dataset.act === "toggle") {
-        rec.completed = !rec.completed; if (rec.completed) rec.position = 0;
-        await recPut(rec); openMenuId = null; loadRecordings();
-      } else if (mi.dataset.act === "delete") {
-        if (window.confirm("Delete this recording from your device?")) { await recDel(rec.id); openMenuId = null; loadRecordings(); }
-      }
-    }));
+    const menuEl = li.querySelector(".lib-menu");
+    if (menuEl) {
+      menuEl.addEventListener("click", (e) => e.stopPropagation());
+      menuEl.querySelectorAll("[data-act]").forEach((b) => b.addEventListener("click", async () => {
+        const act = b.dataset.act;
+        if (act === "move") { menuMode = "move"; loadRecordings(); }
+        else if (act === "back") { menuMode = "main"; loadRecordings(); }
+        else if (act === "fav") {
+          rec.fav = !rec.fav; await recPut(rec); openMenuId = null; menuMode = "main";
+          announce(rec.fav ? `Added “${rec.title}” to favourites.` : "Removed from favourites.", "ok");
+          loadRecordings();
+        } else if (act === "toggle") {
+          rec.completed = !rec.completed; if (rec.completed) rec.position = 0;
+          await recPut(rec); openMenuId = null; menuMode = "main"; loadRecordings();
+        } else if (act === "delete") {
+          if (window.confirm("Delete this recording from your device?")) { await recDel(rec.id); openMenuId = null; menuMode = "main"; loadRecordings(); }
+        }
+      }));
+      menuEl.querySelectorAll("[data-mv]").forEach((b) => b.addEventListener("click", async () => {
+        let target = b.dataset.mv;
+        if (target === "__new") {
+          const name = (window.prompt("New folder name:") || "").trim().slice(0, 30);
+          if (!name || name === "All" || name === "Unfiled") { return; }
+          const fs = getFolders(); if (!fs.includes(name)) { fs.push(name); setFolders(fs); }
+          target = name;
+        }
+        openMenuId = null; menuMode = "main";
+        await moveRecording(rec, target);   // announces + reloads
+      }));
+    }
     ul.appendChild(li);
   });
 }
