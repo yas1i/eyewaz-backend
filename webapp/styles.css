@@ -685,3 +685,23 @@ body.dark .lib-menu-item.current, body.dark .lib-menu-item.accent { color: var(-
 #asstMicBtn.is-listening { background: var(--danger); border-color: var(--danger); }
 #asstMicBtn.is-listening .ic { animation: pulse 1s ease-in-out infinite; }
 @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .45; } }
+
+/* Pakistani dialect picker */
+.dialect-list { display: flex; flex-direction: column; gap: 10px; margin: 10px 0 4px; }
+.dialect-item {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 14px 16px; border: 2px solid var(--border); border-radius: var(--radius);
+  background: var(--surface); color: var(--text); cursor: pointer; font: inherit;
+  text-align: left; min-height: 56px; transition: border-color .15s, background .15s, transform .1s;
+}
+.dialect-item:hover { border-color: var(--accent-strong); }
+.dialect-item:active { transform: scale(.99); }
+.dialect-item.is-active { border-color: var(--accent-strong); box-shadow: 0 0 0 3px rgba(46,102,117,.18); }
+.dialect-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.dialect-name { font-weight: 800; font-size: 1.05rem; }
+.dialect-region { color: var(--muted); font-size: .9rem; }
+.dialect-badge { flex: 0 0 auto; font-size: .72rem; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; padding: 4px 10px; border-radius: 999px; }
+.dialect-badge.live { background: var(--accent-soft); color: #143b44; }
+.dialect-badge.soon { background: var(--border); color: var(--muted); }
+body.dark .dialect-item { background: #10211f; }
+body.dark .dialect-badge.live { color: #06222a; }

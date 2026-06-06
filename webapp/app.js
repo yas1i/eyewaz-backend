@@ -1661,10 +1661,44 @@ async function populateVoiceControls() {
   langSel.onchange = fillVoices;
 }
 
+// Pakistani dialect / regional-voice picker (Account).
+async function loadDialects() {
+  const wrap = document.getElementById("dialectList"); if (!wrap) return;
+  let data;
+  try { data = await api("/dialects"); } catch (_) { return; }
+  const cur = userPrefs.voice;
+  wrap.innerHTML = "";
+  (data.dialects || []).forEach((d) => {
+    const live = d.status === "live";
+    const voice = (live && d.voices[0]) ? d.voices[0].shortName : d.fallback_voice;
+    const locale = live ? d.locale : d.fallback_locale;
+    const active = d.voices.some((v) => v.shortName === cur);
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "dialect-item" + (active ? " is-active" : "");
+    btn.setAttribute("role", "listitem");
+    btn.innerHTML =
+      `<span class="dialect-main"><span class="dialect-name">${escapeHtml(d.label)}</span>` +
+      `<span class="dialect-region">${escapeHtml(d.region)}</span></span>` +
+      (live ? `<span class="dialect-badge live">Live</span>` : `<span class="dialect-badge soon">Coming soon</span>`);
+    btn.addEventListener("click", async () => {
+      userPrefs.language = locale; userPrefs.voice = voice; userPrefs.engine = "azure";
+      try { await api("/profile", { method: "PUT", body: { preferences: userPrefs } }); } catch (_) {}
+      const s = document.getElementById("dialectStatus");
+      const msg = live ? `Now reading in ${d.label}.` : `${d.label} is coming soon — using standard Urdu for now.`;
+      if (s) { s.className = "status ok"; s.textContent = msg; }
+      announce(msg, "ok");
+      loadDialects();
+    });
+    wrap.appendChild(btn);
+  });
+}
+
 async function openAccount() {
   showView("account");
   accStatus("Loading your settings…", "busy");
   Plan.init();
+  loadDialects();
   const profile = await loadPrefs();   // also refreshes the plan card via Billing.set
   if (profile) {
     $("#accName").value = profile.name || "";
