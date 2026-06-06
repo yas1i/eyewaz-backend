@@ -7,6 +7,12 @@
   <title>EYEWAZ — See better. Live better.</title>
   <link rel="icon" type="image/png" href="/app/assets/eyewaz-favicon.png" />
   <link rel="apple-touch-icon" href="/app/assets/eyewaz-favicon.png" />
+  <!-- PWA: installable + offline -->
+  <link rel="manifest" href="/app/manifest.webmanifest" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="EYEWAZ" />
   <!-- Brand display font (GoodDogNew look-alike, rounded & friendly) -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -86,6 +92,7 @@
     <section id="authView" class="auth" aria-labelledby="authHeading">
       <h2 id="authHeading">Welcome back</h2>
       <p class="lede" id="authLede">Sign in to turn text into spoken Urdu.</p>
+      <p class="hint"><a href="/privacy" target="_blank" rel="noopener">Privacy policy</a></p>
       <p id="authError" class="form-error" role="alert" hidden></p>
 
       <!-- Fast biometric sign-in (shown only if the device supports it) -->
@@ -581,6 +588,7 @@
         </div>
       </form>
       <button type="button" id="accountBackBtn" class="link-btn">← Back to reading</button>
+      <p class="hint"><a href="/privacy" target="_blank" rel="noopener">Privacy policy</a></p>
     </section>
 
   </main>

@@ -1,0 +1,16 @@
+{
+  "appId": "com.canvassolutions.eyewaz",
+  "appName": "EYEWAZ",
+  "webDir": "www",
+  "backgroundColor": "#F7F6E9",
+  "server": {
+    "url": "https://eyewaz.com/app",
+    "cleartext": false,
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "LocalNotifications": { "smallIcon": "ic_stat_eyewaz", "iconColor": "#7BB2BE" },
+    "SplashScreen": { "backgroundColor": "#7BB2BE", "showSpinner": false }
+  },
+  "ios": { "contentInset": "always" }
+}
