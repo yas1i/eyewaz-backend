@@ -1,14 +1,14 @@
 """
 Membership plans + daily command quotas.
 
-Plans:
-  free      — 3 commands/day, 1 reminder, 3 saved recordings
-  monthly   — 50 commands/day
-  supermax  — 100 commands/day
+Plans (command allowance resets monthly):
+  free      — 3 commands/month, 1 reminder, 3 saved recordings
+  monthly   — 50 commands/month
+  supermax  — 100 commands/month
 
 A "command" is one functional action: a photo/picture/document upload
 (translate + read), a web-page read, or an assistant message. The reminder and
-recording caps are enforced on-device (they're stored client-side); the daily
+recording caps are enforced on-device (they're stored client-side); the monthly
 command quota is enforced here, server-side, so it can't be bypassed.
 """
 
@@ -18,15 +18,16 @@ from datetime import datetime, timezone
 from flask import Response
 
 PLAN_LIMITS = {
-    "free":     {"daily": 3,    "reminders": 1,     "recordings": 3,     "label": "Free"},
-    "monthly":  {"daily": 50,   "reminders": 99999, "recordings": 99999, "label": "Monthly"},
-    "supermax": {"daily": 100,  "reminders": 99999, "recordings": 99999, "label": "Super Max"},
+    "free":     {"monthly": 3,    "reminders": 1,     "recordings": 3,     "label": "Free"},
+    "monthly":  {"monthly": 50,   "reminders": 99999, "recordings": 99999, "label": "Monthly"},
+    "supermax": {"monthly": 100,  "reminders": 99999, "recordings": 99999, "label": "Super Max"},
 }
 DEFAULT_PLAN = "free"
 
 
-def _today():
-    return datetime.now(timezone.utc).strftime("%Y-%m-%d")
+def _period():
+    """Current quota period — a calendar month, e.g. '2026-06'."""
+    return datetime.now(timezone.utc).strftime("%Y-%m")
 
 
 def effective_plan(user):
@@ -40,8 +41,9 @@ def effective_plan(user):
     return plan
 
 
-def _used_today(user):
-    if getattr(user, "usage_day", "") != _today():
+def _used_this_period(user):
+    # usage_day holds the period key ("YYYY-MM"); reset when the month changes.
+    if getattr(user, "usage_day", "") != _period():
         return 0
     return int(getattr(user, "usage_count", 0) or 0)
 
@@ -49,30 +51,31 @@ def _used_today(user):
 def snapshot(user):
     plan = effective_plan(user)
     lim = PLAN_LIMITS[plan]
-    used = _used_today(user)
+    used = _used_this_period(user)
     return {
         "plan": plan,
         "plan_label": lim["label"],
-        "daily_limit": lim["daily"],
-        "used_today": used,
-        "remaining": max(0, lim["daily"] - used),
+        "limit": lim["monthly"],
+        "used": used,
+        "remaining": max(0, lim["monthly"] - used),
+        "period": "month",
         "reminders_limit": lim["reminders"],
         "recordings_limit": lim["recordings"],
     }
 
 
 def consume(user, n=1):
-    """Count `n` commands against today's allowance.
+    """Count `n` commands against this month's allowance.
 
-    Returns (ok, snapshot). When the day rolls over the counter resets. If the
+    Returns (ok, snapshot). When the month rolls over the counter resets. If the
     user is already at the limit nothing is charged and ok is False.
     """
-    today = _today()
-    if getattr(user, "usage_day", "") != today:
-        user.usage_day = today
+    period = _period()
+    if getattr(user, "usage_day", "") != period:
+        user.usage_day = period
         user.usage_count = 0
     lim = PLAN_LIMITS[effective_plan(user)]
-    if int(user.usage_count or 0) >= lim["daily"]:
+    if int(user.usage_count or 0) >= lim["monthly"]:
         return False, snapshot(user)
     user.usage_count = int(user.usage_count or 0) + n
     user.save()
@@ -80,10 +83,10 @@ def consume(user, n=1):
 
 
 def quota_response(snap):
-    """The 402 returned to a client that's out of commands for the day."""
+    """The 402 returned to a client that's out of commands for the month."""
     return Response(json.dumps({
-        "message": (f"You've used all {snap['daily_limit']} of today's commands on the "
-                    f"{snap['plan_label']} plan. Upgrade for more, or try again tomorrow."),
+        "message": (f"You've used all {snap['limit']} of this month's commands on the "
+                    f"{snap['plan_label']} plan. Upgrade for more, or try again next month."),
         "quota_exceeded": True,
         "usage": snap,
     }), status=402, mimetype="application/json")

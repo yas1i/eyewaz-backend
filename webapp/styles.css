@@ -443,6 +443,8 @@ body.dark .reminder-when { color: var(--accent); }
 /* Membership / plan */
 .plan-line { color: var(--accent-strong); font-weight: 700; margin: 2px 0 14px; }
 body.dark .plan-line { color: var(--accent); }
+.upgrade-link { color: var(--accent-strong); font-weight: 800; text-decoration: underline; white-space: nowrap; }
+body.dark .upgrade-link { color: var(--accent); }
 .plan-grid { display: grid; gap: 14px; grid-template-columns: 1fr; margin: 12px 0; }
 @media (min-width: 560px) { .plan-grid { grid-template-columns: repeat(3, 1fr); } }
 .plan-card {

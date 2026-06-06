@@ -158,8 +158,9 @@ Production env vars (Render): `MONGO_URI`, `JWT_SECRET_KEY`, `FLASK_SECRET_KEY`,
 8. **Ask Eyewaz assistant** — `/api/assistant` calls Claude (`anthropic` SDK,
    model `claude-opus-4-8`). Set `ANTHROPIC_API_KEY`. Without it the endpoint
    returns a friendly 503 and the rest of the app keeps working.
-9. **Membership quotas** — Free = 3 commands/day (1 reminder, 3 recordings),
-   Monthly = 50/day, Super Max = 100/day. Enforced server-side in `usage.py`.
+9. **Membership quotas** — Free = 3 commands/month (1 reminder, 3 recordings),
+   Monthly = 50/month, Super Max = 100/month. Resets each calendar month;
+   enforced server-side in `usage.py`.
    Optional `DEV_PLAN_KEY` env enables `POST /api/dev/plan` to switch a user's
    plan for testing before PayPal is wired (leave unset in production once live).
 10. **PayPal subscriptions** — dormant until configured (buttons fall back to a

@@ -854,12 +854,19 @@ const Billing = (() => {
   function set(u) { userUsage = u || null; render(); }
   function render() {
     if (userUsage) {
+      const u = userUsage;
       const line = document.getElementById("planLine");
-      if (line) line.textContent =
-        `Plan: ${userUsage.plan_label} — ${userUsage.remaining} of ${userUsage.daily_limit} commands left today.`;
+      if (line) {
+        line.textContent = `Plan: ${u.plan_label} — ${u.remaining} of ${u.limit} commands left this month. `;
+        const a = document.createElement("a");
+        a.href = "#"; a.className = "upgrade-link";
+        a.textContent = (u.plan === "supermax" ? "Manage plan" : "Upgrade") + " ↗";
+        a.addEventListener("click", (e) => { e.preventDefault(); openAccount(); });
+        line.appendChild(a);
+      }
       const cur = document.getElementById("currentPlanText");
       if (cur) cur.textContent =
-        `You're on the ${userUsage.plan_label} plan — ${userUsage.remaining} of ${userUsage.daily_limit} commands left today.`;
+        `You're on the ${u.plan_label} plan — ${u.remaining} of ${u.limit} commands left this month.`;
     }
     document.querySelectorAll(".plan-card").forEach((c) =>
       c.classList.toggle("is-current", !!userUsage && c.dataset.plan === userUsage.plan));
@@ -868,7 +875,7 @@ const Billing = (() => {
   function onQuota(data) {
     if (data && data.usage) set(data.usage);
     announce(data && data.message ? data.message
-      : "You've reached today's command limit. Upgrade for more.", "error");
+      : "You've reached this month's command limit. Upgrade for more.", "error");
   }
   function recordingsLimit() { return userUsage ? userUsage.recordings_limit : 3; }
   function remindersLimit() { return userUsage ? userUsage.reminders_limit : 1; }
@@ -1648,7 +1655,7 @@ $("#textPlayBtn")?.addEventListener("click", async () => {
   try {
     // Reading typed text counts as one command (it has no heavy server endpoint).
     if (!(await Billing.consumeOne())) {
-      ts.className = "status error"; ts.textContent = "Daily command limit reached — upgrade for more.";
+      ts.className = "status error"; ts.textContent = "Monthly command limit reached — upgrade for more.";
       return;
     }
     const lang = $("#rcLanguage").value, voice = $("#rcVoice").value, rate = Number($("#rcRate").value);
