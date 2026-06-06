@@ -655,3 +655,20 @@ body.dark .bb-btn.is-on { color: var(--accent); }
 
 /* Keep page content clear of the fixed bottom bar */
 main { padding-bottom: 96px; }
+
+/* Library toolbar + sort */
+.lib-toolbar { display: flex; justify-content: flex-end; margin: 0 0 12px; }
+.sort-btn {
+  border: 2px solid var(--border); background: var(--surface); color: var(--text);
+  font: inherit; font-weight: 700; font-size: .92rem; cursor: pointer;
+  padding: 8px 16px; border-radius: 999px; min-height: 40px; transition: border-color .15s, background .15s;
+}
+.sort-btn:hover { border-color: var(--accent-strong); }
+body.dark .sort-btn { background: #10211f; }
+
+/* Tap-menu (replaces the dropdown) */
+.lib-menu-head { font-weight: 800; color: var(--muted); font-size: .8rem; text-transform: uppercase; letter-spacing: .6px; padding: 4px 12px 2px; }
+.lib-menu-item.current { color: var(--accent-strong); font-weight: 800; }
+.lib-menu-item.accent { color: var(--accent-strong); font-weight: 800; }
+.lib-menu-item.back { color: var(--muted); }
+body.dark .lib-menu-item.current, body.dark .lib-menu-item.accent { color: var(--accent); }
