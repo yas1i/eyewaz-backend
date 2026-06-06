@@ -682,6 +682,9 @@ function playRecording(rec) {
   a.src = recObjectUrl; a.hidden = false;
   // Resume from where the listener left off (unless near the end).
   a.onloadedmetadata = () => {
+    if (isFinite(a.duration) && a.duration > 0 && rec.duration !== a.duration) {
+      rec.duration = a.duration; recPut(rec);   // remember length for progress bars
+    }
     if (rec.position && rec.position < (a.duration || 1e9) - 2) a.currentTime = rec.position;
     a.play().catch(() => {});
   };
@@ -700,7 +703,10 @@ function playRecording(rec) {
     if (recPlaying) { recPlaying.position = a.currentTime; recPut(recPlaying); }
   });
   a.addEventListener("ended", () => {
-    if (recPlaying) { recPlaying.position = 0; recPut(recPlaying); const p = recPlaying; recPlaying = null; if (p) loadRecordings(); }
+    if (recPlaying) {
+      recPlaying.position = 0; recPlaying.completed = true; recPut(recPlaying);
+      recPlaying = null; loadRecordings();   // moves it to the Completed tab
+    }
   });
 })();
 
@@ -734,8 +740,55 @@ async function deleteFolder(name) {
   loadRecordings();
 }
 
+// --- My Library view state + helpers ---
+let activeSeg = "todo";   // "todo" | "done"
+let recQuery = "";        // search text
+let openMenuId = null;    // id of the card whose ⋮ menu is open
+
+function _initials(t) {
+  const parts = (t || "?").trim().split(/\s+/).slice(0, 2);
+  return (parts.map((p) => p[0] || "").join("") || "?").toUpperCase();
+}
+function _coverColor(t) {
+  let h = 0; for (let i = 0; i < (t || "").length; i++) h = (h * 31 + t.charCodeAt(i)) % 360;
+  return `hsl(${h}, 42%, 60%)`;
+}
+function fmtDuration(sec) {
+  sec = Math.round(sec || 0);
+  if (!sec) return "";
+  const m = Math.round(sec / 60);
+  return (m < 1 ? 1 : m) + " min";
+}
+function recProgress(rec) {
+  if (rec.completed) return 100;
+  if (rec.duration && rec.position) return Math.min(100, Math.round((rec.position / rec.duration) * 100));
+  return 0;
+}
+
+function bindLibraryControls() {
+  const search = $("#recSearch");
+  if (search && !search.dataset.bound) {
+    search.dataset.bound = "1";
+    let t = 0;
+    search.addEventListener("input", () => {
+      clearTimeout(t);
+      t = setTimeout(() => { recQuery = search.value.trim().toLowerCase(); loadRecordings(); }, 180);
+    });
+  }
+  const todo = $("#segTodo"), done = $("#segDone");
+  if (todo && !todo.dataset.bound) { todo.dataset.bound = "1"; todo.addEventListener("click", () => { activeSeg = "todo"; loadRecordings(); }); }
+  if (done && !done.dataset.bound) { done.dataset.bound = "1"; done.addEventListener("click", () => { activeSeg = "done"; loadRecordings(); }); }
+  if (!document._libMenuClose) {
+    document._libMenuClose = true;
+    document.addEventListener("click", (e) => {
+      if (openMenuId && !e.target.closest(".lib-card-wrap")) { openMenuId = null; loadRecordings(); }
+    });
+  }
+}
+
 async function loadRecordings() {
   const ul = $("#recList"); if (!ul) return;
+  bindLibraryControls();
   let recs = [];
   try { recs = await recAll(); } catch (_) {}
   const custom = allFolderNames(recs);
@@ -743,15 +796,18 @@ async function loadRecordings() {
   const chipFolders = ["All", FAV, ...custom, "Unfiled"];
   if (!chipFolders.includes(activeFolder)) activeFolder = "All";
 
-  // Folder chips (with counts), plus a delete control for the active custom folder.
+  // Segmented To-do / Completed
+  const segTodo = $("#segTodo"), segDone = $("#segDone");
+  if (segTodo) { segTodo.classList.toggle("is-on", activeSeg === "todo"); segTodo.setAttribute("aria-selected", String(activeSeg === "todo")); }
+  if (segDone) { segDone.classList.toggle("is-on", activeSeg === "done"); segDone.setAttribute("aria-selected", String(activeSeg === "done")); }
+
+  // Folder chips (counts) + delete control for a custom folder
   const bar = $("#folderBar"); bar.innerHTML = "";
   chipFolders.forEach((f) => {
     const b = document.createElement("button");
     b.type = "button";
     b.className = "folder-chip" + (f === activeFolder ? " is-active" : "");
-    const count = f === "All" ? recs.length
-      : f === FAV ? recs.filter((r) => r.fav).length
-      : recs.filter((r) => r.folder === f).length;
+    const count = f === "All" ? recs.length : f === FAV ? recs.filter((r) => r.fav).length : recs.filter((r) => r.folder === f).length;
     b.textContent = f === "All" ? `All (${count})` : `${f} (${count})`;
     b.setAttribute("aria-pressed", String(f === activeFolder));
     b.addEventListener("click", () => { activeFolder = f; loadRecordings(); });
@@ -759,55 +815,86 @@ async function loadRecordings() {
   });
   if (activeFolder !== "All" && activeFolder !== "Unfiled" && activeFolder !== FAV) {
     const del = document.createElement("button");
-    del.type = "button";
-    del.className = "folder-chip folder-del";
+    del.type = "button"; del.className = "folder-chip folder-del";
     del.textContent = `🗑 Delete “${activeFolder}”`;
     del.setAttribute("aria-label", `Delete folder ${activeFolder}`);
     del.addEventListener("click", () => deleteFolder(activeFolder));
     bar.appendChild(del);
   }
 
-  // Build the shared "move to folder" option list once.
   const moveOptions = ["Unfiled", ...custom];
 
-  ul.innerHTML = "";
-  const shown = recs.filter((r) =>
-    activeFolder === "All" ? true : activeFolder === FAV ? r.fav : r.folder === activeFolder)
+  // Filter: folder -> segment (completed?) -> search
+  const shown = recs
+    .filter((r) => activeFolder === "All" ? true : activeFolder === FAV ? r.fav : r.folder === activeFolder)
+    .filter((r) => activeSeg === "done" ? !!r.completed : !r.completed)
+    .filter((r) => !recQuery || (r.title || "").toLowerCase().includes(recQuery))
     .sort((a, b) => b.createdAt - a.createdAt);
-  if (!shown.length) {
-    ul.innerHTML = '<li class="lede">No saved recordings here yet. Read something, then press “💾 Save offline”.</li>';
-    return;
+
+  ul.innerHTML = "";
+  const empty = $("#recEmpty");
+  if (empty) {
+    empty.hidden = shown.length > 0;
+    if (!shown.length) empty.textContent = recQuery
+      ? "No recordings match your search."
+      : (activeSeg === "done" ? "Nothing completed yet." : "Nothing to do here yet.");
   }
+  if (!shown.length) return;
+
   shown.forEach((rec) => {
     const li = document.createElement("li");
-    const card = document.createElement("div");
-    card.className = "lib-item";
-    const opts = moveOptions.map((f) =>
-      `<option value="${escapeHtml(f)}"${f === rec.folder ? " selected" : ""}>${escapeHtml(f)}</option>`
-    ).join("");
-    const resume = rec.position > 5 ? ` · ▶ resume ${fmtTime(rec.position)}` : "";
-    card.innerHTML =
-      `<button class="lib-play-icon" aria-label="Play ${escapeHtml(rec.title)}">▶</button>` +
-      `<span class="lib-info"><strong>${escapeHtml(rec.title)}</strong>` +
-      `<span class="lib-snippet">${new Date(rec.createdAt).toLocaleDateString()}${resume}</span>` +
-      `<label class="sr-only" for="mv_${rec.id}">Move ${escapeHtml(rec.title)} to a folder</label>` +
-      `<select class="rec-move" id="mv_${rec.id}" aria-label="Move ${escapeHtml(rec.title)} to a folder">${opts}</select>` +
-      `</span>` +
-      `<button class="round-btn rec-fav${rec.fav ? " is-fav" : ""}" aria-pressed="${!!rec.fav}" ` +
-        `aria-label="${rec.fav ? "Remove from" : "Add to"} favourites">${rec.fav ? "★" : "☆"}</button>` +
-      `<button class="round-btn rec-del" aria-label="Delete recording">🗑</button>`;
-    card.querySelector(".lib-play-icon").addEventListener("click", () => playRecording(rec));
-    card.querySelector(".rec-move").addEventListener("change", (e) => moveRecording(rec, e.target.value));
-    card.querySelector(".rec-fav").addEventListener("click", async () => {
+    li.className = "lib-card-wrap";
+    const pct = recProgress(rec);
+    const date = new Date(rec.createdAt).toLocaleDateString(undefined, { day: "numeric", month: "short" });
+    const meta = [fmtDuration(rec.duration), date].filter(Boolean).join(" · ");
+    const opts = moveOptions.map((f) => `<option value="${escapeHtml(f)}"${f === rec.folder ? " selected" : ""}>${escapeHtml(f)}</option>`).join("");
+    const menuOpen = openMenuId === rec.id;
+    const resume = (rec.position > 5 && !rec.completed) ? " · resume " + fmtTime(rec.position) : "";
+    li.innerHTML =
+      `<div class="lib-card">` +
+        `<button class="lib-cover" aria-label="Play ${escapeHtml(rec.title)}" style="--cv:${_coverColor(rec.title)}">` +
+          `<span class="lib-cover-ini" aria-hidden="true">${escapeHtml(_initials(rec.title))}</span>` +
+          `<span class="lib-cover-play" aria-hidden="true">▶</span>` +
+        `</button>` +
+        `<div class="lib-body">` +
+          `<div class="lib-line1">` +
+            `<strong class="lib-title">${escapeHtml(rec.title)}</strong>` +
+            `<span class="lib-meta">${escapeHtml(meta)}</span>` +
+            `<button class="lib-kebab" aria-haspopup="true" aria-expanded="${menuOpen}" aria-label="More options for ${escapeHtml(rec.title)}">⋮</button>` +
+          `</div>` +
+          `<p class="lib-sub">${escapeHtml(rec.folder || "Unfiled")}${resume}</p>` +
+          `<div class="lib-line3">` +
+            `<span class="lib-bar"><span class="lib-bar-fill" style="width:${pct}%"></span></span>` +
+            `<button class="lib-heart${rec.fav ? " is-fav" : ""}" aria-pressed="${!!rec.fav}" aria-label="${rec.fav ? "Remove from" : "Add to"} favourites">${rec.fav ? "♥" : "♡"}</button>` +
+          `</div>` +
+        `</div>` +
+      `</div>` +
+      `<div class="lib-menu" role="menu"${menuOpen ? "" : " hidden"}>` +
+        `<label class="sr-only" for="mv_${rec.id}">Move ${escapeHtml(rec.title)} to a folder</label>` +
+        `<select class="rec-move" id="mv_${rec.id}" aria-label="Move ${escapeHtml(rec.title)} to a folder">${opts}</select>` +
+        `<button class="lib-menu-item" data-act="toggle" role="menuitem">${rec.completed ? "Mark as to-do" : "Mark completed"}</button>` +
+        `<button class="lib-menu-item danger" data-act="delete" role="menuitem">Delete</button>` +
+      `</div>`;
+    li.querySelector(".lib-cover").addEventListener("click", () => playRecording(rec));
+    li.querySelector(".lib-heart").addEventListener("click", async () => {
       rec.fav = !rec.fav; await recPut(rec);
-      announce(rec.fav ? `Added “${rec.title}” to favourites.` : `Removed from favourites.`, "ok");
+      announce(rec.fav ? `Added “${rec.title}” to favourites.` : "Removed from favourites.", "ok");
       loadRecordings();
     });
-    card.querySelector(".rec-del").addEventListener("click", async () => {
-      if (!window.confirm("Delete this recording from your device?")) return;
-      await recDel(rec.id); loadRecordings();
+    li.querySelector(".lib-kebab").addEventListener("click", (e) => {
+      e.stopPropagation(); openMenuId = menuOpen ? null : rec.id; loadRecordings();
     });
-    li.appendChild(card); ul.appendChild(li);
+    const sel = li.querySelector(".rec-move");
+    if (sel) sel.addEventListener("change", (e) => { openMenuId = null; moveRecording(rec, e.target.value); });
+    li.querySelectorAll(".lib-menu-item").forEach((mi) => mi.addEventListener("click", async () => {
+      if (mi.dataset.act === "toggle") {
+        rec.completed = !rec.completed; if (rec.completed) rec.position = 0;
+        await recPut(rec); openMenuId = null; loadRecordings();
+      } else if (mi.dataset.act === "delete") {
+        if (window.confirm("Delete this recording from your device?")) { await recDel(rec.id); openMenuId = null; loadRecordings(); }
+      }
+    }));
+    ul.appendChild(li);
   });
 }
 

@@ -371,15 +371,30 @@
       </div>
 
       <!-- ===== MY BOOKS panel (saved recordings, on-device, in folders) ===== -->
-      <div id="booksPanel" class="mode-panel" role="tabpanel" aria-labelledby="tabBooks" hidden>
-        <p class="lede">Your saved recordings — stored on <strong>this device</strong> for offline replay.</p>
-        <div class="row">
+      <div id="booksPanel" class="mode-panel library-screen" role="tabpanel" aria-labelledby="tabBooks" hidden>
+        <div class="lib-search">
+          <span class="lib-search-icon" aria-hidden="true">🔍</span>
+          <input id="recSearch" type="search" placeholder="Search your library"
+                 aria-label="Search your recordings" autocomplete="off" />
+        </div>
+
+        <div class="seg" role="tablist" aria-label="Filter recordings">
+          <button id="segTodo" type="button" class="seg-btn is-on" role="tab" aria-selected="true">To do</button>
+          <button id="segDone" type="button" class="seg-btn" role="tab" aria-selected="false">Completed</button>
+        </div>
+
+        <div id="folderBar" class="folder-bar" role="tablist" aria-label="Folders"></div>
+
+        <div class="row newfolder-row">
           <input id="newFolderName" type="text" placeholder="New folder name" aria-label="New folder name" />
           <button id="newFolderBtn" type="button" class="primary-btn">+ Folder</button>
         </div>
-        <div id="folderBar" class="folder-bar" role="tablist" aria-label="Folders"></div>
+
         <audio id="recAudio" controls preload="auto" hidden></audio>
         <ul id="recList" class="library" aria-label="Saved recordings"></ul>
+        <p id="recEmpty" class="lib-empty" hidden>
+          Your library is empty.<br />Read something, then press <strong>💾 Save offline</strong>.
+        </p>
       </div>
     </section>
 
