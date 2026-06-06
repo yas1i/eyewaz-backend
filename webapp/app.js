@@ -934,6 +934,16 @@ const Plan = (() => {
 
   async function setupPayPal() {
     try { cfg = await api("/paypal/config", { auth: false }); } catch (_) { cfg = null; }
+    const setupBtn = document.getElementById("paypalSetupBtn");
+    // Creds present but plans not created yet → offer a one-click finish (key-gated).
+    if (setupBtn) {
+      const needsSetup = cfg && cfg.configured && !cfg.enabled;
+      setupBtn.hidden = !needsSetup;
+      if (needsSetup && !setupBtn.dataset.bound) {
+        setupBtn.dataset.bound = "1";
+        setupBtn.addEventListener("click", finishPayPalSetup);
+      }
+    }
     const enabled = cfg && cfg.enabled && cfg.client_id;
     if (!enabled) return;                       // keep placeholder buttons
     try { await loadSdk(cfg.client_id, cfg.currency || "GBP"); }
@@ -942,6 +952,19 @@ const Plan = (() => {
     // Offer cancellation if the user is already on a paid plan.
     const cancel = document.getElementById("cancelSubBtn");
     if (cancel && userUsage && userUsage.plan !== "free") cancel.hidden = false;
+  }
+
+  async function finishPayPalSetup() {
+    const key = window.prompt("Enter your DEV_PLAN_KEY to create the PayPal plans:");
+    if (!key) return;
+    announce("Creating PayPal plans…", "busy");
+    try {
+      const d = await api("/paypal/setup", { method: "POST",
+        body: { key, prices: PLAN_PRICES } });
+      announce(d.message || "PayPal is now live.", "ok");
+      window.alert(d.message || "PayPal plans created — checkout is live.");
+      await setupPayPal();   // re-render with live buttons
+    } catch (e) { announce(e.message || "PayPal setup failed.", "error"); }
   }
 
   function loadSdk(clientId, currency) {
@@ -1003,6 +1026,13 @@ window.setPlan = (plan, key) =>
   api("/dev/plan", { method: "POST", body: { plan, key } })
     .then((d) => { Billing.set(d.usage); announce("Plan set to " + plan + ".", "ok"); return d; })
     .catch((e) => { announce(e.message || "Could not set plan.", "error"); });
+
+// One-shot PayPal plan creation (needs DEV_PLAN_KEY + PayPal creds in env).
+// Usage:  setupPayPal("your-dev-key")    → creates + saves plans, PayPal goes live.
+window.setupPayPal = (key, prices) =>
+  api("/paypal/setup", { method: "POST", body: { key, prices: prices || PLAN_PRICES } })
+    .then((d) => { console.log(d); announce(d.message || "PayPal is live.", "ok"); return d; })
+    .catch((e) => { announce(e.message || "PayPal setup failed.", "error"); });
 
 /* ----------------- Passkeys: Face ID / Touch ID / fingerprint --------------- */
 const Passkey = (() => {

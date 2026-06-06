@@ -166,12 +166,16 @@ Production env vars (Render): `MONGO_URI`, `JWT_SECRET_KEY`, `FLASK_SECRET_KEY`,
    "coming soon" placeholder). To switch on:
    - Set `PAYPAL_CLIENT_ID`, `PAYPAL_SECRET`, `PAYPAL_ENV=sandbox` (then `live`),
      `PAYPAL_CURRENCY=GBP`.
-   - Create the billing plans once: with `DEV_PLAN_KEY` set, `POST /api/paypal/setup`
-     `{ "key": "...", "prices": {"monthly":"4.99","supermax":"9.99"} }` → it returns
-     `PAYPAL_PLAN_MONTHLY` / `PAYPAL_PLAN_SUPERMAX`; put those in env + redeploy.
-   - Register a webhook at developer.paypal.com → `https://<host>/api/paypal/webhook`
-     for the BILLING.SUBSCRIPTION.* and PAYMENT.SALE.COMPLETED events; set its
-     `PAYPAL_WEBHOOK_ID`. Card data never touches the app (hosted Smart Buttons).
+   - Create the billing plans once (no redeploy needed — saved to the DB):
+     log in, open **Account**, click **⚙ Finish PayPal setup** and enter your
+     `DEV_PLAN_KEY` (or run `setupPayPal("DEV_PLAN_KEY")` in the console). PayPal
+     checkout goes live immediately. (Setting `PAYPAL_PLAN_MONTHLY` /
+     `PAYPAL_PLAN_SUPERMAX` in env still works and overrides the DB.)
+   - **Webhook is optional for go-live** — activation verifies the subscription
+     server-side on approval. Add it later for auto-renewal/cancel sync:
+     developer.paypal.com → `https://<host>/api/paypal/webhook` for
+     BILLING.SUBSCRIPTION.* + PAYMENT.SALE.COMPLETED; set `PAYPAL_WEBHOOK_ID`.
+   - Card data never touches the app (hosted Smart Buttons).
 11. **Stripe = card + Klarna** (one integration provides both). Dormant until set:
    - Create two recurring **Prices** in the Stripe Dashboard (Monthly, Super Max);
      set `STRIPE_SECRET_KEY`, `STRIPE_PRICE_MONTHLY`, `STRIPE_PRICE_SUPERMAX`.

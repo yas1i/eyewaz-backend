@@ -61,6 +61,16 @@ class Users(Document):
         }
 
 
+class AppSettings(Document):
+    """Singleton app config persisted in the DB (e.g. PayPal plan ids created at
+    runtime), so payment setup needs no env round-trip or redeploy."""
+    key = StringField(primary_key=True, default="singleton")
+    paypal_product_id = StringField()
+    paypal_plan_monthly = StringField()
+    paypal_plan_supermax = StringField()
+    objects = QuerySetManager()
+
+
 class Docs(Document):
     id = StringField(primary_key=True)
     user = ReferenceField(Users)
