@@ -32,6 +32,20 @@
       <g id="ic-folder" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h3.5l2 2H19a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></g>
       <g id="ic-add" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="6" x2="12" y2="18"/><line x1="6" y1="12" x2="18" y2="12"/></g>
       <g id="ic-heart" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20S4.5 15.4 4.5 9.9A3.6 3.6 0 0 1 12 7a3.6 3.6 0 0 1 7.5 2.9C19.5 15.4 12 20 12 20z"/></g>
+      <g id="ic-mic" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M6 11a6 6 0 0 0 12 0"/><line x1="12" y1="17" x2="12" y2="21"/><line x1="8.5" y1="21" x2="15.5" y2="21"/></g>
+      <g id="ic-chat" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a7.5 7.5 0 0 1-10.8 6.7L4 20l1.8-4.2A7.5 7.5 0 1 1 21 11.5z"/><line x1="8.5" y1="11.5" x2="15.5" y2="11.5"/></g>
+      <g id="ic-bell" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16v-5a6 6 0 0 1 12 0v5l1.5 2.2H4.5z"/><path d="M9.8 19.5a2.4 2.4 0 0 0 4.4 0"/></g>
+      <g id="ic-send" fill="currentColor"><path d="M3.4 20.4 21 12 3.4 3.6l2.1 6.9L14 12l-8.5 1.5z"/></g>
+      <g id="ic-play" fill="currentColor"><path d="M7 5.2 19 12 7 18.8z"/></g>
+      <g id="ic-stop" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2.5"/></g>
+      <g id="ic-download" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="4" x2="12" y2="14.5"/><path d="M8 10.5l4 4 4-4"/><path d="M5 19h14"/></g>
+      <g id="ic-save" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h11l3 3v13H5z"/><path d="M8 4v5h7"/><rect x="8.5" y="13" width="7" height="5"/></g>
+      <g id="ic-card" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="2.5"/><line x1="3" y1="10.5" x2="21" y2="10.5"/></g>
+      <g id="ic-settings" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 3v2.6M12 18.4V21M3 12h2.6M18.4 12H21M5.6 5.6l1.9 1.9M16.5 16.5l1.9 1.9M18.4 5.6l-1.9 1.9M7.5 16.5l-1.9 1.9"/></g>
+      <g id="ic-search" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></g>
+      <g id="ic-pause" fill="currentColor"><rect x="6.5" y="5" width="3.6" height="14" rx="1.2"/><rect x="13.9" y="5" width="3.6" height="14" rx="1.2"/></g>
+      <g id="ic-trash" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M9 7V5h6v2"/><path d="M6 7l1 13h10l1-13"/><line x1="10" y1="11" x2="10" y2="16.5"/><line x1="14" y1="11" x2="14" y2="16.5"/></g>
+      <g id="ic-sun" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5 5l1.4 1.4M17.6 17.6 19 19M19 5l-1.4 1.4M6.4 17.6 5 19"/></g>
     </defs>
   </svg>
 
@@ -73,7 +87,7 @@
 
       <!-- Fast biometric sign-in (shown only if the device supports it) -->
       <button type="button" id="faceIdLoginBtn" class="primary-btn" hidden>
-        👤 Sign in with Face ID / Touch ID
+        <svg class="ic" aria-hidden="true"><use href="#ic-person"/></svg> Sign in with Face ID / Touch ID
       </button>
 
       <!-- Social sign-in (shown on the login & signup steps) -->
@@ -234,22 +248,22 @@
         <h2 id="dayGreeting">Good day</h2>
         <p class="lede" id="dayDate"></p>
         <p class="plan-line" id="planLine"></p>
-        <button id="startDayBtn" class="primary-btn">🌅 Start my day</button>
+        <button id="startDayBtn" class="primary-btn"><svg class="ic" aria-hidden="true"><use href="#ic-day"/></svg> Start my day</button>
         <p id="dayStatus" class="status" role="status"></p>
         <audio id="dayAudio" controls preload="auto" hidden></audio>
         <div class="card">
           <h3>Today's list</h3>
           <p id="dayList" class="page-text"></p>
-          <p class="hint">Set your weekday &amp; weekend lists in ⚙ Account. EYEWAZ greets you, reads the date, and reads today's list aloud.</p>
+          <p class="hint">Set your weekday &amp; weekend lists in Account. EYEWAZ greets you, reads the date, and reads today's list aloud.</p>
         </div>
 
         <!-- ===== Ask Eyewaz: hands-free conversational assistant ===== -->
         <div class="card" id="assistantCard">
-          <h3>💬 Ask Eyewaz</h3>
+          <h3><svg class="ic" aria-hidden="true"><use href="#ic-chat"/></svg> Ask Eyewaz</h3>
           <p class="hint">Tap the microphone and speak — ask about your day, your list, or anything else. Eyewaz listens and answers aloud.</p>
           <div class="player-bar">
-            <button id="asstMicBtn" class="primary-btn" aria-label="Hold or tap to talk to Eyewaz">🎤 Talk to Eyewaz</button>
-            <button id="asstStopBtn" class="round-btn" aria-label="Stop speaking" hidden>⏹</button>
+            <button id="asstMicBtn" class="primary-btn" aria-label="Hold or tap to talk to Eyewaz"><svg class="ic" aria-hidden="true"><use href="#ic-mic"/></svg> Talk to Eyewaz</button>
+            <button id="asstStopBtn" class="round-btn" aria-label="Stop speaking" hidden><svg class="ic" aria-hidden="true"><use href="#ic-stop"/></svg></button>
           </div>
           <p id="asstStatus" class="status" role="status"></p>
           <div id="asstLog" class="assistant-log" aria-live="polite" aria-label="Conversation with Eyewaz"></div>
@@ -257,13 +271,13 @@
             <label class="sr-only" for="asstText">Type your message to Eyewaz</label>
             <input id="asstText" type="text" autocomplete="off"
               placeholder="…or type your message and press Enter" />
-            <button type="submit" class="round-btn" aria-label="Send message">➤</button>
+            <button type="submit" class="round-btn" aria-label="Send message"><svg class="ic" aria-hidden="true"><use href="#ic-send"/></svg></button>
           </form>
         </div>
 
         <!-- ===== Reminders: time-based spoken nudges (medication, prayers…) ===== -->
         <div class="card" id="remindersCard">
-          <h3>⏰ Reminders</h3>
+          <h3><svg class="ic" aria-hidden="true"><use href="#ic-bell"/></svg> Reminders</h3>
           <p class="hint">Spoken nudges for medicines, prayers, or appointments. EYEWAZ reads them aloud at the set time while the app is open.</p>
           <form id="reminderForm" class="reminder-form">
             <input type="time" id="reminderTime" aria-label="Reminder time" required />
@@ -275,7 +289,7 @@
               <option value="weekends">Weekends</option>
               <option value="once">Just once</option>
             </select>
-            <button type="submit" class="primary-btn">➕ Add reminder</button>
+            <button type="submit" class="primary-btn"><svg class="ic" aria-hidden="true"><use href="#ic-add"/></svg> Add reminder</button>
           </form>
           <ul id="reminderList" class="reminder-list" aria-live="polite"></ul>
         </div>
@@ -286,10 +300,10 @@
         <textarea id="textInput" class="reader-text"
           placeholder="Type or paste text here, then press Play. EYEWAZ translates it to your reading language and reads it aloud."></textarea>
         <div class="player-bar">
-          <button id="textPlayBtn" class="play-btn" aria-label="Play">▶</button>
-          <button id="textStopBtn" class="round-btn" aria-label="Stop">⏹</button>
-          <a id="textDownload" class="round-btn" download="eyewaz-audio.mp3" hidden aria-label="Download audio">⬇</a>
-          <button id="textSaveBtn" class="round-btn" hidden aria-label="Save to my device">💾</button>
+          <button id="textPlayBtn" class="play-btn" aria-label="Play"><svg class="ic" aria-hidden="true"><use href="#ic-play"/></svg></button>
+          <button id="textStopBtn" class="round-btn" aria-label="Stop"><svg class="ic" aria-hidden="true"><use href="#ic-stop"/></svg></button>
+          <a id="textDownload" class="round-btn" download="eyewaz-audio.mp3" hidden aria-label="Download audio"><svg class="ic" aria-hidden="true"><use href="#ic-download"/></svg></a>
+          <button id="textSaveBtn" class="round-btn" hidden aria-label="Save to my device"><svg class="ic" aria-hidden="true"><use href="#ic-save"/></svg></button>
         </div>
         <audio id="textAudio" controls preload="auto" hidden></audio>
         <p id="textStatus" class="status" role="status"></p>
@@ -302,7 +316,7 @@
       <!-- ===== DOCUMENT panel ===== -->
       <div id="docPanel" class="mode-panel" role="tabpanel" aria-labelledby="tabDoc" hidden>
         <label for="docInput" class="capture-btn">
-          <span aria-hidden="true" class="capture-icon">📄</span>
+          <span aria-hidden="true" class="capture-icon"><svg class="ic cap-ic"><use href="#ic-doc"/></svg></span>
           <span>Choose a PDF, Word, EPUB, or text file</span>
         </label>
         <input id="docInput" type="file" accept=".pdf,.docx,.doc,.txt,.epub" class="sr-only" />
@@ -315,8 +329,8 @@
           <h4>Audio (natural voice)</h4>
           <audio id="docAudio" controls preload="auto"></audio>
           <div class="row">
-            <a id="docDownload" class="round-btn" download="eyewaz-audio.mp3" hidden aria-label="Download audio">⬇</a>
-            <button id="docSaveBtn" class="round-btn" hidden aria-label="Save to my device">💾</button>
+            <a id="docDownload" class="round-btn" download="eyewaz-audio.mp3" hidden aria-label="Download audio"><svg class="ic" aria-hidden="true"><use href="#ic-download"/></svg></a>
+            <button id="docSaveBtn" class="round-btn" hidden aria-label="Save to my device"><svg class="ic" aria-hidden="true"><use href="#ic-save"/></svg></button>
           </div>
           <h4>Translation</h4>
           <p id="docTrans" class="urdu"></p>
@@ -327,7 +341,7 @@
       <!-- ===== PHOTO panel ===== -->
       <div id="photoPanel" class="mode-panel" role="tabpanel" aria-labelledby="tabPhoto" hidden>
         <label for="photoInput" class="capture-btn" id="captureLabel">
-          <span aria-hidden="true" class="capture-icon">📷</span>
+          <span aria-hidden="true" class="capture-icon"><svg class="ic cap-ic"><use href="#ic-photo"/></svg></span>
           <span>Take or choose a photo</span>
         </label>
         <input id="photoInput" type="file" accept="image/*" capture="environment" class="sr-only" />
@@ -345,13 +359,13 @@
           <h3 id="resultHeading">Result</h3>
           <h4>Audio (natural voice)</h4>
           <audio id="player" controls preload="auto"></audio>
-          <button id="replayBtn" class="primary-btn">▶ Play again</button>
+          <button id="replayBtn" class="primary-btn"><svg class="ic" aria-hidden="true"><use href="#ic-play"/></svg> Play again</button>
 
           <h4>Read with your device voice</h4>
           <div class="row">
-            <button id="speakUrduBtn" type="button" class="primary-btn">🔊 Speak translation</button>
-            <button id="speakEngBtn" type="button" class="primary-btn ghost">🔊 Speak original</button>
-            <button id="stopSpeakBtn" type="button" class="primary-btn ghost">⏹ Stop</button>
+            <button id="speakUrduBtn" type="button" class="primary-btn"><svg class="ic" aria-hidden="true"><use href="#ic-voice-on"/></svg> Speak translation</button>
+            <button id="speakEngBtn" type="button" class="primary-btn ghost"><svg class="ic" aria-hidden="true"><use href="#ic-voice-on"/></svg> Speak original</button>
+            <button id="stopSpeakBtn" type="button" class="primary-btn ghost"><svg class="ic" aria-hidden="true"><use href="#ic-stop"/></svg> Stop</button>
           </div>
           <p id="ttsHint" class="hint" hidden></p>
 
@@ -376,10 +390,10 @@
         <article id="pageResult" class="card" hidden aria-labelledby="pageResultHeading">
           <h3 id="pageResultHeading" tabindex="-1">Page</h3>
           <div class="row">
-            <button id="pagePlayBtn" type="button" class="primary-btn">▶ Play (original)</button>
-            <button id="pagePauseBtn" type="button" class="primary-btn ghost">⏸ Pause</button>
-            <button id="pageStopBtn" type="button" class="primary-btn ghost">⏹ Stop</button>
-            <button id="pageUrduBtn" type="button" class="primary-btn">🌐 Translate &amp; read aloud</button>
+            <button id="pagePlayBtn" type="button" class="primary-btn"><svg class="ic" aria-hidden="true"><use href="#ic-play"/></svg> Play (original)</button>
+            <button id="pagePauseBtn" type="button" class="primary-btn ghost"><svg class="ic" aria-hidden="true"><use href="#ic-pause"/></svg> Pause</button>
+            <button id="pageStopBtn" type="button" class="primary-btn ghost"><svg class="ic" aria-hidden="true"><use href="#ic-stop"/></svg> Stop</button>
+            <button id="pageUrduBtn" type="button" class="primary-btn"><svg class="ic" aria-hidden="true"><use href="#ic-web"/></svg> Translate &amp; read aloud</button>
           </div>
           <p id="pageText" class="page-text" lang="en"></p>
 
@@ -394,7 +408,7 @@
       <!-- ===== MY BOOKS panel (saved recordings, on-device, in folders) ===== -->
       <div id="booksPanel" class="mode-panel library-screen" role="tabpanel" aria-labelledby="tabBooks" hidden>
         <div class="lib-search">
-          <span class="lib-search-icon" aria-hidden="true">🔍</span>
+          <span class="lib-search-icon" aria-hidden="true"><svg class="ic" aria-hidden="true"><use href="#ic-search"/></svg></span>
           <input id="recSearch" type="search" placeholder="Search your library"
                  aria-label="Search your recordings" autocomplete="off" />
         </div>
@@ -418,7 +432,7 @@
         <audio id="recAudio" controls preload="auto" hidden></audio>
         <ul id="recList" class="library" aria-label="Saved recordings"></ul>
         <p id="recEmpty" class="lib-empty" hidden>
-          Your library is empty.<br />Read something, then press <strong>💾 Save offline</strong>.
+          Your library is empty.<br />Read something, then press <strong>Save offline</strong>.
         </p>
       </div>
     </section>
@@ -430,7 +444,7 @@
 
       <!-- ===== Fast sign-in (Face ID / Touch ID) ===== -->
       <div class="card" id="faceIdCard" hidden>
-        <h3>👤 Fast sign-in</h3>
+        <h3><svg class="ic" aria-hidden="true"><use href="#ic-person"/></svg> Fast sign-in</h3>
         <p class="hint">Turn on Face ID, Touch ID, or fingerprint to sign in instantly on this device — no password or code to type.</p>
         <button type="button" id="faceIdEnableBtn" class="primary-btn">Enable Face ID on this device</button>
         <p class="status" id="faceIdStatus" role="status"></p>
@@ -460,7 +474,7 @@
             </ul>
             <button type="button" class="primary-btn plan-upgrade" data-plan="monthly">Upgrade with PayPal</button>
             <div class="paypal-slot" id="pp-monthly" hidden></div>
-            <button type="button" class="primary-btn ghost stripe-btn" data-plan="monthly" hidden>💳 Card or Klarna</button>
+            <button type="button" class="primary-btn ghost stripe-btn" data-plan="monthly" hidden><svg class="ic" aria-hidden="true"><use href="#ic-card"/></svg> Card or Klarna</button>
           </div>
           <div class="plan-card" data-plan="supermax">
             <h4>Super Max</h4>
@@ -472,12 +486,12 @@
             </ul>
             <button type="button" class="primary-btn plan-upgrade" data-plan="supermax">Upgrade with PayPal</button>
             <div class="paypal-slot" id="pp-supermax" hidden></div>
-            <button type="button" class="primary-btn ghost stripe-btn" data-plan="supermax" hidden>💳 Card or Klarna</button>
+            <button type="button" class="primary-btn ghost stripe-btn" data-plan="supermax" hidden><svg class="ic" aria-hidden="true"><use href="#ic-card"/></svg> Card or Klarna</button>
           </div>
         </div>
         <p class="hint">Payments via PayPal (Klarna &amp; card coming soon). Cancel anytime.</p>
         <button type="button" id="cancelSubBtn" class="primary-btn ghost" hidden>Cancel my subscription</button>
-        <button type="button" id="paypalSetupBtn" class="primary-btn ghost" hidden>⚙ Finish PayPal setup</button>
+        <button type="button" id="paypalSetupBtn" class="primary-btn ghost" hidden><svg class="ic" aria-hidden="true"><use href="#ic-settings"/></svg> Finish PayPal setup</button>
       </div>
 
       <form id="accountForm" class="card" novalidate>
@@ -525,7 +539,7 @@
         </div>
 
         <div class="row">
-          <button type="button" id="testVoiceBtn" class="primary-btn ghost">🔊 Test this voice</button>
+          <button type="button" id="testVoiceBtn" class="primary-btn ghost"><svg class="ic" aria-hidden="true"><use href="#ic-voice-on"/></svg> Test this voice</button>
           <button type="submit" class="primary-btn">Save settings</button>
         </div>
       </form>

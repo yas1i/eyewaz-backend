@@ -868,7 +868,7 @@ async function loadRecordings() {
   if (activeFolder !== "All" && activeFolder !== "Unfiled" && activeFolder !== FAV) {
     const del = document.createElement("button");
     del.type = "button"; del.className = "folder-chip folder-del";
-    del.textContent = `🗑 Delete “${activeFolder}”`;
+    del.innerHTML = `<svg class="ic" aria-hidden="true"><use href="#ic-trash"/></svg> Delete “${escapeHtml(activeFolder)}”`;
     del.setAttribute("aria-label", `Delete folder ${activeFolder}`);
     del.addEventListener("click", () => deleteFolder(activeFolder));
     bar.appendChild(del);
@@ -924,7 +924,7 @@ async function loadRecordings() {
       `<div class="lib-card">` +
         `<button class="lib-cover" aria-label="Play ${escapeHtml(rec.title)}" style="--cv:${_coverColor(rec.title)}">` +
           `<span class="lib-cover-ini" aria-hidden="true">${escapeHtml(_initials(rec.title))}</span>` +
-          `<span class="lib-cover-play" aria-hidden="true">▶</span>` +
+          `<span class="lib-cover-play" aria-hidden="true"><svg class="ic" aria-hidden="true"><use href="#ic-play"/></svg></span>` +
         `</button>` +
         `<div class="lib-body">` +
           `<div class="lib-line1">` +
@@ -1328,7 +1328,7 @@ function renderMyDay() {
   if ($("#dayDate")) $("#dayDate").textContent =
     new Date().toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" });
   const list = todayListText();
-  if ($("#dayList")) $("#dayList").textContent = list || "No list set for today — add one in ⚙ Account.";
+  if ($("#dayList")) $("#dayList").textContent = list || "No list set for today — add one in Account.";
 }
 $("#startDayBtn")?.addEventListener("click", async () => {
   const st = $("#dayStatus"), btn = $("#startDayBtn");
@@ -1447,7 +1447,8 @@ const Assistant = (() => {
   function setMic(on) {
     const btn = el("asstMicBtn");
     if (!btn) return;
-    btn.textContent = on ? "🔴 Listening…" : "🎤 Talk to Eyewaz";
+    btn.innerHTML = '<svg class="ic" aria-hidden="true"><use href="#ic-mic"/></svg> ' + (on ? "Listening…" : "Talk to Eyewaz");
+    btn.classList.toggle("is-listening", on);
     btn.setAttribute("aria-pressed", String(on));
   }
 
@@ -1524,7 +1525,7 @@ const Reminders = (() => {
         `<span class="reminder-when">${speak12h(r.time)}</span>` +
         `<span class="reminder-info"><strong>${escapeHtml(r.label)}</strong>` +
         `<span class="lib-snippet">${REPEAT_LABEL[r.repeat] || "Every day"}</span></span>` +
-        `<button class="round-btn rem-del" aria-label="Delete reminder ${escapeHtml(r.label)}">🗑</button>`;
+        `<button class="round-btn rem-del" aria-label="Delete reminder ${escapeHtml(r.label)}"><svg class="ic" aria-hidden="true"><use href="#ic-trash"/></svg></button>`;
       li.querySelector(".rem-del").addEventListener("click", () => {
         set(get().filter((x) => x.id !== r.id));
         announce("Reminder deleted.", "ok");
@@ -1536,7 +1537,7 @@ const Reminders = (() => {
 
   function fire(r) {
     const msg = "Reminder. " + r.label;
-    announce("⏰ " + r.label, "ok");
+    announce("Reminder. " + r.label, "ok");
     speakInUserLang(msg);
     try {
       if ("Notification" in window && Notification.permission === "granted")
@@ -1745,8 +1746,10 @@ const themeToggle = $("#themeToggle");
 function applyTheme(dark) {
   document.body.classList.toggle("dark", dark);
   if (themeToggle) {
-    themeToggle.textContent = dark ? "☀️" : "🌙";
+    const use = themeToggle.querySelector("use");
+    if (use) use.setAttribute("href", dark ? "#ic-sun" : "#ic-theme");
     themeToggle.setAttribute("aria-pressed", String(dark));
+    themeToggle.setAttribute("aria-label", dark ? "Switch to light mode" : "Switch to dark mode");
   }
 }
 applyTheme(localStorage.getItem("eyewaz_theme") === "dark");
@@ -1853,7 +1856,7 @@ $("#textSaveBtn")?.addEventListener("click", async () => {
   const ts = $("#textStatus");
   try {
     await saveRecording($("#textAudio").src, $("#textInput").value || "Text", $("#rcLanguage").value);
-    ts.className = "status ok"; ts.textContent = "Saved on your device — find it in 📚 My Books.";
+    ts.className = "status ok"; ts.textContent = "Saved on your device — find it in My Books.";
   } catch (e) { ts.className = "status error"; ts.textContent = "Could not save: " + (e.message || e); }
 });
 
@@ -1872,7 +1875,7 @@ $("#docSaveBtn")?.addEventListener("click", async () => {
   const st = $("#docStatus");
   try {
     await saveRecording($("#docAudio").src, docFile ? docFile.name : "Document", $("#docSaveBtn").dataset.lang || "");
-    st.className = "status ok"; st.textContent = "Saved on your device — find it in 📚 My Books.";
+    st.className = "status ok"; st.textContent = "Saved on your device — find it in My Books.";
   } catch (e) { st.className = "status error"; st.textContent = "Could not save: " + (e.message || e); }
 });
 $("#docReadBtn")?.addEventListener("click", async () => {
