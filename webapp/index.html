@@ -233,6 +233,10 @@
       <!-- Shared inline voice / language / speed controls -->
       <div class="reader-controls card">
         <div class="rc-row">
+          <label id="rcDialectLabel">Dialect — just for now</label>
+          <div id="rcDialects" class="rc-dialects" role="group" aria-labelledby="rcDialectLabel"></div>
+        </div>
+        <div class="rc-row">
           <label for="rcLanguage">Reading language</label>
           <select id="rcLanguage"></select>
         </div>
@@ -511,7 +515,15 @@
         <p class="hint">Turn a consenting native-speaker recording into a cloned dialect voice. Requires your <code>DEV_PLAN_KEY</code> and <code>ELEVENLABS_API_KEY</code> on the server.</p>
         <div class="field"><label for="vbDialect">Dialect</label><select id="vbDialect"></select></div>
         <div class="field"><label for="vbSpeaker">Speaker name</label><input id="vbSpeaker" type="text" autocomplete="off" placeholder="e.g. Ahmed K." /></div>
-        <div class="field"><label for="vbAudio">Voice sample (clear audio, ~1–2 min)</label><input id="vbAudio" type="file" accept="audio/*" /></div>
+        <div class="field"><label for="vbAudio">Voice sample (clear audio, ~1–2 min) — upload a file…</label><input id="vbAudio" type="file" accept="audio/*" /></div>
+        <div class="field">
+          <label>…or record now</label>
+          <div class="player-bar" style="justify-content:flex-start; margin:8px 0;">
+            <button id="vbRecBtn" type="button" class="primary-btn ghost"><svg class="ic" aria-hidden="true"><use href="#ic-mic"/></svg> Record</button>
+            <button id="vbRecStop" type="button" class="round-btn" hidden aria-label="Stop recording"><svg class="ic" aria-hidden="true"><use href="#ic-stop"/></svg></button>
+          </div>
+          <audio id="vbRecAudio" controls hidden></audio>
+        </div>
         <div class="field"><label for="vbKey">Admin key (DEV_PLAN_KEY)</label><input id="vbKey" type="password" autocomplete="off" /></div>
         <label class="vb-consent"><input id="vbConsent" type="checkbox" /> The speaker has consented to their voice being cloned for EYEWAZ.</label>
         <button id="vbCreateBtn" type="button" class="primary-btn">Create dialect voice</button>

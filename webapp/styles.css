@@ -711,3 +711,14 @@ body.dark .dialect-badge.live { color: #06222a; }
 .vb-consent input { width: 22px; height: 22px; margin-top: 2px; accent-color: var(--accent-strong); }
 .vb-list { margin-top: 14px; }
 .vb-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 0; border-top: 1px solid var(--border); }
+
+/* On-the-go dialect chips on the reading screen */
+.rc-dialects { display: flex; flex-wrap: wrap; gap: 8px; }
+.rc-dialect-chip {
+  padding: 8px 14px; border-radius: 999px; border: 2px solid var(--border);
+  background: var(--surface); color: var(--text); font: inherit; font-weight: 700;
+  cursor: pointer; min-height: 40px; transition: border-color .15s, background .15s;
+}
+.rc-dialect-chip:hover { border-color: var(--accent-strong); }
+.rc-dialect-chip.is-active { background: var(--accent-strong); color: #fff; border-color: var(--accent-strong); }
+body.dark .rc-dialect-chip { background: #10211f; }
