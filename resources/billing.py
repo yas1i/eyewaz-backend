@@ -25,6 +25,37 @@ def _resp(payload, status):
 _PAID_DAYS = 33
 
 
+def _settings():
+    from database.models import AppSettings
+    return AppSettings.objects(key="singleton").first() or AppSettings(key="singleton")
+
+
+def _paypal_plans():
+    """Plan ids from env first, else the DB (saved by /api/paypal/setup) —
+    so setup needs no env round-trip or redeploy."""
+    m = os.getenv("PAYPAL_PLAN_MONTHLY")
+    s = os.getenv("PAYPAL_PLAN_SUPERMAX")
+    if not (m and s):
+        st = _settings()
+        m = m or st.paypal_plan_monthly
+        s = s or st.paypal_plan_supermax
+    return {"monthly": m, "supermax": s}
+
+
+def _paypal_ready():
+    p = _paypal_plans()
+    return paypal_api.configured() and bool(p.get("monthly") and p.get("supermax"))
+
+
+def _paypal_plan_for_id(plan_id):
+    p = _paypal_plans()
+    if plan_id and plan_id == p.get("monthly"):
+        return "monthly"
+    if plan_id and plan_id == p.get("supermax"):
+        return "supermax"
+    return None
+
+
 class UsageAPI(Resource):
     """GET a usage snapshot; POST consumes one command (used by the text reader,
     which has no heavy server endpoint of its own)."""
@@ -70,12 +101,14 @@ class PayPalConfigAPI(Resource):
     """Public-ish config the client needs to render PayPal buttons."""
 
     def get(self):
+        ready = _paypal_ready()
         return _resp({
-            "enabled": paypal_api.enabled(),
-            "client_id": os.getenv("PAYPAL_CLIENT_ID") if paypal_api.enabled() else None,
+            "enabled": ready,
+            "client_id": os.getenv("PAYPAL_CLIENT_ID") if ready else None,
             "env": paypal_api.env(),
             "currency": paypal_api.currency(),
-            "plans": paypal_api.plans() if paypal_api.enabled() else {},
+            "plans": _paypal_plans() if ready else {},
+            "configured": paypal_api.configured(),   # creds present but maybe no plans yet
         }, 200)
 
 
@@ -85,7 +118,7 @@ class PayPalActivateAPI(Resource):
 
     @jwt_required()
     def post(self):
-        if not paypal_api.enabled():
+        if not _paypal_ready():
             return _resp({"message": "Payments are not set up yet."}, 503)
         data = request.get_json(force=True, silent=True) or {}
         sub_id = (data.get("subscription_id") or "").strip()
@@ -100,7 +133,7 @@ class PayPalActivateAPI(Resource):
         if status not in ("ACTIVE", "APPROVED"):
             return _resp({"message": f"Subscription is not active yet ({status})."}, 400)
 
-        plan = paypal_api.plan_for_id(sub.get("plan_id")) or data.get("plan")
+        plan = _paypal_plan_for_id(sub.get("plan_id")) or data.get("plan")
         if plan not in ("monthly", "supermax"):
             return _resp({"message": "Unknown plan."}, 400)
 
@@ -147,8 +180,14 @@ class PayPalSetupAPI(Resource):
             ids = paypal_api.create_product_and_plans(prices, data.get("currency"))
         except Exception as e:
             return _resp({"message": f"PayPal setup failed: {e}"}, 502)
+        # Persist to the DB so PayPal goes live immediately — no env edit / redeploy.
+        st = _settings()
+        st.paypal_product_id = ids.get("product_id")
+        st.paypal_plan_monthly = ids.get("monthly")
+        st.paypal_plan_supermax = ids.get("supermax")
+        st.save()
         return _resp({
-            "message": "Plans created. Put these in your environment, then redeploy.",
+            "message": "PayPal plans created and saved. PayPal checkout is now live — no redeploy needed.",
             "PAYPAL_PLAN_MONTHLY": ids.get("monthly"),
             "PAYPAL_PLAN_SUPERMAX": ids.get("supermax"),
             "product_id": ids.get("product_id"),
@@ -173,7 +212,7 @@ class PayPalWebhookAPI(Resource):
 
         if etype in ("BILLING.SUBSCRIPTION.ACTIVATED", "BILLING.SUBSCRIPTION.RE-ACTIVATED",
                      "PAYMENT.SALE.COMPLETED", "PAYMENT.CAPTURE.COMPLETED"):
-            plan = paypal_api.plan_for_id(resource.get("plan_id")) or user.plan
+            plan = _paypal_plan_for_id(resource.get("plan_id")) or user.plan
             if plan in ("monthly", "supermax"):
                 user.plan = plan
             user.plan_until = datetime.utcnow() + timedelta(days=_PAID_DAYS)
