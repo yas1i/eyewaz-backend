@@ -1,0 +1,89 @@
+"""
+EYEWAZ self-hosted Urdu TTS microservice (open-source, no per-character fees).
+
+Engine: Meta MMS-TTS (`facebook/mms-tts-urd`) — an open, multilingual VITS model
+with a real Urdu voice. Runs on CPU (fine for short screen-reader utterances) or
+GPU (faster). This one HTTP service is the shared backbone for:
+  - the EYEWAZ app (set SELF_HOST_TTS_URL and route "selfhost" voices here),
+  - an Android system TTS-engine app (stream /tts to TalkBack),
+  - an NVDA add-on / Chrome read-aloud extension.
+
+Dialect voices: clone native speakers with OpenVoice/XTTS on top of this base and
+serve them as additional /tts?voice=... ids (see README, Phase 2).
+
+Endpoints:
+  GET  /healthz            -> {"ok": true, "model": ...}
+  POST /tts  {text, ...}   -> audio/wav   (also GET /tts?text=... for quick tests)
+"""
+
+import io
+import os
+
+import numpy as np
+import soundfile as sf
+import torch
+from fastapi import FastAPI, Response
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel
+from transformers import VitsModel, AutoTokenizer
+
+MODEL_ID = os.getenv("TTS_MODEL", "facebook/mms-tts-urd")
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+MAX_CHARS = int(os.getenv("TTS_MAX_CHARS", "1200"))
+
+app = FastAPI(title="EYEWAZ Urdu TTS")
+_model = None
+_tok = None
+
+
+def _load():
+    global _model, _tok
+    if _model is None:
+        _tok = AutoTokenizer.from_pretrained(MODEL_ID)
+        _model = VitsModel.from_pretrained(MODEL_ID).to(DEVICE).eval()
+    return _model, _tok
+
+
+class TTSIn(BaseModel):
+    text: str
+    speed: float | None = None   # 0.5–2.0 (MMS exposes a length/speaking-rate scale)
+
+
+def _synth(text: str, speed: float | None) -> bytes:
+    model, tok = _load()
+    text = (text or "").strip()[:MAX_CHARS]
+    if not text:
+        return b""
+    inputs = tok(text, return_tensors="pt").to(DEVICE)
+    if speed:
+        try:
+            model.speaking_rate = max(0.5, min(2.0, float(speed)))
+        except Exception:
+            pass
+    with torch.no_grad():
+        wav = model(**inputs).waveform[0].detach().cpu().float().numpy()
+    wav = np.clip(wav, -1.0, 1.0)
+    buf = io.BytesIO()
+    sf.write(buf, wav, model.config.sampling_rate, format="WAV", subtype="PCM_16")
+    return buf.getvalue()
+
+
+@app.get("/healthz")
+def healthz():
+    return {"ok": True, "model": MODEL_ID, "device": DEVICE}
+
+
+@app.post("/tts")
+def tts_post(body: TTSIn):
+    audio = _synth(body.text, body.speed)
+    if not audio:
+        return JSONResponse({"message": "No text."}, status_code=400)
+    return Response(content=audio, media_type="audio/wav")
+
+
+@app.get("/tts")
+def tts_get(text: str = "", speed: float | None = None):
+    audio = _synth(text, speed)
+    if not audio:
+        return JSONResponse({"message": "No text."}, status_code=400)
+    return Response(content=audio, media_type="audio/wav")
