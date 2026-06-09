@@ -41,6 +41,7 @@ MAX_CHARS = int(os.getenv("TTS_MAX_CHARS", "1200"))
 app = FastAPI(title="EYEWAZ Urdu TTS")
 _model = None
 _tok = None
+_uro = None
 
 
 def _load():
@@ -49,6 +50,15 @@ def _load():
         _tok = AutoTokenizer.from_pretrained(MODEL_ID)
         _model = VitsModel.from_pretrained(MODEL_ID).to(DEVICE).eval()
     return _model, _tok
+
+
+def _romanize(text: str) -> str:
+    """MMS-TTS for non-Latin scripts (Urdu, etc.) needs romanized input."""
+    global _uro
+    if _uro is None:
+        import uroman as ur
+        _uro = ur.Uroman()
+    return _uro.romanize_string(text)
 
 
 class TTSIn(BaseModel):
@@ -61,6 +71,8 @@ def _synth(text: str, speed: float | None) -> bytes:
     text = (text or "").strip()[:MAX_CHARS]
     if not text:
         return b""
+    if getattr(tok, "is_uroman", False):
+        text = _romanize(text)
     inputs = tok(text, return_tensors="pt").to(DEVICE)
     if speed:
         try:
