@@ -30,6 +30,7 @@ FALLBACK_LOCALE = "ur-PK"
 # "coming soon" (Phase 2 cloned voice bank).
 CATALOG = [
     {"id": "urdu",    "label": "Standard Urdu",        "region": "National",            "locale": "ur-PK", "voices": ["ur-PK-UzmaNeural", "ur-PK-AsadNeural"]},
+    {"id": "urdu-selfhost", "label": "Urdu — open-source (free)", "region": "Self-hosted", "locale": "ur-PK", "voices": [], "selfhost": True},
     {"id": "punjabi", "label": "Punjabi · Urdu",       "region": "Punjab",              "locale": "pa-IN", "voices": ["pa-IN-VaaniNeural", "pa-IN-OjasNeural", "pa-IN-GurpreetNeural"]},
     {"id": "pashto",  "label": "Pashto · Urdu",        "region": "Khyber Pakhtunkhwa",  "locale": "ps-AF", "voices": ["ps-AF-LatifaNeural", "ps-AF-GulNawazNeural"]},
     {"id": "sindhi",  "label": "Sindhi · Karachi Urdu","region": "Sindh",               "locale": "ur-PK", "voices": []},
@@ -59,7 +60,18 @@ class DialectsAPI(Resource):
         cloned = {dv.dialect_id: dv for dv in DialectVoice.objects()}
 
         out = []
+        selfhost_on = bool(os.getenv("SELF_HOST_TTS_URL"))
         for d in CATALOG:
+            if d.get("selfhost"):
+                live = selfhost_on
+                out.append({
+                    "id": d["id"], "label": d["label"], "region": d["region"],
+                    "locale": "ur-PK", "status": "live" if live else "soon",
+                    "voices": ([{"shortName": "sh:urdu", "gender": "", "engine": "selfhost",
+                                 "name": "Open-source Urdu"}] if live else []),
+                    "cloned": False, "fallback_voice": FALLBACK_VOICE, "fallback_locale": FALLBACK_LOCALE,
+                })
+                continue
             dv = cloned.get(d["id"])
             present = [by_name[n] for n in d["voices"] if n in by_name]
             if dv and dv.voice_id:

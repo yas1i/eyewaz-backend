@@ -158,6 +158,19 @@ class SpeakAPI(Resource):
         rate = data.get("rate", prefs.get("rate", 1.0))
 
         capped = text[:SPEAK_MAX_CHARS]
+        # Self-hosted open-source Urdu voice ("sh:...") → our own TTS service.
+        if isinstance(voice, str) and voice.startswith("sh:"):
+            import selfhost_tts
+            if selfhost_tts.configured():
+                try:
+                    audio = selfhost_tts.synth(capped, rate)
+                    stored = storage.save_file(audio, "speech.wav")
+                    return _json({"audio_url": stored.url,
+                                  "truncated": len(text) > SPEAK_MAX_CHARS, "voice": voice}, 200)
+                except Exception as e:
+                    return _json({"message": f"Could not generate audio: {e}"}, 502)
+            voice = "ur-PK-UzmaNeural"   # graceful fallback if engine not configured
+
         # Cloned dialect voices are stored as "el:<voice_id>" → synthesize via
         # ElevenLabs; everything else uses Azure.
         if isinstance(voice, str) and voice.startswith("el:"):

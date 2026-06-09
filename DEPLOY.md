@@ -196,6 +196,11 @@ Production env vars (Render): `MONGO_URI`, `JWT_SECRET_KEY`, `FLASK_SECRET_KEY`,
    The clone is stored (DialectVoice) and that dialect goes live immediately;
    reading routes `el:<id>` voices through ElevenLabs. Recording script + consent
    form: `docs/voice-bank/`.
+13. **Self-hosted Urdu TTS (open-source)** — run `tts-service/` (Meta MMS-TTS)
+   on your own host, then set `SELF_HOST_TTS_URL=https://your-tts-host`. A
+   "Urdu — open-source (free)" option then appears in the dialect picker and
+   reading routes `sh:` voices to your service (no Azure per-char cost). Same
+   engine powers the screen-reader surfaces (Android TTS engine, NVDA, Chrome).
 12. **Face ID / passkey sign-in** (WebAuthn) — works out of the box over HTTPS
    (Render provides it). Passkeys are bound to the **domain** (RP ID), so if you
    serve on both the onrender.com URL and `eyewaz.com`, set `WEBAUTHN_RP_ID`
