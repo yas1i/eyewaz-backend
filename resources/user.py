@@ -1,4 +1,5 @@
 import json
+import os
 import random
 from datetime import datetime, timedelta
 
@@ -11,6 +12,12 @@ from database.models import Users
 from mailer import send_otp_email
 
 OTP_TTL_MINUTES = 10
+
+# App-store review login: a single designated account can verify with a fixed
+# code so Google/Apple reviewers (who can't read the OTP email) can sign in.
+# Inactive unless BOTH env vars are set — keep them set only while in review.
+REVIEW_EMAIL = os.getenv("REVIEW_EMAIL")
+REVIEW_OTP = os.getenv("REVIEW_OTP")
 
 
 def _resp(payload, status):
@@ -96,6 +103,24 @@ class VerifyOtpAPI(Resource):
             user = Users.objects.get(email=email)
         except Users.DoesNotExist:
             return _resp({"message": "Account not found"}, 404)
+
+        # Store-review bypass: the designated review account accepts a fixed code
+        # (the reviewer can't see the emailed OTP). Env-gated; off in normal prod.
+        if REVIEW_EMAIL and REVIEW_OTP and email == REVIEW_EMAIL and code == REVIEW_OTP:
+            user.is_verified = True
+            user.otp_hash = None
+            user.otp_expires = None
+            user.otp_purpose = None
+            user.save()
+            access_token = create_access_token(identity=user.email)
+            return _resp(
+                {
+                    "userMeta": {"name": user.name, "email": user.email, "phone": user.phone},
+                    "isLoggedIn": True,
+                    "token": access_token,
+                },
+                200,
+            )
 
         if not user.otp_hash or not user.otp_expires:
             return _resp({"message": "No verification in progress. Please sign in again."}, 400)

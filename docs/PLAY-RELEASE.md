@@ -11,26 +11,49 @@ Do app #1 first; #2 is an easier repeat.
 
 ## ⚠️ Two things that cause rejection — decide BEFORE you submit
 
-### A. Reviewers must be able to log in (OTP problem)
+### A. Reviewers must be able to log in (OTP problem) — ✅ handled in code
 The app requires email-OTP sign-in. A Google reviewer **cannot receive your OTP
 email**, so they can't get past login → automatic rejection under "App access".
-Fix one of these before submitting:
-- Create a **demo account** whose OTP is fixed/known (e.g. a test email where the
-  code is always `000000`, gated to that one address), **or**
-- A reviewer bypass: a hard-coded test email + password path that skips OTP.
-Then enter those credentials in **Play Console → App access**. Without this, you
-will be rejected.
 
-### B. Payments — Play Billing vs PayPal/Stripe
+**Built-in fix (env-gated reviewer login):** `resources/user.py` accepts a fixed
+code for one designated account when these two env vars are set on the server
+(Render). Off by default in normal prod.
+
+```
+REVIEW_EMAIL = reviewer@eyewaz.com        # a real account you create
+REVIEW_OTP   = 246810                      # any 6 digits you choose
+```
+
+Setup once:
+1. Create that account in the app normally (sign up, set a password you know).
+2. On Render, set `REVIEW_EMAIL` + `REVIEW_OTP` and redeploy.
+3. In **Play Console → App access → All functionality**, give the reviewer:
+   `REVIEW_EMAIL`, the account **password**, and tell them the verification code
+   is `REVIEW_OTP`.
+The reviewer signs in with email+password, then types that code — no email
+needed. (Same vars cover Apple review.) You can unset them after approval.
+
+### B. Payments — Play Billing vs PayPal/Stripe — ✅ handled in code
 Google requires **Play Billing** for in-app purchases of **digital** goods
 (your Monthly/SuperMax tiers). Selling those via PayPal/Stripe *inside the
-Android app* violates Play policy → rejection or later removal. Pick one:
-- **Recommended for v1:** **hide the upgrade/purchase UI in the Android (TWA)
-  build** — keep paid tiers purchasable only on the website in a normal browser.
-  The app stays free-to-use; no in-app digital sale, no policy breach.
-- Or integrate **Google Play Billing** (bigger work; 15–30% fee).
-The TWA loads your site, so gate the upgrade buttons behind "is this running
-inside the TWA?" and hide them if so. **Confirm this is done before submission.**
+Android app* violates Play policy → rejection or later removal.
+
+**Built-in fix (TWA detection):** the web app detects when it's running inside
+the Play wrapper (`IS_TWA` in `app.js`, via the `android-app://` referrer or a
+`?twa=1` start-url flag) and hides **all** purchase UI — plan tiers, prices,
+PayPal/Stripe buttons, upgrade links, the dialect "Upgrade" CTA, and the quota
+"upgrade for more" wording. Plan **status** still shows; paid upgrades remain on
+the website in a normal browser. So the app stays free-to-use with no in-app
+digital sale.
+
+**To make detection bullet-proof, launch the TWA at `/app?twa=1`:** when running
+`bubblewrap init`, set the start/launcher URL to `https://eyewaz.com/app?twa=1`
+(or edit `twa-manifest.json` → `"startUrl": "/app?twa=1"` before `build`). The
+referrer check alone usually suffices, but the flag guarantees it on every
+device. Verify after install: the Account screen shows no prices or buy buttons.
+
+> If you later want in-app upgrades on Android, integrate **Google Play Billing**
+> (bigger work; 15–30% fee) instead of removing the gate.
 
 ---
 
@@ -52,7 +75,8 @@ npm i -g @bubblewrap/cli
 mkdir -p twa && cd twa
 bubblewrap init --manifest https://eyewaz.com/app/manifest.webmanifest
 # answers: package = com.canvassolutions.eyewaz ; host = eyewaz.com ;
-#          start url = /app ; name = EYEWAZ ; display = standalone
+#          start url = /app?twa=1  (the ?twa=1 flag triggers the no-purchase mode) ;
+#          name = EYEWAZ ; display = standalone
 bubblewrap build      # creates app-release-bundle.aab + signs with an upload key
 ```
 - On first build Bubblewrap **creates an upload keystore** — back it up
