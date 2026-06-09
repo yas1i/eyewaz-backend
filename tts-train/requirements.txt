@@ -1,0 +1,3 @@
+soundfile
+# Also needs `ffmpeg` installed on the system (brew install ffmpeg / apt install ffmpeg).
+# Training itself uses the `piper-train` package on a GPU — see README.md.
