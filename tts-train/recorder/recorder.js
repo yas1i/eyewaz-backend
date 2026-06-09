@@ -2,11 +2,13 @@
    writes metadata.csv (NNNN|sentence), the exact input prepare_dataset.py wants.
    Chrome/Edge only (uses the File System Access API). Pure client-side. */
 (() => {
-  const S = window.EYEWAZ_SENTENCES || [];
+  let S = (window.EYEWAZ_SENTENCES || []).slice();
   const $ = (id) => document.getElementById(id);
   const pad = (n) => String(n).padStart(4, "0");
   const isRTL = (t) => /[؀-ۿݐ-ݿ]/.test(t);
+  const slug = (s) => (s || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
+  let meta = { dialect: "urdu", gender: "male", speaker: "" };
   let dirHandle = null;
   let idx = 0;
   const done = new Set();
@@ -16,11 +18,38 @@
   let chunks = [], recRate = 44100, recording = false;
   let lastFloat = null, lastBlob = null, lastUrl = null;
 
-  if (!window.showDirectoryPicker) {
+  const fsaOK = !!window.showDirectoryPicker;
+  if (!fsaOK) {
     $("folderHint").innerHTML =
       "⚠️ This browser can't write to a folder. Please use <b>Chrome</b> or <b>Edge</b>.";
-    $("pickBtn").disabled = true;
   }
+
+  // ---------- setup: dialect / speaker / consent / custom script ----------
+  function suggestedName() {
+    const sp = slug($("speakerName").value) || "speaker";
+    return `dataset-${meta.dialect}-${meta.gender}-${sp}`;
+  }
+  function refreshSetup() {
+    meta.dialect = $("dialect").value;
+    meta.gender = $("gender").value;
+    meta.speaker = $("speakerName").value.trim();
+    $("suggestName").textContent = "Suggested folder: " + suggestedName();
+    const ready = fsaOK && $("consent").checked && meta.speaker.length > 0;
+    $("pickBtn").disabled = !ready;
+  }
+  ["dialect", "gender", "speakerName", "consent"].forEach((id) =>
+    $(id).addEventListener("input", refreshSetup));
+
+  $("scriptFile").addEventListener("change", async (e) => {
+    const f = e.target.files[0]; if (!f) return;
+    const txt = await f.text();
+    const lines = txt.split(/\r?\n/).map((l) => l.trim()).filter((l) => l && !l.startsWith("#"));
+    if (lines.length) {
+      S = lines;
+      $("scriptInfo").textContent = `Loaded ${lines.length} lines from ${f.name}.`;
+    }
+  });
+  refreshSetup();
 
   // ---------- folder ----------
   $("pickBtn").addEventListener("click", async () => {
@@ -30,14 +59,29 @@
     if ((await dirHandle.requestPermission({ mode: "readwrite" })) !== "granted") {
       alert("Folder write permission is needed."); return;
     }
+    await writeSpeakerInfo();
     await ensureMetadata();
     await scanExisting();
     $("setup").hidden = true;
     $("rec").hidden = false;
-    $("folderName").textContent = "📁 " + dirHandle.name;
+    $("folderName").textContent = `📁 ${dirHandle.name} · ${meta.dialect}/${meta.gender} · ${meta.speaker}`;
     idx = firstUnrecorded();
     render();
   });
+
+  async function writeSpeakerInfo() {
+    // Record who/what this dataset is, for the voice bank (consent is required
+    // to reach here). prepare_dataset.py ignores this file.
+    const info = {
+      dialect: meta.dialect, gender: meta.gender, speaker: meta.speaker,
+      consent: true, lines: S.length, created: new Date().toISOString(),
+    };
+    try {
+      const fh = await dirHandle.getFileHandle("speaker.json", { create: true });
+      const w = await fh.createWritable();
+      await w.write(JSON.stringify(info, null, 2)); await w.close();
+    } catch (_) {}
+  }
 
   async function ensureMetadata() {
     // Write metadata.csv with ALL lines once (prepare_dataset skips missing wavs).

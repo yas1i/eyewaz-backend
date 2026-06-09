@@ -52,18 +52,47 @@
 </header>
 <main>
   <div class="setup card" id="setup">
-    <div class="row">
-      <label for="speaker">Speaker:</label>
-      <select id="speaker">
-        <option value="female">Female</option>
-        <option value="male">Male</option>
+    <h2 style="margin:0 0 6px;font-size:1.1rem;color:var(--accent)">Speaker &amp; dialect</h2>
+    <div class="row" style="margin-bottom:10px">
+      <label for="dialect">Province / dialect:</label>
+      <select id="dialect">
+        <option value="urdu">Standard Urdu — National</option>
+        <option value="punjabi">Punjabi — Punjab</option>
+        <option value="pashto">Pashto — Khyber Pakhtunkhwa</option>
+        <option value="sindhi">Sindhi — Sindh</option>
+        <option value="saraiki">Saraiki — South Punjab</option>
+        <option value="hindko">Hindko — Hazara</option>
+        <option value="balochi">Balochi — Balochistan</option>
+        <option value="brahui">Brahui — Balochistan</option>
       </select>
-      <button class="primary" id="pickBtn">Choose / create a folder for this speaker…</button>
+      <label for="gender">Voice:</label>
+      <select id="gender">
+        <option value="male">Male</option>
+        <option value="female">Female</option>
+      </select>
     </div>
-    <p class="hint" id="folderHint">Pick (or make) an empty folder, e.g. <code>female</code>. Your clips
-      <code>0001.wav…</code> and <code>metadata.csv</code> are written there. Use <b>Chrome or Edge</b>.</p>
+    <div class="row" style="margin-bottom:10px">
+      <label for="speakerName">Speaker name / ID:</label>
+      <input id="speakerName" type="text" placeholder="e.g. ahmed-lahore" style="flex:1;min-width:160px;padding:8px;border:1px solid #cdd6cf;border-radius:8px;font:inherit" />
+    </div>
+    <div class="row" style="margin-bottom:10px">
+      <label for="scriptFile">Script (optional):</label>
+      <input id="scriptFile" type="file" accept=".txt" />
+      <span class="hint" id="scriptInfo">Default: 81 Urdu lines. Load a .txt (one sentence per line) to record a dialect-specific script.</span>
+    </div>
+    <label style="display:flex;gap:8px;align-items:flex-start;font-weight:500;margin:8px 0">
+      <input id="consent" type="checkbox" style="margin-top:4px" />
+      <span>The speaker <b>consents</b> to their voice being recorded and used by WAJD AI to build an
+        EYEWAZ text-to-speech voice. (See the consent form in <code>docs/voice-bank/consent-form.md</code>.)</span>
+    </label>
+    <div class="row">
+      <button class="primary" id="pickBtn" disabled>Choose / create this speaker's folder…</button>
+      <span class="hint" id="suggestName"></span>
+    </div>
+    <p class="hint" id="folderHint">Pick (or make) an <b>empty</b> folder named like the suggestion above. Clips
+      <code>0001.wav…</code>, <code>metadata.csv</code> and <code>speaker.json</code> are written there. Use <b>Chrome or Edge</b>.</p>
     <p class="hint">Quiet room, mic ~a hand's width away, read naturally. Records exactly the line shown — the
-      transcript is that line.</p>
+      transcript is that line. Record the same speaker through the whole script.</p>
   </div>
 
   <div class="card" id="rec" hidden>
