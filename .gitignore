@@ -95,3 +95,6 @@ docs/source/changelog.md
 .elasticbeanstalk/*
 !.elasticbeanstalk/*.cfg.yml
 !.elasticbeanstalk/*.global.yml
+
+# Real tester emails stay out of git (use play-testers.csv.example as template)
+docs/play-testers.csv
