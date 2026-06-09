@@ -98,3 +98,10 @@ docs/source/changelog.md
 
 # Real tester emails stay out of git (use play-testers.csv.example as template)
 docs/play-testers.csv
+
+# Personal voice recordings + built datasets (never commit)
+tts-train/*.wav
+tts-train/metadata.csv
+tts-train/dataset-*/
+tts-train/female/
+tts-train/male/
