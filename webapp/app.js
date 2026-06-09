@@ -22,6 +22,27 @@ function getToken() { return localStorage.getItem(TOKEN_KEY); }
 function setToken(t) { localStorage.setItem(TOKEN_KEY, t); }
 function clearToken() { localStorage.removeItem(TOKEN_KEY); }
 
+/* Are we running inside the Google Play TWA wrapper? Google requires Play
+   Billing for in-app digital purchases, so when wrapped we hide ALL purchase UI
+   and keep paid tiers web-only. Detected via the android-app:// referrer (set on
+   first launch) or a ?twa=1 start-url flag; the result is cached so later
+   in-app navigations (which lose the referrer) stay compliant. */
+const IS_TWA = (() => {
+  try {
+    if (typeof document !== "undefined" && document.referrer &&
+        document.referrer.startsWith("android-app://")) return true;
+    const q = new URLSearchParams(location.search);
+    if (q.get("twa") === "1") return true;
+    return localStorage.getItem("eyewaz_twa") === "1";
+  } catch (_) { return false; }
+})();
+if (IS_TWA) {
+  try {
+    localStorage.setItem("eyewaz_twa", "1");
+    document.documentElement.classList.add("twa-build");
+  } catch (_) {}
+}
+
 /* ------------------------- Browser text-to-speech --------------------------- */
 // Uses the Web Speech API (speechSynthesis) so the app can read text aloud with
 // the device's own voices — instant, offline, no server round-trip.
@@ -1031,11 +1052,13 @@ const Billing = (() => {
       const line = document.getElementById("planLine");
       if (line) {
         line.textContent = `Plan: ${u.plan_label} — ${u.remaining} of ${u.limit} commands left this month. `;
-        const a = document.createElement("a");
-        a.href = "#"; a.className = "upgrade-link";
-        a.textContent = (u.plan === "supermax" ? "Manage plan" : "Upgrade") + " ↗";
-        a.addEventListener("click", (e) => { e.preventDefault(); openAccount(); });
-        line.appendChild(a);
+        if (!IS_TWA) {   // no in-app upgrade entry point inside the Play wrapper
+          const a = document.createElement("a");
+          a.href = "#"; a.className = "upgrade-link";
+          a.textContent = (u.plan === "supermax" ? "Manage plan" : "Upgrade") + " ↗";
+          a.addEventListener("click", (e) => { e.preventDefault(); openAccount(); });
+          line.appendChild(a);
+        }
       }
       const cur = document.getElementById("currentPlanText");
       if (cur) cur.textContent =
@@ -1047,8 +1070,12 @@ const Billing = (() => {
   async function refresh() { try { const d = await api("/usage"); set(d.usage); } catch (_) {} }
   function onQuota(data) {
     if (data && data.usage) set(data.usage);
-    announce(data && data.message ? data.message
-      : "You've reached this month's command limit. Upgrade for more.", "error");
+    const msg = IS_TWA
+      ? "You've reached this month's command limit."
+      : (data && data.message
+        ? data.message
+        : "You've reached this month's command limit. Upgrade for more.");
+    announce(msg, "error");
   }
   function recordingsLimit() { return userUsage ? userUsage.recordings_limit : 3; }
   function remindersLimit() { return userUsage ? userUsage.reminders_limit : 1; }
@@ -1068,6 +1095,9 @@ const Plan = (() => {
   let sdkLoading = null;   // promise so we load the SDK once
 
   function init() {
+    // Inside the Play TWA: no purchase UI at all (Play Billing policy). Show the
+    // plan status only; the upgrade tiers/checkout stay on the website.
+    if (IS_TWA) { Billing.render(); return; }
     document.querySelectorAll("[data-price]").forEach((el) => {
       const p = PLAN_PRICES[el.dataset.price]; if (p) el.textContent = p;
     });
@@ -1721,11 +1751,15 @@ async function loadDialects() {
     btn.addEventListener("click", async () => {
       const s = document.getElementById("dialectStatus");
       if (locked) {
-        const msg = `${d.label} is a premium voice. Upgrade to unlock it.`;
+        const msg = IS_TWA
+          ? `${d.label} is a premium voice, available with a plan on the EYEWAZ website.`
+          : `${d.label} is a premium voice. Upgrade to unlock it.`;
         if (s) { s.className = "status"; s.textContent = msg; }
         announce(msg, "warn");
-        const pc = document.getElementById("planCard");
-        if (pc) pc.scrollIntoView({ block: "start", behavior: "smooth" });
+        if (!IS_TWA) {
+          const pc = document.getElementById("planCard");
+          if (pc) pc.scrollIntoView({ block: "start", behavior: "smooth" });
+        }
         return;
       }
       userPrefs.language = locale; userPrefs.voice = voice; userPrefs.engine = "azure";

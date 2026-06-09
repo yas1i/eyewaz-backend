@@ -462,6 +462,19 @@ body.dark .upgrade-link { color: var(--accent); }
 #cancelSubBtn { max-width: 320px; margin-top: 6px; }
 body.dark .plan-card { background: #10211f; }
 
+/* Google Play TWA build: no in-app purchase of digital goods (Play Billing
+   policy). Hide the pricing tiers + every checkout control; the plan-status
+   text (currentPlanText / planLine) stays so users still see their usage.
+   Paid upgrades remain available on the EYEWAZ website in a normal browser. */
+.twa-build .plan-grid,
+.twa-build .plan-card,
+.twa-build .plan-upgrade,
+.twa-build .stripe-btn,
+.twa-build .paypal-slot,
+.twa-build .upgrade-link,
+.twa-build #cancelSubBtn,
+.twa-build #paypalSetupBtn { display: none !important; }
+
 @media (max-width: 600px) {
   html, body { font-size: 17px; }
   .topbar { padding: 10px 12px; }
