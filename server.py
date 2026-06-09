@@ -1,5 +1,5 @@
 import os
-from flask import Flask, render_template, send_from_directory, redirect
+from flask import Flask, render_template, send_from_directory, redirect, abort
 from flask_restful import Api
 from routes import initialize_routes
 from dotenv import load_dotenv, find_dotenv
@@ -89,6 +89,17 @@ def assetlinks():
     # Digital Asset Links — verifies the Android TWA (Play Store) owns this domain.
     return send_from_directory(os.path.join(WEBAPP_DIR, ".well-known"),
                                "assetlinks.json", mimetype="application/json")
+
+
+@app.route("/<filename>")
+def google_site_verification(filename):
+    # Google Search Console verification file must be served at the site root,
+    # e.g. https://eyewaz.com/googleXXXX.html. Strictly limited to a
+    # google-prefixed .html that actually exists in webapp/ — anything else 404s
+    # and falls through (no path traversal: send_from_directory rejects "..").
+    if not (filename.startswith("google") and filename.endswith(".html")):
+        abort(404)
+    return send_from_directory(WEBAPP_DIR, filename, mimetype="text/html")
 
 
 # @celery.task
