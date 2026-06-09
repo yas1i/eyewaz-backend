@@ -78,9 +78,25 @@ def translationSpeechTask(f, target_lang="ur-PK", voice="ur-PK-UzmaNeural", rate
 
     # Translate into the user's chosen language and speak with their chosen voice.
     Trans_text, lang = ConvertText(text, target_lang)
-    audio_data = synthesize_long(Trans_text, voice, rate)
-    audio_duration = get_audio_duration_from_bytes(audio_data)
-    audio_filename = blob_client.blob_name.split(".")[0] + "_audio.mp3"
+    # Route non-Azure voices: "sh:" self-hosted engine, "el:" ElevenLabs.
+    if isinstance(voice, str) and voice.startswith("sh:"):
+        import selfhost_tts
+        audio_data = (selfhost_tts.synth(Trans_text, rate) if selfhost_tts.configured()
+                      else synthesize_long(Trans_text, "ur-PK-UzmaNeural", rate))
+    elif isinstance(voice, str) and voice.startswith("el:"):
+        import elevenlabs_api
+        if elevenlabs_api.configured():
+            audio_data = elevenlabs_api.tts(voice[3:], Trans_text)
+        else:
+            audio_data = synthesize_long(Trans_text, "ur-PK-UzmaNeural", rate)
+    else:
+        audio_data = synthesize_long(Trans_text, voice, rate)
+    try:
+        audio_duration = get_audio_duration_from_bytes(audio_data)
+    except Exception:
+        audio_duration = 0
+    _ext = "wav" if (isinstance(voice, str) and voice.startswith("sh:")) else "mp3"
+    audio_filename = blob_client.blob_name.split(".")[0] + "_audio." + _ext
     audio_blob_client = UploadOnAzure(audio_data, audio_filename)
     return text, Trans_text, lang, audio_duration, blob_client, audio_blob_client
 
