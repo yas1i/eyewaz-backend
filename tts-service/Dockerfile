@@ -18,4 +18,5 @@ RUN python -c "from transformers import VitsModel, AutoTokenizer; \
     VitsModel.from_pretrained('facebook/mms-tts-urd')" || true
 
 EXPOSE 8090
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8090"]
+# Shell form so Render's $PORT is honoured (falls back to 8090 locally).
+CMD uvicorn app:app --host 0.0.0.0 --port ${PORT:-8090}
