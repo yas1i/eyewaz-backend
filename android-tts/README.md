@@ -13,11 +13,17 @@ streams its PCM samples to the system. No on-device model — the Hetzner engine
 does the synthesis.
 
 ## 1. Point it at your server
-Edit `app/src/main/java/ai/wajd/eyewaztts/Config.kt`:
-```kotlin
-const val TTS_URL = "http://167.233.35.30:8090/tts"   // your engine
-const val API_KEY = "tts_Rp48FUxogcTE1NBtVs8kYB3DtkSN4wCa"
+Secrets stay out of source control. Copy the template and fill in your values:
+```bash
+cp android-tts/secrets.properties.example android-tts/secrets.properties
+# then edit android-tts/secrets.properties:
+#   TTS_URL=http://YOUR_SERVER:8090/tts
+#   TTS_API_KEY=your_tts_api_key_here
 ```
+These are injected into `BuildConfig` at build time and read by `Config.kt`
+(`BuildConfig.TTS_URL` / `BuildConfig.TTS_API_KEY`). `secrets.properties` is
+gitignored; never commit your real key.
+
 (For production, run the engine behind HTTPS — Caddy in `tts-service/deploy/` —
 use an `https://…` URL and remove `android:usesCleartextTraffic` from the manifest.)
 

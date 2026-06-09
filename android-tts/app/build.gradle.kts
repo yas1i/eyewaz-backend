@@ -1,7 +1,18 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
 }
+
+// Secrets stay OUT of source control. Put your real values in
+// android-tts/secrets.properties (gitignored); see secrets.properties.example.
+val secrets = Properties().apply {
+    val f = rootProject.file("secrets.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
+}
+fun secret(key: String, default: String) =
+    (secrets.getProperty(key) ?: System.getenv(key) ?: default)
 
 android {
     namespace = "ai.wajd.eyewaztts"
@@ -13,6 +24,15 @@ android {
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
+
+        buildConfigField("String", "TTS_URL",
+            "\"${secret("TTS_URL", "http://10.0.2.2:8090/tts")}\"")
+        buildConfigField("String", "TTS_API_KEY",
+            "\"${secret("TTS_API_KEY", "")}\"")
+    }
+
+    buildFeatures {
+        buildConfig = true
     }
 
     buildTypes {

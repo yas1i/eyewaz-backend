@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <application
+        android:allowBackup="true"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:usesCleartextTraffic="true"
+        android:theme="@android:style/Theme.Material.Light">
+
+        <!-- Small launcher screen with setup instructions -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- The system TTS engine: makes TalkBack and every app speak via EYEWAZ -->
+        <service
+            android:name=".EyewazTtsService"
+            android:exported="true"
+            android:label="@string/engine_label">
+            <intent-filter>
+                <action android:name="android.intent.action.TTS_SERVICE" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <meta-data
+                android:name="android.speech.tts"
+                android:resource="@xml/tts_engine" />
+        </service>
+
+        <!-- Tells Android the engine has its (Urdu) voice data installed -->
+        <activity
+            android:name=".CheckVoiceDataActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.NoDisplay">
+            <intent-filter>
+                <action android:name="android.speech.tts.engine.CHECK_TTS_DATA" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <!-- Sample text shown by the "Listen to an example" button in Settings -->
+        <activity
+            android:name=".GetSampleTextActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.NoDisplay">
+            <intent-filter>
+                <action android:name="android.speech.tts.engine.GET_SAMPLE_TEXT" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>
