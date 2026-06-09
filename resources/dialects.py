@@ -69,7 +69,8 @@ class DialectsAPI(Resource):
                     "locale": "ur-PK", "status": "live" if live else "soon",
                     "voices": ([{"shortName": "sh:urdu", "gender": "", "engine": "selfhost",
                                  "name": "Open-source Urdu"}] if live else []),
-                    "cloned": False, "fallback_voice": FALLBACK_VOICE, "fallback_locale": FALLBACK_LOCALE,
+                    "cloned": False, "tier": "free",
+                    "fallback_voice": FALLBACK_VOICE, "fallback_locale": FALLBACK_LOCALE,
                 })
                 continue
             dv = cloned.get(d["id"])
@@ -86,10 +87,14 @@ class DialectsAPI(Resource):
                 status, locale = "live", d["locale"]
             else:
                 voices, status, locale = [], "soon", FALLBACK_LOCALE
+            is_clone = bool(dv and dv.voice_id)
             out.append({
                 "id": d["id"], "label": d["label"], "region": d["region"],
                 "locale": locale, "status": status, "voices": voices,
-                "cloned": bool(dv and dv.voice_id),
+                "cloned": is_clone,
+                # Azure + open-source self-host voices are free; cloned dialect
+                # voices are part of the premium package.
+                "tier": "premium" if is_clone else "free",
                 "fallback_voice": FALLBACK_VOICE, "fallback_locale": FALLBACK_LOCALE,
             })
         return _resp({"dialects": out}, 200)

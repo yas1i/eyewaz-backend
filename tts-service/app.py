@@ -35,6 +35,9 @@ def require_key(x_api_key: str | None = Header(default=None)):
         raise HTTPException(status_code=401, detail="Invalid API key")
 
 MODEL_ID = os.getenv("TTS_MODEL", "facebook/mms-tts-urd-script_arabic")
+# Our own trained voice: set PIPER_MODEL to a Piper .onnx path to use it instead
+# of MMS (cheap CPU inference, our licence). Swapping models = one env var.
+PIPER_MODEL = os.getenv("PIPER_MODEL")
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 MAX_CHARS = int(os.getenv("TTS_MAX_CHARS", "1200"))
 
@@ -42,6 +45,16 @@ app = FastAPI(title="EYEWAZ Urdu TTS")
 _model = None
 _tok = None
 _uro = None
+_piper = None
+
+
+def _piper_voice():
+    global _piper
+    if _piper is None:
+        from piper import PiperVoice
+        cfg = PIPER_MODEL + ".json"
+        _piper = PiperVoice.load(PIPER_MODEL, config_path=cfg if os.path.exists(cfg) else None)
+    return _piper
 
 
 def _load():
@@ -67,12 +80,19 @@ class TTSIn(BaseModel):
 
 
 def _synth(text: str, speed: float | None) -> bytes:
-    model, tok = _load()
     text = (text or "").strip()[:MAX_CHARS]
     if not text:
         return b""
-    # Normalize Urdu (numbers→words, symbols, punctuation) — big intelligibility win.
-    if os.getenv("TTS_NORMALIZE", "1") != "0" and "urd" in MODEL_ID:
+    norm = os.getenv("TTS_NORMALIZE", "1") != "0"
+    # Our trained Piper voice (if configured).
+    if PIPER_MODEL:
+        if norm:
+            import normalize_urdu
+            text = normalize_urdu.normalize(text)
+        return _synth_piper(text, speed)
+    # Otherwise MMS.
+    model, tok = _load()
+    if norm and "urd" in MODEL_ID:
         import normalize_urdu
         text = normalize_urdu.normalize(text)
     if getattr(tok, "is_uroman", False):
@@ -91,9 +111,26 @@ def _synth(text: str, speed: float | None) -> bytes:
     return buf.getvalue()
 
 
+def _synth_piper(text: str, speed: float | None) -> bytes:
+    import wave
+    voice = _piper_voice()
+    buf = io.BytesIO()
+    length_scale = (1.0 / float(speed)) if speed else None
+    with wave.open(buf, "wb") as wf:
+        try:
+            if length_scale:
+                voice.synthesize(text, wf, length_scale=length_scale)
+            else:
+                voice.synthesize(text, wf)
+        except TypeError:
+            voice.synthesize(text, wf)   # older piper API without length_scale
+    return buf.getvalue()
+
+
 @app.get("/healthz")
 def healthz():
-    return {"ok": True, "model": MODEL_ID, "device": DEVICE}
+    return {"ok": True, "engine": "piper" if PIPER_MODEL else "mms",
+            "model": PIPER_MODEL or MODEL_ID, "device": DEVICE}
 
 
 @app.post("/tts", dependencies=[Depends(require_key)])
