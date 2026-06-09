@@ -12,10 +12,10 @@ RUN pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu 
 
 COPY app.py .
 
-# Warm the model into the image layer cache (optional; speeds first request).
+# Bake the model into the image (no || true — fail loudly if the id is wrong).
 RUN python -c "from transformers import VitsModel, AutoTokenizer; \
-    AutoTokenizer.from_pretrained('facebook/mms-tts-urd'); \
-    VitsModel.from_pretrained('facebook/mms-tts-urd')" || true
+    AutoTokenizer.from_pretrained('facebook/mms-tts-urd-script_arabic'); \
+    VitsModel.from_pretrained('facebook/mms-tts-urd-script_arabic')"
 
 EXPOSE 8090
 # Shell form so Render's $PORT is honoured (falls back to 8090 locally).

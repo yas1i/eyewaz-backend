@@ -34,7 +34,7 @@ def require_key(x_api_key: str | None = Header(default=None)):
     if key and x_api_key != key:
         raise HTTPException(status_code=401, detail="Invalid API key")
 
-MODEL_ID = os.getenv("TTS_MODEL", "facebook/mms-tts-urd")
+MODEL_ID = os.getenv("TTS_MODEL", "facebook/mms-tts-urd-script_arabic")
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 MAX_CHARS = int(os.getenv("TTS_MAX_CHARS", "1200"))
 
