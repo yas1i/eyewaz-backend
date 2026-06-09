@@ -4,7 +4,7 @@ _Last updated: 2026-06-06. Publish this at https://eyewaz.com/privacy and link i
 from the app and both store listings. Review with a lawyer before launch; this is
 a working draft, not legal advice._
 
-EYEWAZ ("we", Canvas Solutions) helps blind and low-vision users hear written
+EYEWAZ ("we", WAJD AI) helps blind and low-vision users hear written
 text read aloud. This policy explains what we collect and why.
 
 ## What we collect

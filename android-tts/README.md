@@ -13,7 +13,7 @@ streams its PCM samples to the system. No on-device model — the Hetzner engine
 does the synthesis.
 
 ## 1. Point it at your server
-Edit `app/src/main/java/com/canvassolutions/eyewaztts/Config.kt`:
+Edit `app/src/main/java/ai/wajd/eyewaztts/Config.kt`:
 ```kotlin
 const val TTS_URL = "http://167.233.35.30:8090/tts"   // your engine
 const val API_KEY = "tts_Rp48FUxogcTE1NBtVs8kYB3DtkSN4wCa"

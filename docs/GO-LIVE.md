@@ -67,7 +67,7 @@ Record results in the QA sign-off block.
 ```bash
 npm i -g @bubblewrap/cli
 bubblewrap init --manifest https://eyewaz.com/app/manifest.webmanifest
-# package id: com.canvassolutions.eyewaz  (must match assetlinks.json)
+# package id: ai.wajd.eyewaz  (must match assetlinks.json)
 bubblewrap build      # creates a signing key + a signed .aab
 ```
 

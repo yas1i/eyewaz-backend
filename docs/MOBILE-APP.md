@@ -89,7 +89,7 @@ users get auto-updating web releases through the store.
    bubblewrap init --manifest https://eyewaz.com/app/manifest.webmanifest
    bubblewrap build      # produces a signed .aab
    ```
-   (Package id `com.canvassolutions.eyewaz`, matching `assetlinks.json`.)
+   (Package id `ai.wajd.eyewaz`, matching `assetlinks.json`.)
 3. Upload the `.aab` to Play Console. Once `assetlinks.json` verifies, the address
    bar disappears and it behaves as a native app.
 
