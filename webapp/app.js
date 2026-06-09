@@ -1699,23 +1699,37 @@ async function loadDialects() {
   try { data = await api("/dialects"); } catch (_) { return; }
   const cur = userPrefs.voice;
   wrap.innerHTML = "";
+  const isFree = !userUsage || userUsage.plan === "free";
   (data.dialects || []).forEach((d) => {
     const live = d.status === "live";
+    const premium = d.tier === "premium";
+    const locked = premium && isFree;
     const voice = (live && d.voices[0]) ? d.voices[0].shortName : d.fallback_voice;
     const locale = live ? d.locale : d.fallback_locale;
     const active = d.voices.some((v) => v.shortName === cur);
     const btn = document.createElement("button");
     btn.type = "button";
-    btn.className = "dialect-item" + (active ? " is-active" : "");
+    btn.className = "dialect-item" + (active ? " is-active" : "") + (locked ? " is-locked" : "");
     btn.setAttribute("role", "listitem");
+    let badge;
+    if (premium) badge = `<span class="dialect-badge premium">${locked ? "Premium 🔒" : "Premium"}</span>`;
+    else if (live) badge = `<span class="dialect-badge live">Free</span>`;
+    else badge = `<span class="dialect-badge soon">Coming soon</span>`;
     btn.innerHTML =
       `<span class="dialect-main"><span class="dialect-name">${escapeHtml(d.label)}</span>` +
-      `<span class="dialect-region">${escapeHtml(d.region)}</span></span>` +
-      (live ? `<span class="dialect-badge live">Live</span>` : `<span class="dialect-badge soon">Coming soon</span>`);
+      `<span class="dialect-region">${escapeHtml(d.region)}</span></span>` + badge;
     btn.addEventListener("click", async () => {
+      const s = document.getElementById("dialectStatus");
+      if (locked) {
+        const msg = `${d.label} is a premium voice. Upgrade to unlock it.`;
+        if (s) { s.className = "status"; s.textContent = msg; }
+        announce(msg, "warn");
+        const pc = document.getElementById("planCard");
+        if (pc) pc.scrollIntoView({ block: "start", behavior: "smooth" });
+        return;
+      }
       userPrefs.language = locale; userPrefs.voice = voice; userPrefs.engine = "azure";
       try { await api("/profile", { method: "PUT", body: { preferences: userPrefs } }); } catch (_) {}
-      const s = document.getElementById("dialectStatus");
       const msg = live ? `Now reading in ${d.label}.` : `${d.label} is coming soon — using standard Urdu for now.`;
       if (s) { s.className = "status ok"; s.textContent = msg; }
       announce(msg, "ok");

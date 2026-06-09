@@ -703,8 +703,11 @@ body.dark .lib-menu-item.current, body.dark .lib-menu-item.accent { color: var(-
 .dialect-badge { flex: 0 0 auto; font-size: .72rem; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; padding: 4px 10px; border-radius: 999px; }
 .dialect-badge.live { background: var(--accent-soft); color: #143b44; }
 .dialect-badge.soon { background: var(--border); color: var(--muted); }
+.dialect-badge.premium { background: #f4d58d; color: #5b430a; }
+.dialect-item.is-locked { opacity: .9; }
 body.dark .dialect-item { background: #10211f; }
 body.dark .dialect-badge.live { color: #06222a; }
+body.dark .dialect-badge.premium { background: #6b5418; color: #ffe7ad; }
 
 /* Voice bank (admin) */
 .vb-consent { display: flex; align-items: flex-start; gap: 10px; margin: 10px 0 14px; font-size: .98rem; }

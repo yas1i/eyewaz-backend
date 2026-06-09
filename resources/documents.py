@@ -124,6 +124,11 @@ class DocumentTransSpeechAPI(Resource):
         target_lang = prefs.get("language", "ur-PK")
         voice = prefs.get("voice", "ur-PK-UzmaNeural")
         rate = prefs.get("rate", 1.0)
+        # Cloned dialect voices ("el:") are premium — free members read in
+        # standard Azure Urdu.
+        if isinstance(voice, str) and voice.startswith("el:") and \
+                usage.effective_plan(user) == "free":
+            voice = "ur-PK-UzmaNeural"
 
         try:
             text, Trans_text, lang, audio_duration, blob_client, audio_blob_client = \

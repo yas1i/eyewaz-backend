@@ -172,7 +172,12 @@ class SpeakAPI(Resource):
             voice = "ur-PK-UzmaNeural"   # graceful fallback if engine not configured
 
         # Cloned dialect voices are stored as "el:<voice_id>" → synthesize via
-        # ElevenLabs; everything else uses Azure.
+        # ElevenLabs; everything else uses Azure. Cloned voices are premium —
+        # free members fall back to standard Azure Urdu.
+        if isinstance(voice, str) and voice.startswith("el:"):
+            import usage
+            if usage.effective_plan(user) == "free":
+                voice = "ur-PK-UzmaNeural"
         if isinstance(voice, str) and voice.startswith("el:"):
             import elevenlabs_api
             if not elevenlabs_api.configured():
