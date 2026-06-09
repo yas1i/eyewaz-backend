@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>EYEWAZ Read Aloud</title>
+    <style>
+      :root { --accent: #2e6675; --soft: #F7F6E9; }
+      * { box-sizing: border-box; }
+      body { width: 300px; margin: 0; padding: 14px; font: 15px/1.4 system-ui, sans-serif; color: #14302f; background: var(--soft); }
+      h1 { font-size: 1.1rem; margin: 0 0 10px; color: var(--accent); }
+      label { display: block; font-weight: 600; margin: 10px 0 4px; }
+      input[type=url], input[type=password] { width: 100%; padding: 8px; border: 1px solid #cdd6cf; border-radius: 8px; font-size: 14px; }
+      input[type=range] { width: 100%; }
+      .row { display: flex; gap: 8px; margin-top: 12px; }
+      button { flex: 1; padding: 10px; border: 0; border-radius: 10px; font-weight: 700; font-size: 14px; cursor: pointer; }
+      .primary { background: var(--accent); color: #fff; }
+      .ghost { background: #e3e9e2; color: #14302f; }
+      .hint { color: #5a6b63; font-size: 12px; margin-top: 4px; }
+      #status { margin-top: 10px; font-size: 13px; min-height: 18px; }
+      .ok { color: #1d7a4d; } .err { color: #b23b3b; }
+      details { margin-top: 12px; } summary { cursor: pointer; font-weight: 600; }
+    </style>
+  </head>
+  <body>
+    <h1>EYEWAZ Read Aloud</h1>
+    <div class="row">
+      <button id="readBtn" class="primary">▶ Read selection</button>
+      <button id="stopBtn" class="ghost">■ Stop</button>
+    </div>
+    <p class="hint">Select text on the page, then click Read — or press <b>Alt+Shift+U</b>.</p>
+
+    <label for="speed">Speed: <span id="speedVal">1.0×</span></label>
+    <input type="range" id="speed" min="0.5" max="2" step="0.1" value="1" />
+
+    <details>
+      <summary>Voice service settings</summary>
+      <label for="ttsUrl">TTS service URL</label>
+      <input type="url" id="ttsUrl" placeholder="http://your-server:8090" />
+      <label for="apiKey">API key (X-API-Key)</label>
+      <input type="password" id="apiKey" placeholder="leave blank if none" />
+      <p class="hint">Points at your EYEWAZ self-hosted Urdu voice service.</p>
+    </details>
+
+    <div id="status" role="status" aria-live="polite"></div>
+    <script src="popup.js"></script>
+  </body>
+</html>
