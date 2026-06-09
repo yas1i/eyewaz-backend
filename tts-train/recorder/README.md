@@ -14,9 +14,23 @@ python3 -m http.server 8000
 ```
 (Double-clicking `index.html` also works in most Chrome setups.)
 
+## Provinces & dialects
+Pick a **Province / dialect** (Standard Urdu, Punjabi, Pashto, Sindhi, Saraiki,
+Hindko, Balochi, Brahui), the **Voice** (male/female), and a **Speaker name/ID**.
+Tick **consent** (required — you're recording a person's voice). The tool suggests
+a folder name like `dataset-punjabi-male-ahmed-lahore` and writes a `speaker.json`
+alongside the clips so every dataset is self-describing.
+
+To record a **dialect-specific script** (not the default Urdu lines), load a
+`.txt` via "Script (optional)" — one sentence per line, `#` comments ignored.
+
+This is how you collect native voices across all provinces: send a recordist in
+each region the link, they record their speaker into a clearly-named folder, and
+send it back.
+
 ## Record
-1. Pick **Speaker = Female**, click **Choose / create a folder** → make an empty
-   folder called `female`. (Do the **male** pass later into a `male` folder.)
+1. Choose dialect + voice + speaker + consent, click **Choose / create folder** →
+   make an empty folder matching the suggested name.
 2. For each line: **Record** (or <kbd>Space</kbd>) → read the sentence → **Stop**
    → it plays back → **Save & next** (<kbd>Enter</kbd>). Fluffed it? **Re-record**
    (<kbd>R</kbd>).
