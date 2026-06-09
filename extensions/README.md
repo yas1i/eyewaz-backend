@@ -8,7 +8,8 @@ here. One voice, many front doors.
 | **Chrome / Edge extension** | `chrome/` | Select web-page text → hear it in Urdu (right-click or `Alt+Shift+U`). | ✅ Built |
 | **NVDA add-on** | `nvda/` | Makes EYEWAZ Urdu a *synthesizer* — NVDA reads the whole of Windows in Urdu. | ✅ Built |
 | **Android TTS engine** | `../android-tts/` | System voice — TalkBack and every Android app speak Urdu. | ✅ Built (sideload) |
-| **JAWS / Narrator / all Windows** | see below | Universal Windows voice via SAPI5. | 📋 Planned |
+| **JAWS / Narrator / all Windows** | `../windows-sapi/` | Universal Windows voice via SAPI5. | 🟡 Scaffolded (needs Windows build) |
+| **Local offline voice server** | `../tts-local/` | Run the trained Piper voice on `127.0.0.1` — instant, offline, free, for any client above. | ✅ Built (needs a trained .onnx) |
 
 ## How each connects
 - **Chrome** → background worker fetches `/tts`, plays via an offscreen audio doc.
