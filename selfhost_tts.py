@@ -43,7 +43,11 @@ def synth(text, speed=1.0):
     for piece in _chunks((text or "").strip()):
         if not piece.strip():
             continue
-        r = requests.post(_base() + "/tts", json={"text": piece, "speed": speed}, timeout=120)
+        headers = {}
+        if os.getenv("SELF_HOST_TTS_KEY"):
+            headers["X-API-Key"] = os.getenv("SELF_HOST_TTS_KEY")
+        r = requests.post(_base() + "/tts", json={"text": piece, "speed": speed},
+                          headers=headers, timeout=120)
         r.raise_for_status()
         data, this_sr = sf.read(io.BytesIO(r.content), dtype="float32")
         sr = this_sr

@@ -11,6 +11,9 @@ services:
     environment:
       - PORT=8090
       - TTS_MODEL=facebook/mms-tts-urd
+      # Set a secret to require X-API-Key on /tts (recommended when 8090 is open).
+      # Put the SAME value as SELF_HOST_TTS_KEY on the EYEWAZ backend.
+      - TTS_API_KEY=${TTS_API_KEY:-}
     ports:
       - "8090:8090"
 

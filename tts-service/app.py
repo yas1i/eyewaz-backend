@@ -22,10 +22,17 @@ import os
 import numpy as np
 import soundfile as sf
 import torch
-from fastapi import FastAPI, Response
+from fastapi import Depends, FastAPI, Header, HTTPException, Response
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from transformers import VitsModel, AutoTokenizer
+
+
+def require_key(x_api_key: str | None = Header(default=None)):
+    """If TTS_API_KEY is set, require a matching X-API-Key header on /tts."""
+    key = os.getenv("TTS_API_KEY")
+    if key and x_api_key != key:
+        raise HTTPException(status_code=401, detail="Invalid API key")
 
 MODEL_ID = os.getenv("TTS_MODEL", "facebook/mms-tts-urd")
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
@@ -73,7 +80,7 @@ def healthz():
     return {"ok": True, "model": MODEL_ID, "device": DEVICE}
 
 
-@app.post("/tts")
+@app.post("/tts", dependencies=[Depends(require_key)])
 def tts_post(body: TTSIn):
     audio = _synth(body.text, body.speed)
     if not audio:
@@ -81,7 +88,7 @@ def tts_post(body: TTSIn):
     return Response(content=audio, media_type="audio/wav")
 
 
-@app.get("/tts")
+@app.get("/tts", dependencies=[Depends(require_key)])
 def tts_get(text: str = "", speed: float | None = None):
     audio = _synth(text, speed)
     if not audio:
