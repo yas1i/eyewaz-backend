@@ -71,6 +71,10 @@ def _synth(text: str, speed: float | None) -> bytes:
     text = (text or "").strip()[:MAX_CHARS]
     if not text:
         return b""
+    # Normalize Urdu (numbers→words, symbols, punctuation) — big intelligibility win.
+    if os.getenv("TTS_NORMALIZE", "1") != "0" and "urd" in MODEL_ID:
+        import normalize_urdu
+        text = normalize_urdu.normalize(text)
     if getattr(tok, "is_uroman", False):
         text = _romanize(text)
     inputs = tok(text, return_tensors="pt").to(DEVICE)
