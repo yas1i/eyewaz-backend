@@ -14,7 +14,7 @@ speaker's clear, informed, written consent. Keep a signed copy (paper or e-sign)
 I confirm that:
 
 - The voice in the recording is **my own**, and I am giving this recording freely.
-- I consent to EYEWAZ (Canvas Solutions) creating a **synthetic clone** of my
+- I consent to EYEWAZ (WAJD AI) creating a **synthetic clone** of my
   voice from this recording, and using it within the EYEWAZ app to read content
   aloud in my dialect for users (including blind and low-vision users).
 - I understand the cloned voice can generate speech I did not personally record.

@@ -1,8 +1,8 @@
 # EYEWAZ — Google Play release, testing & approval runbook
 
 You ship **two** apps to Play:
-1. **EYEWAZ** — the PWA wrapped as a **TWA** (`com.canvassolutions.eyewaz`).
-2. **EYEWAZ Urdu Voice** — the **TTS engine** (`com.canvassolutions.eyewaztts`,
+1. **EYEWAZ** — the PWA wrapped as a **TWA** (`ai.wajd.eyewaz`).
+2. **EYEWAZ Urdu Voice** — the **TTS engine** (`ai.wajd.eyewaztts`,
    in `android-tts/`). Separate listing, normal AAB (not a TWA).
 
 Do app #1 first; #2 is an easier repeat.
@@ -74,7 +74,7 @@ device. Verify after install: the Account screen shows no prices or buy buttons.
 npm i -g @bubblewrap/cli
 mkdir -p twa && cd twa
 bubblewrap init --manifest https://eyewaz.com/app/manifest.webmanifest
-# answers: package = com.canvassolutions.eyewaz ; host = eyewaz.com ;
+# answers: package = ai.wajd.eyewaz ; host = eyewaz.com ;
 #          start url = /app?twa=1  (the ?twa=1 flag triggers the no-purchase mode) ;
 #          name = EYEWAZ ; display = standalone
 bubblewrap build      # creates app-release-bundle.aab + signs with an upload key
@@ -141,7 +141,7 @@ track) → release notes → **staged rollout** (start 10–20%). **Send for rev
 ## 8. The TTS engine app (second submission)
 - Build a normal release AAB from `android-tts/` (Android Studio → Build →
   Generate Signed Bundle, or `./gradlew bundleRelease` with a keystore).
-- New Play listing, package `com.canvassolutions.eyewaztts`.
+- New Play listing, package `ai.wajd.eyewaztts`.
 - It declares `BIND_TEXT_TO_SPEECH_SERVICE` / acts as a system TTS engine — that's
   allowed. In the listing, explain it's an **accessibility TTS voice** that powers
   TalkBack and other apps in Urdu.

@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace = "com.canvassolutions.eyewaztts"
+    namespace = "ai.wajd.eyewaztts"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.canvassolutions.eyewaztts"
+        applicationId = "ai.wajd.eyewaztts"
         minSdk = 21
         targetSdk = 34
         versionCode = 1
