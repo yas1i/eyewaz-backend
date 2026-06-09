@@ -2118,7 +2118,7 @@ $("#docReadBtn")?.addEventListener("click", async () => {
 function enterApp() {
   showView("capture");
   loadLibrary();
-  loadPrefs().then(() => { initReaderControls(); initReaderDialects(); renderMyDay(); Assistant.init(); Reminders.init(); checkoutReturn(); });
+  loadPrefs().then(() => { initReaderControls(); renderMyDay(); Assistant.init(); Reminders.init(); checkoutReturn(); });
 }
 
 // React to a return from Stripe Checkout (?checkout=success|cancel).
