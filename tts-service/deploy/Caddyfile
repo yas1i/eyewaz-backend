@@ -1,0 +1,5 @@
+# Auto-HTTPS for the TTS engine. Replace the hostname with yours and point its
+# DNS A record at this server's IP, then: docker compose --profile tls up -d
+tts.eyewaz.com {
+    reverse_proxy tts:8090
+}

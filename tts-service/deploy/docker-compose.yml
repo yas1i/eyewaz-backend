@@ -1,0 +1,32 @@
+# EYEWAZ self-hosted Urdu TTS — Hetzner (or any Docker host) deployment.
+#
+#   docker compose up -d                 # plain HTTP on :8090 (fine for the
+#                                        # EYEWAZ backend, which calls it server-side)
+#   docker compose --profile tls up -d   # + Caddy auto-HTTPS (needs a domain;
+#                                        # edit Caddyfile first)
+services:
+  tts:
+    image: aluminur/eyewaz-tts:latest
+    restart: unless-stopped
+    environment:
+      - PORT=8090
+      - TTS_MODEL=facebook/mms-tts-urd
+    ports:
+      - "8090:8090"
+
+  caddy:
+    image: caddy:2
+    profiles: ["tls"]
+    restart: unless-stopped
+    depends_on: [tts]
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:
