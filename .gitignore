@@ -60,7 +60,10 @@ __pycache__
 .#*
 .coverage
 .pytest_cache
-src
+
+# Android: real secrets stay out of git (use secrets.properties.example as a template)
+secrets.properties
+android-tts/secrets.properties
 
 *.swp
 *.map
