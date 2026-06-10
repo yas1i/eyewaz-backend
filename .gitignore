@@ -105,3 +105,15 @@ tts-train/metadata.csv
 tts-train/dataset-*/
 tts-train/female/
 tts-train/male/
+
+# Android TWA build — keystore & secrets never commit
+twa/android.keystore
+twa/keystore-password.txt
+twa/*.aab
+twa/*.apk
+twa/.gradle/
+twa/app/build/
+twa/build/
+
+# Editor / AI-tool configs
+.claude/
