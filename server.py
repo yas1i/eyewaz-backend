@@ -78,6 +78,21 @@ def webapp_static(filename):
     return _no_cache(send_from_directory(WEBAPP_DIR, filename))
 
 
+# --- Voice recorder (contributors collect into the online voice bank) ---
+RECORDER_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tts-train", "recorder")
+
+
+@app.route("/record")
+@app.route("/record/")
+def recorder_index():
+    return _no_cache(send_from_directory(RECORDER_DIR, "index.html"))
+
+
+@app.route("/record/<path:filename>")
+def recorder_static(filename):
+    return _no_cache(send_from_directory(RECORDER_DIR, filename))
+
+
 @app.route("/privacy")
 def privacy():
     # Public privacy policy (required for the app stores).

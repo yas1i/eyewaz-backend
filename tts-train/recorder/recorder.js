@@ -9,6 +9,7 @@
   const slug = (s) => (s || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
   let meta = { dialect: "urdu", gender: "male", speaker: "" };
+  let uploadCfg = { url: "", key: "", contributor: "" };
   let dirHandle = null;
   let idx = 0;
   const done = new Set();
@@ -33,12 +34,17 @@
     meta.dialect = $("dialect").value;
     meta.gender = $("gender").value;
     meta.speaker = $("speakerName").value.trim();
+    if ($("srvUrl")) {
+      uploadCfg.url = $("srvUrl").value.trim();
+      uploadCfg.contributor = $("contrib") ? $("contrib").value.trim() : "";
+      uploadCfg.key = $("srvKey") ? $("srvKey").value.trim() : "";
+    }
     $("suggestName").textContent = "Suggested folder: " + suggestedName();
     const ready = fsaOK && $("consent").checked && meta.speaker.length > 0;
     $("pickBtn").disabled = !ready;
   }
-  ["dialect", "gender", "speakerName", "consent"].forEach((id) =>
-    $(id).addEventListener("input", refreshSetup));
+  ["dialect", "gender", "speakerName", "consent", "srvUrl", "contrib", "srvKey"].forEach((id) =>
+    $(id) && $(id).addEventListener("input", refreshSetup));
 
   $("scriptFile").addEventListener("change", async (e) => {
     const f = e.target.files[0]; if (!f) return;
@@ -166,17 +172,37 @@
 
   async function save() {
     if (!lastBlob) return;
-    const id = pad(idx + 1);
+    const curIdx = idx, id = pad(curIdx + 1), text = S[curIdx], blob = lastBlob;
     try {
       const fh = await dirHandle.getFileHandle(id + ".wav", { create: true });
-      const w = await fh.createWritable(); await w.write(lastBlob); await w.close();
+      const w = await fh.createWritable(); await w.write(blob); await w.close();
     } catch (e) { setStatus("Could not write file: " + e.message, "err"); return; }
-    done.add(idx);
+    done.add(curIdx);
     clearTake();
     setStatus("Saved " + id + ".wav ✓", "ok");
-    const next = idx + 1 < S.length ? idx + 1 : idx;
-    idx = (idx + 1 < S.length) ? next : idx;
+    idx = (curIdx + 1 < S.length) ? curIdx + 1 : curIdx;
     render();
+    // Optional: also push to the online voice bank.
+    if (uploadCfg.url) {
+      try { await uploadClip(id, text, blob); setStatus(`Saved ${id}.wav ✓ + uploaded ☁`, "ok"); }
+      catch (e) { setStatus(`Saved ${id}.wav ✓ (upload failed: ${e.message})`, "warn"); }
+    }
+  }
+
+  async function uploadClip(id, text, blob) {
+    const fd = new FormData();
+    fd.append("audio", blob, id + ".wav");
+    fd.append("lang", meta.dialect);
+    fd.append("speaker", meta.speaker);
+    fd.append("gender", meta.gender);
+    fd.append("sentence_id", id);
+    fd.append("transcript", text);
+    fd.append("consent", "true");
+    if (uploadCfg.contributor) fd.append("contributor", uploadCfg.contributor);
+    if (uploadCfg.key) fd.append("key", uploadCfg.key);
+    const r = await fetch(uploadCfg.url.replace(/\/+$/, "") + "/api/voicebank/clip",
+      { method: "POST", body: fd });
+    if (!r.ok) throw new Error("HTTP " + r.status);
   }
 
   function clearTake() {
