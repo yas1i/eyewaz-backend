@@ -83,6 +83,24 @@ class DialectVoice(Document):
     objects = QuerySetManager()
 
 
+class VoiceClip(Document):
+    """One recorded utterance in the online voice bank — the raw material for
+    training a dialect/language TTS voice. Contributors (native speakers across
+    provinces) record via the web recorder, which uploads here."""
+    lang = StringField(max_length=40, default="urdu")     # dialect/language id
+    speaker = StringField(max_length=120, default="")     # speaker name/id
+    gender = StringField(max_length=10, default="")        # male | female
+    sentence_id = StringField(max_length=20, default="")   # e.g. "0001"
+    transcript = StringField(default="")                   # exact text read
+    filename = StringField(default="")                     # stored wav filename
+    duration = FloatField(default=0.0)                      # seconds
+    consent_at = DateTimeField()                            # consent timestamp
+    contributor = StringField(max_length=160, default="")  # who uploaded (email/handle)
+    created_at = DateTimeField(default=datetime.utcnow)
+    meta = {"indexes": ["lang", "speaker", ("lang", "speaker", "sentence_id")]}
+    objects = QuerySetManager()
+
+
 class Docs(Document):
     id = StringField(primary_key=True)
     user = ReferenceField(Users)
