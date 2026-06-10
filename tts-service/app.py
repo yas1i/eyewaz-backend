@@ -38,6 +38,11 @@ MODEL_ID = os.getenv("TTS_MODEL", "facebook/mms-tts-urd-script_arabic")
 # Our own trained voice: set PIPER_MODEL to a Piper .onnx path to use it instead
 # of MMS (cheap CPU inference, our licence). Swapping models = one env var.
 PIPER_MODEL = os.getenv("PIPER_MODEL")
+# Interim Azure-quality Urdu: set SPEECH_KEY + REGION to route /tts through Azure
+# Neural TTS until the trained Piper voice is ready. Priority: Piper > Azure > MMS.
+AZURE_KEY = os.getenv("SPEECH_KEY")
+AZURE_REGION = os.getenv("SPEECH_REGION") or os.getenv("REGION")
+AZURE_VOICE = os.getenv("AZURE_VOICE", "ur-PK-UzmaNeural")
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 MAX_CHARS = int(os.getenv("TTS_MAX_CHARS", "1200"))
 
@@ -90,6 +95,10 @@ def _synth(text: str, speed: float | None) -> bytes:
             import normalize_urdu
             text = normalize_urdu.normalize(text)
         return _synth_piper(text, speed)
+    # Interim: Azure Neural Urdu (good quality) if keys are set. Azure handles its
+    # own text/number normalization, so we pass the raw text.
+    if AZURE_KEY and AZURE_REGION:
+        return _synth_azure(text, speed)
     # Otherwise MMS.
     model, tok = _load()
     if norm and "urd" in MODEL_ID:
@@ -127,10 +136,35 @@ def _synth_piper(text: str, speed: float | None) -> bytes:
     return buf.getvalue()
 
 
+def _xml_escape(s: str) -> str:
+    return (s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+             .replace('"', "&quot;").replace("'", "&apos;"))
+
+
+def _synth_azure(text: str, speed: float | None) -> bytes:
+    """Azure Neural TTS via REST (returns 22.05 kHz mono 16-bit WAV)."""
+    import urllib.request
+    rate = ""
+    if speed and float(speed) != 1.0:
+        rate = f" rate='{int((float(speed) - 1.0) * 100):+d}%'"
+    ssml = (f"<speak version='1.0' xml:lang='ur-PK'>"
+            f"<voice name='{AZURE_VOICE}'><prosody{rate}>{_xml_escape(text)}</prosody></voice></speak>")
+    url = f"https://{AZURE_REGION}.tts.speech.microsoft.com/cognitiveservices/v1"
+    req = urllib.request.Request(url, data=ssml.encode("utf-8"), headers={
+        "Ocp-Apim-Subscription-Key": AZURE_KEY,
+        "Content-Type": "application/ssml+xml",
+        "X-Microsoft-OutputFormat": "riff-22050hz-16bit-mono-pcm",
+        "User-Agent": "eyewaz-tts",
+    })
+    with urllib.request.urlopen(req, timeout=20) as r:
+        return r.read()
+
+
 @app.get("/healthz")
 def healthz():
-    return {"ok": True, "engine": "piper" if PIPER_MODEL else "mms",
-            "model": PIPER_MODEL or MODEL_ID, "device": DEVICE}
+    engine = "piper" if PIPER_MODEL else ("azure" if (AZURE_KEY and AZURE_REGION) else "mms")
+    model = PIPER_MODEL or (AZURE_VOICE if engine == "azure" else MODEL_ID)
+    return {"ok": True, "engine": engine, "model": model, "device": DEVICE}
 
 
 @app.post("/tts", dependencies=[Depends(require_key)])
