@@ -153,7 +153,7 @@ def _synth_azure(text: str, speed: float | None) -> bytes:
     req = urllib.request.Request(url, data=ssml.encode("utf-8"), headers={
         "Ocp-Apim-Subscription-Key": AZURE_KEY,
         "Content-Type": "application/ssml+xml",
-        "X-Microsoft-OutputFormat": "riff-22050hz-16bit-mono-pcm",
+        "X-Microsoft-OutputFormat": "riff-24khz-16bit-mono-pcm",
         "User-Agent": "eyewaz-tts",
     })
     with urllib.request.urlopen(req, timeout=20) as r:
