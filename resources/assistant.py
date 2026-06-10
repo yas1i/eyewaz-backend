@@ -1,14 +1,14 @@
 """
-EYEWAZ conversational assistant.
+EYEWAZ conversational assistant (optional, admin-enabled).
 
 A blind or low-vision user speaks to the app; the browser turns that speech
-into text and posts it here. We hand the message to Claude along with the
-user's name and their saved to-do lists, and return a short, spoken-friendly
+into text and posts it here. We send the message — with the user's name and
+saved to-do lists — to a hosted AI model and return a short, spoken-friendly
 reply that the client reads aloud (browser TTS or Azure Urdu voice).
 
-Reads ANTHROPIC_API_KEY from the environment (the Anthropic SDK picks it up
-automatically). If the key is missing the endpoint fails gracefully so the
-rest of the app keeps working.
+Off by default. An owner enables it from the admin toggle (AppSettings
+.assistant_enabled). The AI provider/model and API key are read from the
+environment, so the feature is fully configurable and ships disabled.
 """
 
 import json
@@ -18,13 +18,24 @@ from flask import request, Response
 from flask_restful import Resource
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
-from database.models import Users
+from database.models import Users, AppSettings
 
 # Lazily-created singleton so a missing SDK / key never crashes import or boot.
 _CLIENT = None
 _CLIENT_ERROR = None
 
-MODEL = "claude-opus-4-8"
+# Provider + model are env-configurable; the feature is off unless an admin
+# enables it and a key is set. Defaults can be overridden without code changes.
+MODEL = os.getenv("ASSISTANT_MODEL", "claude-opus-4-8")
+
+
+def _is_enabled():
+    """Owner toggle (off by default). Stored in AppSettings, set via admin."""
+    try:
+        s = AppSettings.objects(key="singleton").first()
+        return bool(s and s.assistant_enabled)
+    except Exception:
+        return False
 MAX_TOKENS = 1024
 MAX_TURNS = 12          # cap client-supplied history so the prompt stays bounded
 MAX_MSG_CHARS = 4000    # cap a single user utterance
@@ -119,9 +130,30 @@ def _clean_history(raw):
     return history
 
 
+class AssistantConfigAPI(Resource):
+    """Report whether the assistant is on (so the UI shows/hides it) and let an
+    owner flip it. Off by default; toggling needs DEV_PLAN_KEY."""
+
+    def get(self):
+        return _resp({"enabled": _is_enabled(),
+                      "configured": bool(os.getenv("ANTHROPIC_API_KEY"))}, 200)
+
+    def post(self):
+        secret = os.getenv("DEV_PLAN_KEY")
+        data = request.get_json(force=True, silent=True) or {}
+        if not secret or data.get("key") != secret:
+            return _resp({"message": "Owner key required."}, 401)
+        s = AppSettings.objects(key="singleton").first() or AppSettings(key="singleton")
+        s.assistant_enabled = bool(data.get("enabled"))
+        s.save()
+        return _resp({"enabled": s.assistant_enabled}, 200)
+
+
 class AssistantAPI(Resource):
     @jwt_required()
     def post(self):
+        if not _is_enabled():
+            return _resp({"message": "The assistant is turned off."}, 403)
         data = request.get_json(force=True, silent=True) or {}
         message = (data.get("message") or "").strip()
         if not message:

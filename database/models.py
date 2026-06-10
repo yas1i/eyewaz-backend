@@ -68,6 +68,7 @@ class AppSettings(Document):
     paypal_product_id = StringField()
     paypal_plan_monthly = StringField()
     paypal_plan_supermax = StringField()
+    assistant_enabled = BooleanField(default=False)   # admin toggle, off by default
     objects = QuerySetManager()
 
 

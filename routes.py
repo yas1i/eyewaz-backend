@@ -13,7 +13,7 @@ from resources.documents import UpdateDocumentFavAPI, UpdateDocumentUnFavAPI
 from resources.playback import PausePlaybackAPI
 from resources.folder import Folder, FolderApi
 from resources.web import ReadUrlAPI, TranslateTextAPI, SpeakAPI
-from resources.assistant import AssistantAPI
+from resources.assistant import AssistantAPI, AssistantConfigAPI
 from resources.billing import (
     UsageAPI, DevPlanAPI,
     PayPalConfigAPI, PayPalActivateAPI, PayPalCancelAPI, PayPalSetupAPI, PayPalWebhookAPI,
@@ -50,6 +50,7 @@ def initialize_routes(api):
     api.add_resource(ProfileAPI, "/api/profile")
     api.add_resource(VoicesAPI, "/api/voices")
     api.add_resource(AssistantAPI, "/api/assistant")
+    api.add_resource(AssistantConfigAPI, "/api/assistant/config")
     api.add_resource(UsageAPI, "/api/usage")
     api.add_resource(DevPlanAPI, "/api/dev/plan")
     api.add_resource(DialectsAPI, "/api/dialects")

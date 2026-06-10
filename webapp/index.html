@@ -267,8 +267,8 @@
           <p class="hint">Set your weekday &amp; weekend lists in Account. EYEWAZ greets you, reads the date, and reads today's list aloud.</p>
         </div>
 
-        <!-- ===== Ask Eyewaz: hands-free conversational assistant ===== -->
-        <div class="card" id="assistantCard">
+        <!-- ===== Ask Eyewaz: hands-free conversational assistant (off until an owner enables it) ===== -->
+        <div class="card" id="assistantCard" hidden>
           <h3><svg class="ic" aria-hidden="true"><use href="#ic-chat"/></svg> Ask Eyewaz</h3>
           <p class="hint">Tap the microphone and speak — ask about your day, your list, or anything else. Eyewaz listens and answers aloud.</p>
           <div class="player-bar">
@@ -585,6 +585,14 @@
         </div>
       </form>
       <button type="button" id="accountBackBtn" class="link-btn">← Back to reading</button>
+
+      <div class="card" id="ownerCard">
+        <h3>Owner controls</h3>
+        <p class="hint">The voice assistant ("Ask Eyewaz") is <b>off by default</b>. Turning it on routes
+          questions to a hosted AI model. Owner key required.</p>
+        <button type="button" id="asstToggleBtn" class="primary-btn ghost">Assistant: checking…</button>
+        <p id="asstToggleStatus" class="status" role="status"></p>
+      </div>
 
       <div class="card" id="dangerZone">
         <h3>Delete account</h3>
