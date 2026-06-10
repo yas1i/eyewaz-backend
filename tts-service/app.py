@@ -144,11 +144,12 @@ def _xml_escape(s: str) -> str:
 def _synth_azure(text: str, speed: float | None) -> bytes:
     """Azure Neural TTS via REST (returns 22.05 kHz mono 16-bit WAV)."""
     import urllib.request
-    rate = ""
+    body = _xml_escape(text)
     if speed and float(speed) != 1.0:
-        rate = f" rate='{int((float(speed) - 1.0) * 100):+d}%'"
-    ssml = (f"<speak version='1.0' xml:lang='ur-PK'>"
-            f"<voice name='{AZURE_VOICE}'><prosody{rate}>{_xml_escape(text)}</prosody></voice></speak>")
+        rate = f"{int((float(speed) - 1.0) * 100):+d}%"
+        body = f"<prosody rate='{rate}'>{body}</prosody>"
+    ssml = (f"<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='ur-PK'>"
+            f"<voice name='{AZURE_VOICE}'>{body}</voice></speak>")
     url = f"https://{AZURE_REGION}.tts.speech.microsoft.com/cognitiveservices/v1"
     req = urllib.request.Request(url, data=ssml.encode("utf-8"), headers={
         "Ocp-Apim-Subscription-Key": AZURE_KEY,
