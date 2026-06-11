@@ -91,19 +91,14 @@ def _synth(text: str, speed: float | None) -> bytes:
     norm = os.getenv("TTS_NORMALIZE", "1") != "0"
     # Our trained Piper voice (if configured).
     if PIPER_MODEL:
-        if norm:
-            import normalize_urdu
-            text = normalize_urdu.normalize(text)
-        return _synth_piper(text, speed)
+        return _synth_piper(_maybe_normalize(text, norm), speed)
     # Interim: Azure Neural Urdu (good quality) if keys are set. Azure handles its
     # own text/number normalization, so we pass the raw text.
     if AZURE_KEY and AZURE_REGION:
         return _synth_azure(text, speed)
     # Otherwise MMS.
     model, tok = _load()
-    if norm and "urd" in MODEL_ID:
-        import normalize_urdu
-        text = normalize_urdu.normalize(text)
+    text = _maybe_normalize(text, norm and "urd" in MODEL_ID)
     if getattr(tok, "is_uroman", False):
         text = _romanize(text)
     inputs = tok(text, return_tensors="pt").to(DEVICE)
@@ -120,19 +115,39 @@ def _synth(text: str, speed: float | None) -> bytes:
     return buf.getvalue()
 
 
+def _maybe_normalize(text: str, enabled: bool) -> str:
+    """Urdu number/text normalization — optional and never fatal if the module
+    isn't present in the image."""
+    if not enabled:
+        return text
+    try:
+        import normalize_urdu
+        return normalize_urdu.normalize(text)
+    except Exception:
+        return text
+
+
 def _synth_piper(text: str, speed: float | None) -> bytes:
+    """piper-tts 1.3.x (OHF-Voice) API: synthesize() yields AudioChunk objects;
+    we assemble them into a WAV ourselves."""
     import wave
     voice = _piper_voice()
+    length_scale = (1.0 / float(speed)) if (speed and float(speed) != 1.0) else 1.0
+    try:
+        from piper import SynthesisConfig
+        chunks = list(voice.synthesize(text, syn_config=SynthesisConfig(length_scale=length_scale)))
+    except TypeError:
+        chunks = list(voice.synthesize(text))   # tolerate signature changes
+    if not chunks:
+        return b""
+    rate = getattr(chunks[0], "sample_rate", 22050)
+    audio = b"".join(getattr(c, "audio_int16_bytes", b"") for c in chunks)
     buf = io.BytesIO()
-    length_scale = (1.0 / float(speed)) if speed else None
     with wave.open(buf, "wb") as wf:
-        try:
-            if length_scale:
-                voice.synthesize(text, wf, length_scale=length_scale)
-            else:
-                voice.synthesize(text, wf)
-        except TypeError:
-            voice.synthesize(text, wf)   # older piper API without length_scale
+        wf.setnchannels(1)
+        wf.setsampwidth(2)
+        wf.setframerate(rate)
+        wf.writeframes(audio)
     return buf.getvalue()
 
 
