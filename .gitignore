@@ -117,3 +117,4 @@ twa/build/
 
 # Editor / AI-tool configs
 .claude/
+webapp/app
