@@ -10,7 +10,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu torch \
  && pip install --no-cache-dir -r requirements.txt
 
-COPY app.py normalize_urdu.py .
+COPY app.py normalize_urdu.py ./
 
 # Bake the model into the image (no || true — fail loudly if the id is wrong).
 RUN python -c "from transformers import VitsModel, AutoTokenizer; \
