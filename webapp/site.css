@@ -1,0 +1,92 @@
+/* EYEWAZ marketing site — warm, colourful, and accessible.
+   Brand blue + cream, with rotating soft tiles (sky, pink, mint, sand) so the
+   site feels alive: bringing colour to a tool made for those who can't see it. */
+@import url("https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700&display=swap");
+
+:root {
+  --cream: #F7F6E9;
+  --ink: #16302f;          /* deep teal-green ink (AA on cream + tiles) */
+  --ink-soft: #3c5a55;
+  --blue: #7BB2BE;         /* EYEWAZ brand blue */
+  --blue-strong: #2e6675;
+  --header: #1f3d3a;       /* dark teal bar */
+  --tile-sky: #bfe6ef;
+  --tile-pink: #f7cdd9;
+  --tile-mint: #cfe9df;
+  --tile-sand: #efe4c4;
+  --tile-lilac: #ddd6f3;
+  --radius: 22px;
+  --font-brand: "Baloo 2", "Comic Sans MS", system-ui, sans-serif;
+  --font-body: "Nunito", system-ui, -apple-system, sans-serif;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0; background: var(--cream); color: var(--ink);
+  font-family: var(--font-body); font-size: 18px; line-height: 1.6;
+}
+h1, h2, h3 { font-family: var(--font-brand); line-height: 1.15; margin: 0 0 .4em; }
+a { color: var(--blue-strong); }
+.skip { position: absolute; left: -999px; top: 0; background: #fff; padding: 10px 16px; border-radius: 8px; }
+.skip:focus { left: 12px; top: 12px; z-index: 100; }
+
+/* Top offer strip */
+.strip { background: var(--tile-pink); color: var(--ink); text-align: center; font-weight: 700; padding: 10px 16px; font-size: .95rem; }
+
+/* Header / nav */
+header.nav { background: var(--header); color: var(--cream); }
+.nav-inner { max-width: 1080px; margin: 0 auto; display: flex; align-items: center; gap: 18px; padding: 14px 20px; flex-wrap: wrap; }
+.brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--cream); margin-right: auto; }
+.brand img { height: 38px; width: auto; }
+.brand b { font-family: var(--font-brand); font-size: 1.5rem; letter-spacing: .5px; }
+.nav a.link { color: var(--cream); text-decoration: none; font-weight: 700; padding: 8px 10px; border-radius: 10px; }
+.nav a.link:hover, .nav a.link:focus { background: rgba(255,255,255,.12); }
+.btn { display: inline-block; background: var(--blue); color: #0f2e33; font-weight: 800; text-decoration: none;
+       padding: 12px 22px; border-radius: 999px; border: 0; cursor: pointer; font-family: var(--font-body); font-size: 1rem; }
+.btn:hover, .btn:focus { background: #95c6cf; }
+.btn.solid { background: var(--blue-strong); color: #fff; }
+.btn.solid:hover { background: #224f5b; }
+
+main { max-width: 1080px; margin: 0 auto; padding: 0 20px 64px; }
+
+/* Hero */
+.hero { text-align: center; padding: 60px 10px 30px; }
+.hero h1 { font-size: clamp(2.2rem, 6vw, 3.6rem); color: var(--blue-strong); }
+.hero p.lead { font-size: clamp(1.05rem, 2.4vw, 1.35rem); max-width: 760px; margin: 0 auto 26px; color: var(--ink-soft); }
+.hero .cta { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+
+/* Tiles */
+.tiles { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); margin: 30px 0; }
+.tile { border-radius: var(--radius); padding: 26px 24px; }
+.tile h3 { font-size: 1.3rem; color: var(--ink); }
+.tile p { margin: 0; color: var(--ink-soft); font-weight: 600; }
+.tile .ic { width: 40px; height: 40px; margin-bottom: 12px; }
+.t-sky { background: var(--tile-sky); } .t-pink { background: var(--tile-pink); }
+.t-mint { background: var(--tile-mint); } .t-sand { background: var(--tile-sand); }
+.t-lilac { background: var(--tile-lilac); } .t-white { background: #fff; }
+
+section.block { margin: 56px 0; }
+section.block h2 { font-size: clamp(1.8rem, 4vw, 2.6rem); color: var(--blue-strong); text-align: center; }
+section.block > p.sub { text-align: center; max-width: 720px; margin: 0 auto 10px; color: var(--ink-soft); }
+
+.split { display: grid; gap: 22px; grid-template-columns: 1fr 1fr; align-items: stretch; }
+@media (max-width: 720px) { .split { grid-template-columns: 1fr; } }
+
+.cardbox { background: #fff; border-radius: var(--radius); padding: 28px; border: 1px solid #e6e3cf; }
+.cardbox.big { padding: 34px; }
+
+/* Contact rows */
+.contact-grid { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.contact-card { border-radius: var(--radius); padding: 26px; }
+.contact-card a { font-weight: 800; color: var(--blue-strong); word-break: break-word; }
+
+/* Footer */
+footer.site { background: var(--header); color: var(--cream); margin-top: 40px; }
+footer.site .f-inner { max-width: 1080px; margin: 0 auto; padding: 36px 20px; display: flex; gap: 24px; flex-wrap: wrap; justify-content: space-between; }
+footer.site a { color: var(--tile-sky); text-decoration: none; display: block; padding: 4px 0; }
+footer.site a:hover { text-decoration: underline; }
+footer.site h4 { font-family: var(--font-brand); margin: 0 0 8px; }
+footer .copy { width: 100%; text-align: center; padding-top: 10px; border-top: 1px solid rgba(255,255,255,.15); color: #cfe0db; font-size: .9rem; }
+
+:focus-visible { outline: 3px solid var(--blue-strong); outline-offset: 2px; border-radius: 6px; }

@@ -46,8 +46,23 @@ initialize_routes(api)
 
 @app.route("/")
 def index():
-    # The accessible web client is the front door.
-    return redirect("/app")
+    # Public marketing landing page. The app itself lives at /app.
+    return _no_cache(send_from_directory(WEBAPP_DIR, "home.html"))
+
+
+@app.route("/about")
+def about_page():
+    return _no_cache(send_from_directory(WEBAPP_DIR, "about.html"))
+
+
+@app.route("/contact")
+def contact_page():
+    return _no_cache(send_from_directory(WEBAPP_DIR, "contact.html"))
+
+
+@app.route("/site.css")
+def site_css():
+    return _no_cache(send_from_directory(WEBAPP_DIR, "site.css"))
 
 
 @app.route("/files/<path:filename>")
