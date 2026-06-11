@@ -4,17 +4,24 @@
 @import url("https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700&display=swap");
 
 :root {
+  /* EYEWAZ 2026 palette — warm neutrals with confident, modern accents.
+     Green header/footer stays; tiles glow instead of pastel-ing. */
   --cream: #F7F6E9;
-  --ink: #16302f;          /* deep teal-green ink (AA on cream + tiles) */
+  --ink: #16302f;            /* deep teal-green ink (AA on cream + tiles) */
   --ink-soft: #3c5a55;
-  --blue: #7BB2BE;         /* EYEWAZ brand blue */
+  --blue: #7BB2BE;           /* EYEWAZ brand blue */
   --blue-strong: #2e6675;
-  --header: #1f3d3a;       /* dark teal bar */
-  --tile-sky: #bfe6ef;
-  --tile-pink: #f7cdd9;
-  --tile-mint: #cfe9df;
-  --tile-sand: #efe4c4;
-  --tile-lilac: #ddd6f3;
+  --header: #1f3d3a;         /* dark green bar (keep) */
+  --rose-smoke: #E6BFAE;     /* warm rosy neutral — the new hero tint */
+  --neo-mint: #9FE7C8;       /* fresh mint with pop */
+  --electric-aqua: #7BD8E6;  /* brand-adjacent aqua, brighter */
+  --amber-glow: #FFD27D;     /* warm golden highlight */
+  --coral-pop: #FF8D6B;      /* energetic coral for moments of delight */
+  --tile-sky: var(--electric-aqua);
+  --tile-pink: var(--rose-smoke);
+  --tile-mint: var(--neo-mint);
+  --tile-sand: var(--amber-glow);
+  --tile-lilac: #CdC2F0;     /* digital lavender, used sparingly */
   --radius: 22px;
   --font-brand: "Baloo 2", "Comic Sans MS", system-ui, sans-serif;
   --font-body: "Nunito", system-ui, -apple-system, sans-serif;
@@ -31,8 +38,15 @@ a { color: var(--blue-strong); }
 .skip { position: absolute; left: -999px; top: 0; background: #fff; padding: 10px 16px; border-radius: 8px; }
 .skip:focus { left: 12px; top: 12px; z-index: 100; }
 
-/* Top offer strip */
-.strip { background: var(--tile-pink); color: var(--ink); text-align: center; font-weight: 700; padding: 10px 16px; font-size: .95rem; }
+/* Top strip — slow living gradient across the new palette */
+.strip {
+  color: var(--ink); text-align: center; font-weight: 700; padding: 10px 16px; font-size: .95rem;
+  background: linear-gradient(90deg, var(--rose-smoke), var(--amber-glow), var(--neo-mint), var(--electric-aqua), var(--rose-smoke));
+  background-size: 300% 100%;
+  animation: stripflow 18s linear infinite;
+}
+@keyframes stripflow { to { background-position: 300% 0; } }
+@media (prefers-reduced-motion: reduce) { .strip { animation: none; } }
 
 /* Header / nav */
 header.nav { background: var(--header); color: var(--cream); }
@@ -58,7 +72,9 @@ main { max-width: 1080px; margin: 0 auto; padding: 0 20px 64px; }
 
 /* Tiles */
 .tiles { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); margin: 30px 0; }
-.tile { border-radius: var(--radius); padding: 26px 24px; }
+.tile { border-radius: var(--radius); padding: 26px 24px; transition: transform .25s ease, box-shadow .25s ease; }
+.tile:hover { transform: translateY(-4px); box-shadow: 0 12px 28px rgba(22,48,47,.12); }
+@media (prefers-reduced-motion: reduce) { .tile, .tile:hover { transition: none; transform: none; box-shadow: none; } }
 .tile h3 { font-size: 1.3rem; color: var(--ink); }
 .tile p { margin: 0; color: var(--ink-soft); font-weight: 600; }
 .tile .ic { width: 40px; height: 40px; margin-bottom: 12px; }

@@ -65,6 +65,18 @@ def site_css():
     return _no_cache(send_from_directory(WEBAPP_DIR, "site.css"))
 
 
+@app.route("/how-it-works")
+def how_it_works_page():
+    return _no_cache(send_from_directory(WEBAPP_DIR, "how-it-works.html"))
+
+
+@app.route("/favicon.ico")
+def favicon():
+    # Browsers ask for /favicon.ico at the root; serve the logo favicon.
+    return send_from_directory(os.path.join(WEBAPP_DIR, "assets"),
+                               "eyewaz-favicon.png", mimetype="image/png")
+
+
 @app.route("/files/<path:filename>")
 def serve_file(filename):
     """Serve uploaded documents and generated audio from local storage."""
