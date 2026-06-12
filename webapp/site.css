@@ -106,3 +106,49 @@ footer.site h4 { font-family: var(--font-brand); margin: 0 0 8px; }
 footer .copy { width: 100%; text-align: center; padding-top: 10px; border-top: 1px solid rgba(255,255,255,.15); color: #cfe0db; font-size: .9rem; }
 
 :focus-visible { outline: 3px solid var(--blue-strong); outline-offset: 2px; border-radius: 6px; }
+
+/* ---------- Animated EYEWAZ logo: the eye wakes up, sound flows through ---------- */
+.elogo { height: 38px; width: auto; display: block; }
+.brand .elogo { color: var(--cream); }
+.hero-logo { display: flex; justify-content: center; margin-bottom: 8px; color: var(--blue-strong); }
+.hero-logo .elogo { height: 120px; }
+.elogo .eye-g { transform-origin: 25px 32px; animation: eyeCycle 7s ease-in-out infinite; }
+.elogo .w1 { animation: waveDrift 2.4s ease-in-out infinite; }
+.elogo .w2 { animation: waveDrift 2.4s ease-in-out .4s infinite; }
+.elogo .w3 { animation: waveDrift 2.4s ease-in-out .8s infinite; }
+@keyframes eyeCycle {
+  0% { transform: scaleY(.06); }   /* asleep */
+  7% { transform: scaleY(1); }     /* wakes up */
+  86% { transform: scaleY(1); }
+  90% { transform: scaleY(.08); }  /* blink */
+  94%, 100% { transform: scaleY(1); }
+}
+@keyframes waveDrift {
+  0% { opacity: 0; transform: translateX(-3px); }
+  35% { opacity: 1; }
+  100% { opacity: 0; transform: translateX(5px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .elogo .eye-g, .elogo .w1, .elogo .w2, .elogo .w3 { animation: none; opacity: 1; }
+}
+
+/* ---------- Language wall (Why EYEWAZ) ---------- */
+.langwall { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin: 18px 0; }
+.lchip {
+  display: inline-flex; align-items: center; gap: 8px; background: #fff; border: 1px solid #e6e3cf;
+  border-radius: 999px; padding: 9px 16px; font-weight: 800; font-size: 1rem;
+  opacity: 0; transform: translateY(10px) scale(.96); transition: opacity .45s ease, transform .45s ease;
+}
+.lchip.in { opacity: 1; transform: none; }
+.lchip .dot { width: 9px; height: 9px; border-radius: 999px; flex: 0 0 auto; }
+.lchip.live .dot { background: #1d7a4d; animation: lpulse 1.8s ease-in-out infinite; }
+.lchip.dev .dot { background: #b97f12; }
+.lchip.plan .dot { background: #b65c43; }
+.lchip.live { border-color: #bfe2cf; }
+.lchip.dev { border-color: #f0dba9; }
+.lchip.plan { border-color: #ecc9bb; }
+@keyframes lpulse { 0%,100% { box-shadow: 0 0 0 0 rgba(29,122,77,.45);} 55% { box-shadow: 0 0 0 7px rgba(29,122,77,0);} }
+.legend { display: flex; gap: 18px; justify-content: center; flex-wrap: wrap; font-weight: 700; color: var(--ink-soft); margin-bottom: 8px; }
+.legend span { display: inline-flex; align-items: center; gap: 7px; }
+.legend i { width: 10px; height: 10px; border-radius: 99px; display: inline-block; }
+@media (prefers-reduced-motion: reduce) { .lchip { opacity: 1; transform: none; } .lchip.live .dot { animation: none; } }

@@ -70,6 +70,21 @@ def how_it_works_page():
     return _no_cache(send_from_directory(WEBAPP_DIR, "how-it-works.html"))
 
 
+@app.route("/why-us")
+def why_us_page():
+    return _no_cache(send_from_directory(WEBAPP_DIR, "why-us.html"))
+
+
+@app.route("/download")
+def download_page():
+    return _no_cache(send_from_directory(WEBAPP_DIR, "download.html"))
+
+
+@app.route("/site-logo.js")
+def site_logo_js():
+    return _no_cache(send_from_directory(WEBAPP_DIR, "site-logo.js"))
+
+
 @app.route("/favicon.ico")
 def favicon():
     # Browsers ask for /favicon.ico at the root; serve the logo favicon.

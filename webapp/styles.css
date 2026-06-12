@@ -754,3 +754,31 @@ body.dark option { background-color: #10211f; color: var(--text); }
 /* keep the search field transparent inside its pill */
 body.dark .lib-search { background: var(--surface); }
 body.dark .lib-search input { background-color: transparent !important; }
+
+/* ---------- Palette tints: bring the brand colours into the app ----------
+   Soft washes of the 2026 palette (Rose Smoke / Neo Mint / Electric Aqua /
+   Amber Glow / Digital Lavender) so each card has its own identity. Text stays
+   var(--text) — all tints pass AA. Dark mode gets deep, muted equivalents. */
+:root {
+  --tint-rose: #F2DCD2;
+  --tint-mint: #D9F2E6;
+  --tint-aqua: #D3EDF3;
+  --tint-amber: #FCE9C5;
+  --tint-lilac: #E6E0F6;
+}
+#assistantCard { background: var(--tint-aqua); border-color: transparent; }
+#remindersCard { background: var(--tint-amber); border-color: transparent; }
+#dialectCard { background: var(--tint-mint); border-color: transparent; }
+#faceIdCard { background: var(--tint-lilac); border-color: transparent; }
+#voiceBankCard { background: var(--tint-rose); border-color: transparent; }
+.plan-card[data-plan="free"] { background: var(--tint-mint); }
+.plan-card[data-plan="monthly"] { background: var(--tint-aqua); }
+.plan-card[data-plan="supermax"] { background: var(--tint-amber); }
+body.dark #assistantCard { background: #0f2e35; }
+body.dark #remindersCard { background: #33290f; }
+body.dark #dialectCard { background: #0f2e23; }
+body.dark #faceIdCard { background: #241f38; }
+body.dark #voiceBankCard { background: #331f18; }
+body.dark .plan-card[data-plan="free"] { background: #0f2e23; }
+body.dark .plan-card[data-plan="monthly"] { background: #0f2e35; }
+body.dark .plan-card[data-plan="supermax"] { background: #33290f; }
