@@ -85,6 +85,16 @@ def site_logo_js():
     return _no_cache(send_from_directory(WEBAPP_DIR, "site-logo.js"))
 
 
+@app.route("/robots.txt")
+def robots_txt():
+    return send_from_directory(WEBAPP_DIR, "robots.txt", mimetype="text/plain")
+
+
+@app.route("/sitemap.xml")
+def sitemap_xml():
+    return send_from_directory(WEBAPP_DIR, "sitemap.xml", mimetype="application/xml")
+
+
 @app.route("/favicon.ico")
 def favicon():
     # Browsers ask for /favicon.ico at the root; serve the logo favicon.

@@ -81,7 +81,7 @@
       <span>The speaker <b>consents</b> to their voice being recorded and used by WAJD AI to build an
         EYEWAZ text-to-speech voice. (See the consent form in <code>docs/voice-bank/consent-form.md</code>.)</span>
     </label>
-    <details open style="margin:8px 0">
+    <details style="margin:8px 0">
       <summary style="cursor:pointer;font-weight:600">Online upload &amp; advanced options</summary>
       <p class="hint">The server address is pre-filled. If your EYEWAZ contact gave you a
         voice-bank key, enter it here — every saved clip then uploads to the online voice bank.</p>
@@ -98,6 +98,9 @@
       <button class="primary" id="pickBtn" disabled>Choose / create this speaker's folder…</button>
       <button class="ghost" id="onlineBtn" disabled>Record online only (no folder)</button>
       <span class="hint" id="suggestName"></span>
+    </div>
+    <p class="hint" id="readyHint" style="font-weight:700"></p>
+    <div class="row" hidden>
     </div>
     <p class="hint" id="folderHint">On a computer: pick (or make) an <b>empty</b> folder — clips also save locally.
       On a <b>phone</b> (or any browser): fill in the Server URL above and use <b>Record online only</b> —

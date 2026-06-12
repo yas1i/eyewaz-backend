@@ -782,3 +782,8 @@ body.dark #voiceBankCard { background: #331f18; }
 body.dark .plan-card[data-plan="free"] { background: #0f2e23; }
 body.dark .plan-card[data-plan="monthly"] { background: #0f2e35; }
 body.dark .plan-card[data-plan="supermax"] { background: #33290f; }
+
+/* Google Play TWA build: hide social sign-in. Google blocks its OAuth flow in
+   wrapped-app contexts ("disallowed_useragent"), so the store build signs in
+   with email + code only — reviewers and users never hit a broken flow. */
+.twa-build #socialBlock { display: none !important; }
