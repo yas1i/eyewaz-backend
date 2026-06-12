@@ -91,6 +91,22 @@ class VoiceBankClipAPI(Resource):
                       "sentence_id": sentence_id, "duration": dur}, 200)
 
 
+class VoiceBankDoneAPI(Resource):
+    """Sentence ids a speaker has already uploaded — lets the recorder resume
+    across sessions/devices in online-only (no local folder) mode."""
+
+    def get(self):
+        key = os.getenv("VOICEBANK_KEY")
+        if key and request.headers.get("X-VoiceBank-Key") != key and request.args.get("key") != key:
+            return _resp({"message": "Invalid voice-bank key."}, 401)
+        lang = _slug(request.args.get("lang", ""))
+        speaker = _slug(request.args.get("speaker", ""))
+        if not (lang and speaker):
+            return _resp({"message": "lang and speaker required."}, 400)
+        ids = sorted(c.sentence_id for c in VoiceClip.objects(lang=lang, speaker=speaker))
+        return _resp({"ids": ids}, 200)
+
+
 class VoiceBankStatsAPI(Resource):
     """How much has been collected, by language and speaker."""
 

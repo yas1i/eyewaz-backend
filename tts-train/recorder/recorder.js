@@ -22,7 +22,8 @@
   const fsaOK = !!window.showDirectoryPicker;
   if (!fsaOK) {
     $("folderHint").innerHTML =
-      "⚠️ This browser can't write to a folder. Please use <b>Chrome</b> or <b>Edge</b>.";
+      "This browser can't save to a folder — no problem: fill in the Server URL above and use " +
+      "<b>Record online only</b>. Every clip goes straight to the voice bank.";
   }
 
   // ---------- setup: dialect / speaker / consent / custom script ----------
@@ -40,8 +41,9 @@
       uploadCfg.key = $("srvKey") ? $("srvKey").value.trim() : "";
     }
     $("suggestName").textContent = "Suggested folder: " + suggestedName();
-    const ready = fsaOK && $("consent").checked && meta.speaker.length > 0;
-    $("pickBtn").disabled = !ready;
+    const ready = $("consent").checked && meta.speaker.length > 0;
+    $("pickBtn").disabled = !(fsaOK && ready);
+    if ($("onlineBtn")) $("onlineBtn").disabled = !(ready && uploadCfg.url);
   }
   ["dialect", "gender", "speakerName", "consent", "srvUrl", "contrib", "srvKey"].forEach((id) =>
     $(id) && $(id).addEventListener("input", refreshSetup));
@@ -70,7 +72,35 @@
     await scanExisting();
     $("setup").hidden = true;
     $("rec").hidden = false;
-    $("folderName").textContent = `📁 ${dirHandle.name} · ${meta.dialect}/${meta.gender} · ${meta.speaker}`;
+    $("folderName").textContent = `Folder: ${dirHandle.name} · ${meta.dialect}/${meta.gender} · ${meta.speaker}`;
+    idx = firstUnrecorded();
+    render();
+  });
+
+  // ---------- online-only mode (phones / any browser; no local folder) ----------
+  $("onlineBtn") && $("onlineBtn").addEventListener("click", async () => {
+    refreshSetup();
+    if (!uploadCfg.url) { alert("Enter the Server URL under 'Upload to EYEWAZ server' first."); return; }
+    dirHandle = null;
+    done.clear();
+    // Resume: ask the server which lines this speaker already uploaded.
+    try {
+      const u = new URL(uploadCfg.url.replace(/\/+$/, "") + "/api/voicebank/done");
+      u.searchParams.set("lang", meta.dialect);
+      u.searchParams.set("speaker", slug(meta.speaker));
+      if (uploadCfg.key) u.searchParams.set("key", uploadCfg.key);
+      const r = await fetch(u);
+      if (r.ok) {
+        const d = await r.json();
+        (d.ids || []).forEach((sid) => {
+          const i = parseInt(sid, 10) - 1;
+          if (i >= 0 && i < S.length) done.add(i);
+        });
+      }
+    } catch (_) { /* offline check failed — start from the top, uploads still dedupe */ }
+    $("setup").hidden = true;
+    $("rec").hidden = false;
+    $("folderName").textContent = `Online: ${meta.dialect}/${meta.gender} · ${meta.speaker}`;
     idx = firstUnrecorded();
     render();
   });
@@ -173,19 +203,33 @@
   async function save() {
     if (!lastBlob) return;
     const curIdx = idx, id = pad(curIdx + 1), text = S[curIdx], blob = lastBlob;
+
+    // Online-only mode: the upload IS the save — only advance once it lands.
+    if (!dirHandle) {
+      setStatus("Uploading " + id + "...", "warn");
+      try { await uploadClip(id, text, blob); }
+      catch (e) { setStatus("Upload failed: " + e.message + " — check your connection and press Save again.", "err"); return; }
+      done.add(curIdx);
+      clearTake();
+      setStatus("Uploaded " + id + " to the voice bank", "ok");
+      idx = (curIdx + 1 < S.length) ? curIdx + 1 : curIdx;
+      render();
+      return;
+    }
+
+    // Folder mode: save locally first, then best-effort upload.
     try {
       const fh = await dirHandle.getFileHandle(id + ".wav", { create: true });
       const w = await fh.createWritable(); await w.write(blob); await w.close();
     } catch (e) { setStatus("Could not write file: " + e.message, "err"); return; }
     done.add(curIdx);
     clearTake();
-    setStatus("Saved " + id + ".wav ✓", "ok");
+    setStatus("Saved " + id + ".wav", "ok");
     idx = (curIdx + 1 < S.length) ? curIdx + 1 : curIdx;
     render();
-    // Optional: also push to the online voice bank.
     if (uploadCfg.url) {
-      try { await uploadClip(id, text, blob); setStatus(`Saved ${id}.wav ✓ + uploaded ☁`, "ok"); }
-      catch (e) { setStatus(`Saved ${id}.wav ✓ (upload failed: ${e.message})`, "warn"); }
+      try { await uploadClip(id, text, blob); setStatus(`Saved ${id}.wav — saved and uploaded`, "ok"); }
+      catch (e) { setStatus(`Saved ${id}.wav (upload failed: ${e.message})`, "warn"); }
     }
   }
 

@@ -46,7 +46,7 @@
 </head>
 <body>
 <header>
-  <strong>🎙️ EYEWAZ Voice Recorder</strong>
+  <strong>EYEWAZ Voice Recorder</strong>
   <span class="sp"></span>
   <span id="hdrProgress" class="progress" style="color:#fff"></span>
 </header>
@@ -78,7 +78,7 @@
     <div class="row" style="margin-bottom:10px">
       <label for="scriptFile">Script (optional):</label>
       <input id="scriptFile" type="file" accept=".txt" />
-      <span class="hint" id="scriptInfo">Default: 81 Urdu lines. Load a .txt (one sentence per line) to record a dialect-specific script.</span>
+      <span class="hint" id="scriptInfo">Default: 514 Urdu lines. Load a .txt (one sentence per line) to record a dialect-specific script.</span>
     </div>
     <label style="display:flex;gap:8px;align-items:flex-start;font-weight:500;margin:8px 0">
       <input id="consent" type="checkbox" style="margin-top:4px" />
@@ -98,10 +98,12 @@
     </details>
     <div class="row">
       <button class="primary" id="pickBtn" disabled>Choose / create this speaker's folder…</button>
+      <button class="ghost" id="onlineBtn" disabled>Record online only (no folder)</button>
       <span class="hint" id="suggestName"></span>
     </div>
-    <p class="hint" id="folderHint">Pick (or make) an <b>empty</b> folder named like the suggestion above. Clips
-      <code>0001.wav…</code>, <code>metadata.csv</code> and <code>speaker.json</code> are written there. Use <b>Chrome or Edge</b>.</p>
+    <p class="hint" id="folderHint">On a computer: pick (or make) an <b>empty</b> folder — clips also save locally.
+      On a <b>phone</b> (or any browser): fill in the Server URL above and use <b>Record online only</b> —
+      every clip goes straight to the voice bank, and you can resume any time from any device.</p>
     <p class="hint">Quiet room, mic ~a hand's width away, read naturally. Records exactly the line shown — the
       transcript is that line. Record the same speaker through the whole script.</p>
   </div>
