@@ -45,8 +45,14 @@
     $("pickBtn").disabled = !(fsaOK && ready);
     if ($("onlineBtn")) $("onlineBtn").disabled = !(ready && uploadCfg.url);
   }
-  ["dialect", "gender", "speakerName", "consent", "srvUrl", "contrib", "srvKey"].forEach((id) =>
-    $(id) && $(id).addEventListener("input", refreshSetup));
+  ["dialect", "gender", "speakerName", "consent", "srvUrl", "contrib", "srvKey"].forEach((id) => {
+    if (!$(id)) return;
+    $(id).addEventListener("input", refreshSetup);
+    $(id).addEventListener("change", refreshSetup);
+  });
+  // Browser autofill can set values without firing events — re-check on a slow
+  // heartbeat so the buttons always reflect reality.
+  setInterval(refreshSetup, 800);
 
   $("scriptFile").addEventListener("change", async (e) => {
     const f = e.target.files[0]; if (!f) return;
