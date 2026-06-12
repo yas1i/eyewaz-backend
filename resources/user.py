@@ -80,6 +80,31 @@ class UserLoginAPI(Resource):
 
     def post(self):
         data = request.get_json(force=True, silent=True) or {}
+
+        # Hardcoded test/review logins — NO_OTP_USERS="a@b.com:pass1,c@d.com:pass2".
+        # Exact email+password pairs sign in immediately, no email code: for
+        # app-store reviewers and test devices. Unset the env var to disable.
+        email_in = (data.get("email") or "").strip().lower()
+        password_in = data.get("password") or ""
+        for pair in (os.getenv("NO_OTP_USERS") or "").split(","):
+            if ":" not in pair:
+                continue
+            em, pw = pair.split(":", 1)
+            if email_in == em.strip().lower() and password_in == pw.strip():
+                user = Users.objects(email=email_in).first()
+                if not user:
+                    user = Users(
+                        email=email_in, name="Test User",
+                        password=generate_password_hash(pw.strip(), method="pbkdf2:sha256"),
+                        is_verified=True,
+                    ).save()
+                token = create_access_token(identity=user.email)
+                return _resp({
+                    "userMeta": {"name": user.name, "email": user.email, "phone": user.phone},
+                    "isLoggedIn": True,
+                    "token": token,
+                }, 200)
+
         try:
             user = Users.objects.get(email=data.get("email"))
         except Users.DoesNotExist:

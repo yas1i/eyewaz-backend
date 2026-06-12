@@ -376,6 +376,12 @@ $("#loginForm").addEventListener("submit", async (e) => {
       method: "POST", auth: false,
       body: { email: $("#loginEmail").value.trim(), password: $("#loginPassword").value },
     });
+    if (data && data.token) {   // test/review accounts sign in directly, no code
+      setToken(data.token);
+      announce("Welcome!", "ok");
+      enterApp();
+      return;
+    }
     goToOtp($("#loginEmail").value.trim(), data);
   } catch (err) {
     showAuthError(err.message === "Invalid credentials"
