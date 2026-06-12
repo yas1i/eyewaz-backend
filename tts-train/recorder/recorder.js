@@ -44,6 +44,16 @@
     const ready = $("consent").checked && meta.speaker.length > 0;
     $("pickBtn").disabled = !(fsaOK && ready);
     if ($("onlineBtn")) $("onlineBtn").disabled = !(ready && uploadCfg.url);
+    // A disabled button should explain itself.
+    if ($("readyHint")) {
+      const missing = [];
+      if (!meta.speaker.length) missing.push("type the speaker name");
+      if (!$("consent").checked) missing.push("tick the consent box");
+      if (!uploadCfg.url) missing.push("set the server URL (advanced options)");
+      $("readyHint").textContent = missing.length
+        ? "To start: " + missing.join(", ") + "."
+        : "Ready — press a button above to begin.";
+    }
   }
   ["dialect", "gender", "speakerName", "consent", "srvUrl", "contrib", "srvKey"].forEach((id) => {
     if (!$(id)) return;
@@ -69,6 +79,26 @@
   if ($("srvUrl") && !$("srvUrl").value && /^https?:$/.test(location.protocol)) {
     $("srvUrl").value = location.origin;
   }
+  // Share-link prefills: /record?key=XYZ&lang=punjabi&speaker=ahmed&gender=female
+  // The organiser puts the voice-bank key in the link; contributors type nothing.
+  // The key is remembered on this device for next time.
+  try {
+    const q = new URLSearchParams(location.search);
+    if (q.get("key")) localStorage.setItem("eyewaz_vb_key", q.get("key"));
+    const savedKey = localStorage.getItem("eyewaz_vb_key");
+    if (savedKey && $("srvKey") && !$("srvKey").value) $("srvKey").value = savedKey;
+    if (q.get("lang") && $("dialect")) {
+      const v = q.get("lang").toLowerCase();
+      if ([...$("dialect").options].some((o) => o.value === v)) $("dialect").value = v;
+    }
+    if (q.get("gender") && $("gender")) {
+      const g = q.get("gender").toLowerCase();
+      if (g === "male" || g === "female") $("gender").value = g;
+    }
+    if (q.get("speaker") && $("speakerName") && !$("speakerName").value) {
+      $("speakerName").value = q.get("speaker");
+    }
+  } catch (_) {}
   if ($("scriptInfo")) {
     $("scriptInfo").innerHTML = "<b>Script:</b> EYEWAZ Urdu — " + S.length +
       " sentences (built in). Recording another language? Load a custom script under advanced options.";
