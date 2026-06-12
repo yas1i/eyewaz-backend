@@ -1743,7 +1743,7 @@ async function loadDialects() {
     btn.className = "dialect-item" + (active ? " is-active" : "") + (locked ? " is-locked" : "");
     btn.setAttribute("role", "listitem");
     let badge;
-    if (premium) badge = `<span class="dialect-badge premium">${locked ? "Premium 🔒" : "Premium"}</span>`;
+    if (premium) badge = `<span class="dialect-badge premium">${locked ? "Premium · locked" : "Premium"}</span>`;
     else if (live) badge = `<span class="dialect-badge live">Free</span>`;
     else badge = `<span class="dialect-badge soon">Coming soon</span>`;
     btn.innerHTML =
