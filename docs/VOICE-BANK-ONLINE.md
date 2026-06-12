@@ -53,9 +53,13 @@ cloud).
 - **Pilot:** ~6 min (proves the pipeline; rough).
 - **Good:** 30–60+ min per speaker, clean and consistent.
 
+## Phone / any-browser mode (built)
+Contributors without Chrome/Edge or on phones use **Record online only** at
+`/record`: no folder needed, every clip uploads straight to the bank, and
+`GET /api/voicebank/done?lang=&speaker=` lets the recorder resume across
+devices/sessions.
+
 ## Roadmap (not yet built)
-- **Upload-only mode** so contributors on phones (no local folder / File System
-  Access) can record and submit.
 - A small **admin dashboard** at `/record` showing `stats` live.
 - One-click **“export + launch training”** that kicks a cloud GPU job (today the
   GPU step is the Kaggle/Colab notebook — the server can’t train on CPU).

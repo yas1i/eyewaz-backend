@@ -20,7 +20,7 @@ from resources.billing import (
     StripeConfigAPI, StripeCheckoutAPI, StripeWebhookAPI,
 )
 from resources.dialects import DialectsAPI, DialectCloneAPI
-from resources.voicebank import VoiceBankClipAPI, VoiceBankStatsAPI, VoiceBankExportAPI
+from resources.voicebank import VoiceBankClipAPI, VoiceBankStatsAPI, VoiceBankExportAPI, VoiceBankDoneAPI
 from resources.webauthn_res import (
     WebAuthnRegisterOptions, WebAuthnRegisterVerify,
     WebAuthnLoginOptions, WebAuthnLoginVerify,
@@ -57,6 +57,7 @@ def initialize_routes(api):
     api.add_resource(DialectCloneAPI, "/api/dialects/clone")
     api.add_resource(VoiceBankClipAPI, "/api/voicebank/clip")
     api.add_resource(VoiceBankStatsAPI, "/api/voicebank/stats")
+    api.add_resource(VoiceBankDoneAPI, "/api/voicebank/done")
     api.add_resource(VoiceBankExportAPI, "/api/voicebank/export")
     api.add_resource(PayPalConfigAPI, "/api/paypal/config")
     api.add_resource(PayPalActivateAPI, "/api/paypal/activate")
