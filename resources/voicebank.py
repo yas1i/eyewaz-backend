@@ -33,6 +33,30 @@ from database.models import VoiceClip
 VB_DIR = os.path.join(storage.UPLOAD_DIR, "voicebank")
 os.makedirs(VB_DIR, exist_ok=True)
 
+MAX_CLIP_BYTES = 20 * 1024 * 1024   # 20 MB per clip is plenty for one sentence
+
+# Optional S3-compatible object storage (Backblaze B2 / Cloudflare R2) so the
+# bank survives restarts on disk-less hosts like Render's free tier. Configured
+# entirely via env: S3_BUCKET + S3_ENDPOINT + S3_ACCESS_KEY_ID +
+# S3_SECRET_ACCESS_KEY (optional S3_REGION). Unset -> local filesystem.
+_S3_CLIENT = None
+
+
+def _s3():
+    global _S3_CLIENT
+    if not os.getenv("S3_BUCKET"):
+        return None
+    if _S3_CLIENT is None:
+        import boto3
+        _S3_CLIENT = boto3.client(
+            "s3",
+            endpoint_url=os.getenv("S3_ENDPOINT"),
+            region_name=os.getenv("S3_REGION") or None,
+            aws_access_key_id=os.getenv("S3_ACCESS_KEY_ID"),
+            aws_secret_access_key=os.getenv("S3_SECRET_ACCESS_KEY"),
+        )
+    return _S3_CLIENT
+
 
 def _slug(s):
     return re.sub(r"[^a-z0-9]+", "-", (s or "").strip().lower()).strip("-") or "anon"
@@ -42,10 +66,10 @@ def _resp(payload, status):
     return Response(json.dumps(payload), status=status, mimetype="application/json")
 
 
-def _duration(path):
+def _duration_bytes(data):
     try:
         import soundfile as sf
-        info = sf.info(path)
+        info = sf.info(io.BytesIO(data))
         return round(info.frames / float(info.samplerate), 3)
     except Exception:
         return 0.0
@@ -72,19 +96,29 @@ class VoiceBankClipAPI(Resource):
         if not (speaker and sentence_id and transcript):
             return _resp({"message": "Missing speaker, sentence_id or transcript."}, 400)
 
-        rel_dir = os.path.join("voicebank", lang, speaker)
-        abs_dir = os.path.join(storage.UPLOAD_DIR, rel_dir)
-        os.makedirs(abs_dir, exist_ok=True)
-        fname = f"{sentence_id}.wav"
-        abs_path = os.path.join(abs_dir, fname)
-        request.files["audio"].save(abs_path)
+        data = request.files["audio"].read()
+        if not data:
+            return _resp({"message": "Empty audio upload."}, 400)
+        if len(data) > MAX_CLIP_BYTES:
+            return _resp({"message": "Clip too large."}, 413)
 
-        dur = _duration(abs_path)
+        rel_path = f"voicebank/{lang}/{speaker}/{sentence_id}.wav"
+        s3 = _s3()
+        if s3:
+            s3.put_object(Bucket=os.getenv("S3_BUCKET"), Key=rel_path,
+                          Body=data, ContentType="audio/wav")
+        else:
+            abs_path = os.path.join(storage.UPLOAD_DIR, rel_path)
+            os.makedirs(os.path.dirname(abs_path), exist_ok=True)
+            with open(abs_path, "wb") as fh:
+                fh.write(data)
+
+        dur = _duration_bytes(data)
         # One clip per (lang, speaker, sentence_id): re-recording replaces it.
         VoiceClip.objects(lang=lang, speaker=speaker, sentence_id=sentence_id).delete()
         VoiceClip(
             lang=lang, speaker=speaker, gender=gender, sentence_id=sentence_id,
-            transcript=transcript, filename=os.path.join(rel_dir, fname),
+            transcript=transcript, filename=rel_path,
             duration=dur, consent_at=datetime.utcnow(), contributor=contributor,
         ).save()
         return _resp({"ok": True, "lang": lang, "speaker": speaker,
@@ -148,15 +182,24 @@ class VoiceBankExportAPI(Resource):
             return _resp({"message": "No clips for that language/speaker."}, 404)
 
         name = f"dataset-{lang}" + (f"-{_slug(speaker)}" if speaker else "")
+        s3 = _s3()
         buf = io.BytesIO()
         with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
             meta = []
             for i, c in enumerate(clips, 1):
                 cid = f"{i:04d}"
-                src = os.path.join(storage.UPLOAD_DIR, c.filename)
-                if not os.path.exists(src):
-                    continue
-                z.write(src, arcname=f"{name}/{cid}.wav")
+                if s3:
+                    try:
+                        body = s3.get_object(Bucket=os.getenv("S3_BUCKET"),
+                                             Key=c.filename)["Body"].read()
+                    except Exception:
+                        continue
+                    z.writestr(f"{name}/{cid}.wav", body)
+                else:
+                    src = os.path.join(storage.UPLOAD_DIR, c.filename)
+                    if not os.path.exists(src):
+                        continue
+                    z.write(src, arcname=f"{name}/{cid}.wav")
                 meta.append(f"{cid}|{c.transcript}")
             z.writestr(f"{name}/metadata.csv", "\n".join(meta) + "\n")
         buf.seek(0)
