@@ -26,3 +26,4 @@ beautifulsoup4
 anthropic
 stripe
 webauthn
+boto3
