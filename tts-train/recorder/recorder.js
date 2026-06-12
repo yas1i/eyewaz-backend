@@ -54,9 +54,19 @@
     const lines = txt.split(/\r?\n/).map((l) => l.trim()).filter((l) => l && !l.startsWith("#"));
     if (lines.length) {
       S = lines;
-      $("scriptInfo").textContent = `Loaded ${lines.length} lines from ${f.name}.`;
+      $("scriptInfo").innerHTML = `<b>Script:</b> ${f.name} — ${lines.length} sentences (custom).`;
     }
   });
+  // Recordists shouldn't have to type anything we already know: the upload
+  // server is wherever this page is served from, and the built-in script is
+  // the default.
+  if ($("srvUrl") && !$("srvUrl").value && /^https?:$/.test(location.protocol)) {
+    $("srvUrl").value = location.origin;
+  }
+  if ($("scriptInfo")) {
+    $("scriptInfo").innerHTML = "<b>Script:</b> EYEWAZ Urdu — " + S.length +
+      " sentences (built in). Recording another language? Load a custom script under advanced options.";
+  }
   refreshSetup();
 
   // ---------- folder ----------

@@ -75,26 +75,24 @@
       <label for="speakerName">Speaker name / ID:</label>
       <input id="speakerName" type="text" placeholder="e.g. ahmed-lahore" style="flex:1;min-width:160px;padding:8px;border:1px solid #cdd6cf;border-radius:8px;font:inherit" />
     </div>
-    <div class="row" style="margin-bottom:10px">
-      <label for="scriptFile">Script (optional):</label>
-      <input id="scriptFile" type="file" accept=".txt" />
-      <span class="hint" id="scriptInfo">Default: 514 Urdu lines. Load a .txt (one sentence per line) to record a dialect-specific script.</span>
-    </div>
+    <p class="hint" id="scriptInfo" style="margin:4px 0 10px"></p>
     <label style="display:flex;gap:8px;align-items:flex-start;font-weight:500;margin:8px 0">
       <input id="consent" type="checkbox" style="margin-top:4px" />
       <span>The speaker <b>consents</b> to their voice being recorded and used by WAJD AI to build an
         EYEWAZ text-to-speech voice. (See the consent form in <code>docs/voice-bank/consent-form.md</code>.)</span>
     </label>
-    <details style="margin:8px 0">
-      <summary style="cursor:pointer;font-weight:600">Upload to EYEWAZ server (optional — for online collection)</summary>
-      <p class="hint">Leave blank to save only to your folder. With a URL set, each clip is also sent to
-        the online voice bank so recordings from every province collect in one place.</p>
-      <div class="row" style="margin:6px 0"><label for="srvUrl">Server URL</label>
-        <input id="srvUrl" type="url" placeholder="https://eyewaz.com" style="flex:1;min-width:160px;padding:8px;border:1px solid #cdd6cf;border-radius:8px;font:inherit" /></div>
+    <details open style="margin:8px 0">
+      <summary style="cursor:pointer;font-weight:600">Online upload &amp; advanced options</summary>
+      <p class="hint">The server address is pre-filled. If your EYEWAZ contact gave you a
+        voice-bank key, enter it here — every saved clip then uploads to the online voice bank.</p>
+      <div class="row" style="margin:6px 0"><label for="srvKey">Voice-bank key</label>
+        <input id="srvKey" type="password" placeholder="from your EYEWAZ contact" style="flex:1;min-width:160px;padding:8px;border:1px solid #cdd6cf;border-radius:8px;font:inherit" /></div>
       <div class="row" style="margin:6px 0"><label for="contrib">Your name/email</label>
         <input id="contrib" type="text" placeholder="recordist@example.com" style="flex:1;min-width:160px;padding:8px;border:1px solid #cdd6cf;border-radius:8px;font:inherit" /></div>
-      <div class="row" style="margin:6px 0"><label for="srvKey">Voice-bank key</label>
-        <input id="srvKey" type="password" placeholder="if your server requires one" style="flex:1;min-width:160px;padding:8px;border:1px solid #cdd6cf;border-radius:8px;font:inherit" /></div>
+      <div class="row" style="margin:6px 0"><label for="srvUrl">Server URL</label>
+        <input id="srvUrl" type="url" placeholder="https://eyewaz.com" style="flex:1;min-width:160px;padding:8px;border:1px solid #cdd6cf;border-radius:8px;font:inherit" /></div>
+      <div class="row" style="margin:6px 0"><label for="scriptFile">Custom script (.txt)</label>
+        <input id="scriptFile" type="file" accept=".txt" /></div>
     </details>
     <div class="row">
       <button class="primary" id="pickBtn" disabled>Choose / create this speaker's folder…</button>
