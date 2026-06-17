@@ -21,6 +21,11 @@ __pycache__/
 
 /node_modules
 
+# Build artifacts + training data — not needed at runtime (keeps tts-train/recorder/)
+twa/
+tts-train/Awan/
+tts-train/*.zip
+
 # https://github.com/github/gitignore/blob/master/Global/macOS.gitignore
 
 # General
