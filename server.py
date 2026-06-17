@@ -135,6 +135,12 @@ RECORDER_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tts-tra
 
 
 @app.route("/record")
+def recorder_redirect():
+    # Redirect to the trailing-slash form so relative asset URLs in index.html
+    # (recorder.js, sentences.js) resolve under /record/ instead of the site root.
+    return redirect("/record/", code=308)
+
+
 @app.route("/record/")
 def recorder_index():
     return _no_cache(send_from_directory(RECORDER_DIR, "index.html"))
