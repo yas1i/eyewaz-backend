@@ -112,7 +112,7 @@ footer .copy { width: 100%; text-align: center; padding-top: 10px; border-top: 1
 .brand .elogo { color: var(--cream); }
 .hero-logo { display: flex; justify-content: center; margin-bottom: 8px; color: var(--blue-strong); }
 .hero-logo .elogo { height: 120px; }
-.elogo .eye-g { transform-origin: 25px 32px; animation: eyeCycle 7s ease-in-out infinite; }
+.elogo .eye-g { transform-origin: 25px 28px; animation: eyeCycle 7s ease-in-out infinite; }
 .elogo .w1 { animation: waveDrift 2.4s ease-in-out infinite; }
 .elogo .w2 { animation: waveDrift 2.4s ease-in-out .4s infinite; }
 .elogo .w3 { animation: waveDrift 2.4s ease-in-out .8s infinite; }

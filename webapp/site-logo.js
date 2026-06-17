@@ -9,14 +9,14 @@
     '<path d="M37 6c12 0 21 9 21 20 0 9-5 13-9 17-3 3-4 6-4 9 0 4-3 7-7 7-3 0-5-1-6-3"/>' +
     /* eye that wakes up + blinks */
     '<g class="eye-g">' +
-    '<path d="M7 32q18-15 36 0q-18 15-36 0z"/>' +
-    '<circle cx="25" cy="32" r="6"/>' +
-    '<circle cx="25" cy="32" r="2" fill="currentColor" stroke="none"/>' +
+    '<path d="M7 28q18-15 36 0q-18 15-36 0z"/>' +
+    '<circle cx="25" cy="28" r="6"/>' +
+    '<circle cx="25" cy="28" r="2" fill="currentColor" stroke="none"/>' +
     '</g>' +
-    /* sound waves floating inside the ear */
-    '<path class="w1" d="M46 26a7 7 0 0 1 0 12"/>' +
-    '<path class="w2" d="M50 22a13 13 0 0 1 0 20"/>' +
-    '<path class="w3" d="M54 18a19 19 0 0 1 0 28"/>' +
+    /* sound waves floating up through the ear opening */
+    '<path class="w1" d="M49 18a7 7 0 0 1 0 12"/>' +
+    '<path class="w2" d="M53 14a13 13 0 0 1 0 20"/>' +
+    '<path class="w3" d="M57 10a19 19 0 0 1 0 28"/>' +
     '</svg>';
   function swap() {
     document.querySelectorAll(".brand img").forEach(function (img) {
