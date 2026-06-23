@@ -31,8 +31,42 @@
     const sp = slug($("speakerName").value) || "speaker";
     return `dataset-${meta.dialect}-${meta.gender}-${sp}`;
   }
+
+  // Built-in scripts per dialect: Urdu lives in sentences.js, extra languages
+  // (Punjabi, Gujarati, ...) in scripts-extra.js. Selecting a dialect swaps the
+  // on-screen sentences to that language so the speaker reads the real script.
+  let scriptLang = "urdu";
+  let customLoaded = false;
+  function scriptFor(dialect) {
+    const sets = window.EYEWAZ_SCRIPTS || {};
+    const s = sets[dialect];
+    return (s && s.length) ? s.slice() : (window.EYEWAZ_SENTENCES || []).slice();
+  }
+  function updateScriptInfo() {
+    if (!$("scriptInfo") || customLoaded) return;
+    const sets = window.EYEWAZ_SCRIPTS || {};
+    const NAMES = { urdu: "Urdu", punjabi: "Punjabi (Shahmukhi)", gujarati: "Gujarati" };
+    const own = !!(sets[scriptLang] && sets[scriptLang].length);
+    const name = own ? (NAMES[scriptLang] || scriptLang) : "Urdu";
+    let msg = "<b>Script:</b> EYEWAZ " + name + ", " + S.length + " sentences (built in).";
+    if (!own && scriptLang !== "urdu") {
+      msg += " No dedicated " + scriptLang + " script yet, so this shows the Urdu set." +
+        " Load a custom script under advanced options to record " + scriptLang + ".";
+    }
+    $("scriptInfo").innerHTML = msg;
+  }
+  function applyScript(dialect) {
+    if (customLoaded || dialect === scriptLang) return;
+    scriptLang = dialect;
+    S = scriptFor(dialect);
+    idx = 0; done.clear();
+    updateScriptInfo();
+    if (!$("rec").hidden) render();
+  }
+
   function refreshSetup() {
     meta.dialect = $("dialect").value;
+    applyScript(meta.dialect);
     meta.gender = $("gender").value;
     meta.speaker = $("speakerName").value.trim();
     if ($("srvUrl")) {
@@ -70,6 +104,8 @@
     const lines = txt.split(/\r?\n/).map((l) => l.trim()).filter((l) => l && !l.startsWith("#"));
     if (lines.length) {
       S = lines;
+      customLoaded = true;
+      idx = 0;
       $("scriptInfo").innerHTML = `<b>Script:</b> ${f.name} — ${lines.length} sentences (custom).`;
     }
   });
@@ -99,10 +135,7 @@
       $("speakerName").value = q.get("speaker");
     }
   } catch (_) {}
-  if ($("scriptInfo")) {
-    $("scriptInfo").innerHTML = "<b>Script:</b> EYEWAZ Urdu — " + S.length +
-      " sentences (built in). Recording another language? Load a custom script under advanced options.";
-  }
+  updateScriptInfo();
   refreshSetup();
 
   // ---------- folder ----------
