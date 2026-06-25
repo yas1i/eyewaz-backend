@@ -136,7 +136,7 @@ html, body {
 
 .topbar {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 12px 20px; background: var(--accent); color: var(--brand-cream);
+  padding: 12px 20px; background: #1f3d3a; color: var(--brand-cream);
 }
 /* Brand lockup: ear/eye mark + GoodDogNew wordmark + tagline */
 .brand-lockup { display: flex; align-items: center; gap: 12px; }
@@ -153,7 +153,8 @@ html, body {
   font-size: .62rem; letter-spacing: 2px; text-transform: uppercase;
 }
 .topbar-actions { display: flex; align-items: center; gap: 10px; }
-.topbar-actions .link-btn { color: #143b44; font-weight: 700; }
+.topbar-actions .link-btn { color: var(--brand-cream); font-weight: 700; }
+.topbar .icon-btn { color: var(--brand-cream); }
 .topbar-actions .link-btn[aria-pressed="false"] { text-decoration: line-through; opacity: .7; }
 
 /* Headings carry the brand font for personality; body stays a legible sans. */
@@ -345,7 +346,7 @@ audio { width: 100%; margin-bottom: 14px; }
 .lib-item .lib-play { font-size: 1.4rem; }
 
 /* ===== EYEWAZ brand refinements (blue/cream identity) ===== */
-.topbar { background: var(--accent); }
+.topbar { background: #1f3d3a; }
 .tab.is-active { background: var(--accent-strong); border-color: var(--accent-strong); }
 .play-btn { background: var(--accent-strong); }
 .play-btn:hover { background: var(--accent-hover); }

@@ -5,7 +5,8 @@
       "namespace": "android_app",
       "package_name": "com.eyewaz.app",
       "sha256_cert_fingerprints": [
-        "REPLACE_WITH_YOUR_PLAY_APP_SIGNING_SHA256_FINGERPRINT"
+        "1A:E9:1E:9A:F2:4B:F0:49:8B:09:9E:5B:73:B6:FA:47:47:44:76:E6:EC:9A:8D:EE:77:15:FF:59:67:22:34:4E
+"
       ]
     }
   }
