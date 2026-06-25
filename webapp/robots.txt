@@ -1,4 +1,8 @@
 User-agent: *
 Allow: /
 Disallow: /api/
+Disallow: /record/
+Disallow: /files/
+Disallow: /app/assets/fonts/
+
 Sitemap: https://www.eyewaz.com/sitemap.xml

@@ -165,14 +165,17 @@ def assetlinks():
 
 
 @app.route("/<filename>")
-def google_site_verification(filename):
-    # Google Search Console verification file must be served at the site root,
-    # e.g. https://eyewaz.com/googleXXXX.html. Strictly limited to a
-    # google-prefixed .html that actually exists in webapp/ — anything else 404s
-    # and falls through (no path traversal: send_from_directory rejects "..").
-    if not (filename.startswith("google") and filename.endswith(".html")):
+def site_verification(filename):
+    # Search engine verification files served at the site root.
+    # Google: googleXXXX.html   Bing: BingSiteAuth.xml
+    # Strictly allow-listed patterns; anything else 404s.
+    # send_from_directory rejects ".." so no path traversal is possible.
+    is_google = filename.startswith("google") and filename.endswith(".html")
+    is_bing   = filename == "BingSiteAuth.xml"
+    if not (is_google or is_bing):
         abort(404)
-    return send_from_directory(WEBAPP_DIR, filename, mimetype="text/html")
+    mime = "application/xml" if is_bing else "text/html"
+    return send_from_directory(WEBAPP_DIR, filename, mimetype=mime)
 
 
 # @celery.task
