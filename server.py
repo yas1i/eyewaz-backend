@@ -90,6 +90,11 @@ def robots_txt():
     return send_from_directory(WEBAPP_DIR, "robots.txt", mimetype="text/plain")
 
 
+@app.route("/BingSiteAuth.xml")
+def bing_site_auth():
+    return send_from_directory(WEBAPP_DIR, "BingSiteAuth.xml", mimetype="application/xml")
+
+
 @app.route("/sitemap.xml")
 def sitemap_xml():
     return send_from_directory(WEBAPP_DIR, "sitemap.xml", mimetype="application/xml")
