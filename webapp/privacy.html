@@ -50,7 +50,7 @@
     <table>
       <tr><th>Data type</th><th>Why collected</th><th>Stored?</th></tr>
       <tr><td>Name, email address</td><td>Account creation and login</td><td>Yes, on our servers</td></tr>
-      <tr><td>Password (hashed)</td><td>Secure login</td><td>Yes, securely hashed — never plain text</td></tr>
+      <tr><td>Password (hashed)</td><td>Secure login</td><td>Yes, securely hashed (never plain text)</td></tr>
       <tr><td>Phone number (optional)</td><td>Optional account field</td><td>Yes, if provided</td></tr>
       <tr><td>Photos / documents you submit</td><td>OCR text extraction only</td><td>Not retained after processing</td></tr>
       <tr><td>Text you paste or type</td><td>To read aloud or translate</td><td>Only if you save to your library</td></tr>
@@ -60,7 +60,7 @@
       <tr><td>Saved library items</td><td>Your personal reading library</td><td>Yes, linked to your account</td></tr>
       <tr><td>Reminders</td><td>Spoken reminders you set</td><td>Yes, linked to your account</td></tr>
       <tr><td>App preferences (language, voice, speed)</td><td>Personalised experience</td><td>Yes, linked to your account</td></tr>
-      <tr><td>Passkey public key (Face ID / fingerprint)</td><td>Biometric unlock — we never receive biometric data</td><td>Public key only</td></tr>
+      <tr><td>Passkey public key (Face ID / fingerprint)</td><td>Biometric unlock: we never receive biometric data</td><td>Public key only</td></tr>
       <tr><td>Usage counts</td><td>Free plan limits</td><td>Yes, linked to your account</td></tr>
     </table>
 
@@ -98,7 +98,7 @@
     <h2>6. Security</h2>
     <ul>
       <li>All data is encrypted in transit using HTTPS/TLS.</li>
-      <li>Passwords are stored as bcrypt hashes — we cannot read your password.</li>
+      <li>Passwords are stored as bcrypt hashes. We cannot read your password.</li>
       <li>API keys and secrets are never shipped inside the app or exposed to users.</li>
     </ul>
 
