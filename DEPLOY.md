@@ -1,210 +1,265 @@
-# Deploying EYEWAZ to www.eyewaz.com
+# EYEWAZ Deploy & Troubleshooting Guide
 
-The backend serves both the API (`/api/*`) and the web client (`/app`) from one
-origin, so you deploy **one** service.
-
-## Decisions to make first
-
-1. **Host.** Recommended: **Azure App Service (Linux)** — you're already on Azure
-   (AI services), so networking/secrets/billing live in one place and it gives a
-   free managed TLS cert + custom domains. Easy alternatives: **Render**,
-   **Railway**, **Fly.io** (all support the included `Dockerfile`).
-2. **Database.** Create a **MongoDB Atlas** cluster (free M0 works to start) and
-   use its SRV connection string as `MONGO_URI`.
-3. **File storage.** `uploads/` (generated audio + uploads) is on local disk.
-   - Single instance on **Azure App Service**: the `/home` dir persists across
-     restarts — fine for an MVP (set the app to 1 instance, store under /home).
-   - For scale-out / durability: switch storage to **Azure Blob** (a small change
-     in `storage.py` — ask and we'll add an env toggle) and create an Azure
-     Storage account.
-4. **Domain.** You need to own **eyewaz.com** and be able to edit its DNS.
-
-## Environment variables (set on the host, never in git)
-
-Copy from `.env.example`. For production set:
-
-```
-MONGO_URI=<your Atlas SRV string>
-JWT_SECRET_KEY=<new long random string>      # regenerate, don't reuse dev
-FLASK_SECRET_KEY=<new long random string>
-PUBLIC_BASE_URL=https://www.eyewaz.com
-OAUTH_REDIRECT_BASE=https://www.eyewaz.com
-STATIC_DIR=templates/
-STORAGE_DIR=/home/uploads          # persistent on Azure App Service
-
-# Azure AI (same multi-service key)
-REGION, VISION_KEY, VISION_ENDPOINT, TRANSLATION_KEY,
-TEXT_TRANSLATION_ENDPOINT, SPEECH_KEY
-
-# Email
-SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, SMTP_FROM
-
-# Optional social login (set redirect URIs to https://www.eyewaz.com/api/auth/<p>/callback)
-GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, FACEBOOK_APP_ID, FACEBOOK_APP_SECRET
-```
-
-## Deploy to Azure App Service (container) — step by step
-
-```bash
-# 0. Login + pick your subscription
-az login
-az account set --subscription "<your subscription>"
-
-# 1. Resource group + Azure Container Registry (ACR)
-az group create -n eyewaz-rg -l eastus
-az acr create -n eyewazacr -g eyewaz-rg --sku Basic --admin-enabled true
-
-# 2. Build the image in ACR (no local Docker needed)
-az acr build -r eyewazacr -t eyewaz-backend:latest .
-
-# 3. App Service plan (Linux). B1 supports custom domains + /home persistence.
-az appservice plan create -n eyewaz-plan -g eyewaz-rg --is-linux --sku B1
-
-# 4. Web App from the image
-az webapp create -g eyewaz-rg -p eyewaz-plan -n eyewaz \
-  --deployment-container-image-name eyewazacr.azurecr.io/eyewaz-backend:latest
-
-# 5. Tell App Service the port + keep /home persistent
-az webapp config appsettings set -g eyewaz-rg -n eyewaz --settings \
-  WEBSITES_PORT=8080 WEBSITES_ENABLE_APP_SERVICE_STORAGE=true
-
-# 6. Set every app env var (from the list above) in one go
-az webapp config appsettings set -g eyewaz-rg -n eyewaz --settings \
-  MONGO_URI="..." JWT_SECRET_KEY="..." FLASK_SECRET_KEY="..." \
-  PUBLIC_BASE_URL="https://www.eyewaz.com" OAUTH_REDIRECT_BASE="https://www.eyewaz.com" \
-  STATIC_DIR="templates/" STORAGE_DIR="/home/uploads" \
-  REGION="eastus" VISION_KEY="..." VISION_ENDPOINT="..." \
-  TRANSLATION_KEY="..." TEXT_TRANSLATION_ENDPOINT="https://api.cognitive.microsofttranslator.com/" \
-  SPEECH_KEY="..." \
-  SMTP_HOST="smtp.gmail.com" SMTP_PORT="587" SMTP_USER="..." SMTP_PASSWORD="..." \
-  SMTP_FROM="EYEWAZ <...>"
-```
-
-Keep the App Service at **1 instance** while using local (/home) storage.
-Alternatives (Render/Railway/Fly): point them at this repo's `Dockerfile` and
-set the same env vars.
-
-## Domain + HTTPS (Azure)
-
-```bash
-# Show the values you need for DNS
-az webapp show -g eyewaz-rg -n eyewaz --query defaultHostName -o tsv      # e.g. eyewaz.azurewebsites.net
-az webapp deployment list-publishing-profiles ...   # not needed for domain
-```
-
-At your DNS provider for **eyewaz.com**, add:
-
-| Type  | Host | Value                                  |
-|-------|------|----------------------------------------|
-| CNAME | www  | `eyewaz.azurewebsites.net`             |
-| TXT   | asuid.www | (the verification ID from the next command) |
-
-```bash
-# Get the domain-verification ID
-az webapp show -g eyewaz-rg -n eyewaz --query customDomainVerificationId -o tsv
-# Add the custom domain, then a free managed certificate
-az webapp config hostname add -g eyewaz-rg --webapp-name eyewaz --hostname www.eyewaz.com
-az webapp config ssl create -g eyewaz-rg --name eyewaz --hostname www.eyewaz.com
-az webapp config ssl bind -g eyewaz-rg --name eyewaz --hostname www.eyewaz.com --ssl-type SNI
-```
-
-For the apex `eyewaz.com`, add an ALIAS/A record per your DNS provider (or a
-redirect to `www`). HTTPS certs are issued automatically once DNS resolves.
-
-## After deploy — checklist
-
-- [ ] `https://www.eyewaz.com/app` loads the web client
-- [ ] Sign up with a real email -> code arrives -> verified
-- [ ] Photo -> Urdu audio plays; web-page reader + Urdu translate work
-- [ ] Account page lists voices and saves settings
-- [ ] If using social login: redirect URIs updated in Google/Facebook consoles
-- [ ] Rotate any dev secrets (JWT/Flask keys; Azure key if it ever leaked)
-
-## Production hardening (recommended, optional)
-
-- Move file storage to Azure Blob for durability/scale.
-- Tighten CORS in `server.py` from `*` to `https://www.eyewaz.com`.
-- Add request logging/monitoring; set a real SMTP/transactional email sender.
-- Add a healthcheck endpoint and autoscale rules.
+Last updated: 26 June 2026
 
 ---
 
-# Clean-deploy checklist (lessons learned)
+## Current live setup
 
-Bugs that bit us once, and how to avoid them:
+| What | Where |
+|------|-------|
+| Backend | Render free tier, service `srv-d8gtdf3tqb8s73950ulg` |
+| Image | Docker Hub `aluminur/eyewaz-backend:latest` |
+| Domain | `www.eyewaz.com` |
+| DNS | Cloudflare (nameservers: adaline + garrett.ns.cloudflare.com) |
+| File storage | Backblaze B2, bucket `eyewaz-voicebank` (public), endpoint `https://s3.us-west-004.backblazeb2.com` |
+| Database | MongoDB Atlas |
 
-1. **Base image / deps** — Dockerfile must be Python 3.9+ (numpy 2 needs it) and
-   `apt install libsndfile1`. Keep `requirements.txt` lines un-merged
-   (a missing trailing newline once hid `beautifulsoup4` in a comment).
-2. **Render can't pull Azure ACR** — push the image to **Docker Hub** (public)
-   and deploy that, or build from a Git repo. ACR creds will always be "invalid".
-3. **Bind to `$PORT`** — the Dockerfile CMD uses `0.0.0.0:${PORT:-8080}`.
-4. **Every env var must be set** — a missing `STATIC_DIR` crashes boot. Do **not**
-   set `PUBLIC_BASE_URL` (leave file links relative). Do **not** set `SMTP_*`.
-5. **MongoDB Atlas → Network Access** — add `0.0.0.0/0` as **Permanent**
-   (NOT the temporary "delete after N hours" option, which expires and silently
-   re-blocks the host). App uses `serverSelectionTimeoutMS=5000` to fail fast.
-6. **Email** — PaaS hosts block outbound SMTP. Use **SendGrid** (HTTP API):
-   set `SENDGRID_API_KEY` + a verified `SENDGRID_FROM`. With neither SendGrid nor
-   SMTP set, codes appear on-screen (dev mode) and the app still works.
-7. **Free tier sleeps** (~1 min cold start) → feels broken. Upgrade to a paid
-   always-on instance for demos/users.
+---
 
-Production env vars (Render): `MONGO_URI`, `JWT_SECRET_KEY`, `FLASK_SECRET_KEY`,
-`STATIC_DIR=templates/`, `REGION`, `VISION_KEY`, `VISION_ENDPOINT`,
-`TRANSLATION_KEY`, `TEXT_TRANSLATION_ENDPOINT`, `SPEECH_KEY`,
-`SENDGRID_API_KEY`, `SENDGRID_FROM`, `ANTHROPIC_API_KEY`.
+## Normal deploy (code change → live)
 
-8. **Ask Eyewaz assistant** — `/api/assistant` calls Claude (`anthropic` SDK,
-   model `claude-opus-4-8`). Set `ANTHROPIC_API_KEY`. Without it the endpoint
-   returns a friendly 503 and the rest of the app keeps working.
-9. **Membership quotas** — Free = 3 commands/month (1 reminder, 3 recordings),
-   Monthly = 50/month, Super Max = 100/month. Resets each calendar month;
-   enforced server-side in `usage.py`.
-   Optional `DEV_PLAN_KEY` env enables `POST /api/dev/plan` to switch a user's
-   plan for testing before PayPal is wired (leave unset in production once live).
-10. **PayPal subscriptions** — dormant until configured (buttons fall back to a
-   "coming soon" placeholder). To switch on:
-   - Set `PAYPAL_CLIENT_ID`, `PAYPAL_SECRET`, `PAYPAL_ENV=sandbox` (then `live`),
-     `PAYPAL_CURRENCY=GBP`.
-   - Create the billing plans once (no redeploy needed — saved to the DB):
-     log in, open **Account**, click **⚙ Finish PayPal setup** and enter your
-     `DEV_PLAN_KEY` (or run `setupPayPal("DEV_PLAN_KEY")` in the console). PayPal
-     checkout goes live immediately. (Setting `PAYPAL_PLAN_MONTHLY` /
-     `PAYPAL_PLAN_SUPERMAX` in env still works and overrides the DB.)
-   - **Webhook is optional for go-live** — activation verifies the subscription
-     server-side on approval. Add it later for auto-renewal/cancel sync:
-     developer.paypal.com → `https://<host>/api/paypal/webhook` for
-     BILLING.SUBSCRIPTION.* + PAYMENT.SALE.COMPLETED; set `PAYPAL_WEBHOOK_ID`.
-   - Card data never touches the app (hosted Smart Buttons).
-11. **Stripe = card + Klarna** (one integration provides both). Dormant until set:
-   - Create two recurring **Prices** in the Stripe Dashboard (Monthly, Super Max);
-     set `STRIPE_SECRET_KEY`, `STRIPE_PRICE_MONTHLY`, `STRIPE_PRICE_SUPERMAX`.
-   - In Stripe Dashboard → Settings → **Payment methods**, enable **Card** and
-     **Klarna** (Klarna then appears automatically in Checkout). To force a set,
-     optionally `STRIPE_PMT_METHODS=card,klarna`.
-   - Add a webhook → `https://<host>/api/stripe/webhook` for
-     `checkout.session.completed`, `invoice.paid`, `customer.subscription.deleted`;
-     set its signing secret as `STRIPE_WEBHOOK_SECRET`.
-   - Checkout is Stripe-hosted (redirect) — card/Klarna details never touch the app.
-12. **Dialect voice bank** — `/api/dialects` lists Pakistani regional voices
-   (live ones validated against the Azure catalogue; the rest "coming soon").
-   To clone real dialect voices from native-speaker recordings: set
-   `ELEVENLABS_API_KEY` (+ optional `ELEVENLABS_MODEL`) and `DEV_PLAN_KEY`, then
-   in the browser run `localStorage.eyewaz_admin='1'` to reveal **Account →
-   Voice bank · admin**: pick dialect → upload sample → tick consent → Create.
-   The clone is stored (DialectVoice) and that dialect goes live immediately;
-   reading routes `el:<id>` voices through ElevenLabs. Recording script + consent
-   form: `docs/voice-bank/`.
-13. **Self-hosted Urdu TTS (open-source)** — run `tts-service/` (Meta MMS-TTS)
-   on your own host, then set `SELF_HOST_TTS_URL=https://your-tts-host`. A
-   "Urdu — open-source (free)" option then appears in the dialect picker and
-   reading routes `sh:` voices to your service (no Azure per-char cost). Same
-   engine powers the screen-reader surfaces (Android TTS engine, NVDA, Chrome).
-12. **Face ID / passkey sign-in** (WebAuthn) — works out of the box over HTTPS
-   (Render provides it). Passkeys are bound to the **domain** (RP ID), so if you
-   serve on both the onrender.com URL and `eyewaz.com`, set `WEBAUTHN_RP_ID`
-   (e.g. `eyewaz.com`) and `WEBAUTHN_ORIGIN` (e.g. `https://eyewaz.com`) to the
-   canonical domain so enrolled passkeys keep working. Otherwise they're derived
-   from the request host automatically. Biometrics never leave the device — only
-   a public key is stored (`webauthn` lib).
+```bash
+# 1. Make your changes in eyewaz-backend-main/
+
+# 2. Commit and push to GitHub (triggers the Render webhook automatically)
+git add .
+git commit -m "your message"
+git push origin main
+```
+
+That's it. The GitHub webhook fires → Render re-deploys from Docker Hub.
+
+**BUT** — GitHub push does NOT rebuild the Docker image. If you changed Python files,
+HTML, or anything in the repo, you must also rebuild and push the Docker image:
+
+```bash
+cd "/Users/wajd/Documents/Claude Projects/eyewaz-backend-main"
+docker build --platform linux/amd64 -t aluminur/eyewaz-backend:latest .
+docker push aluminur/eyewaz-backend:latest
+```
+
+Then trigger the deploy:
+```bash
+curl -X POST "https://api.render.com/deploy/srv-d8gtdf3tqb8s73950ulg?key=M9wZPZFt8sc"
+```
+
+Or just `git push` after the Docker push — the webhook fires the same deploy.
+
+---
+
+## Quick deploy reference
+
+| Action | Command |
+|--------|---------|
+| Build image | `docker build --platform linux/amd64 -t aluminur/eyewaz-backend:latest .` |
+| Push image | `docker push aluminur/eyewaz-backend:latest` |
+| Trigger deploy | `curl -X POST "https://api.render.com/deploy/srv-d8gtdf3tqb8s73950ulg?key=M9wZPZFt8sc"` |
+| Check if live | `curl -s https://www.eyewaz.com/privacy \| grep "Last updated"` |
+| Check Render logs | Render dashboard → eyewaz service → Logs |
+| Check deploy status | Render dashboard → eyewaz service → Events |
+
+---
+
+## Troubleshooting: site not updating after deploy
+
+### Step 1: Check Render Events tab (not Logs)
+- Logs shows gunicorn start/stop (sleep cycles) — that is NOT a deploy
+- Events tab shows actual deploys: "Deploy started", "Deploy live", "Deploy failed"
+- If last deploy is old, the new image was never pulled
+
+### Step 2: Check Docker Hub has the new image
+The deploy hook tells Render to pull `aluminur/eyewaz-backend:latest` from Docker Hub.
+If you haven't pushed a new image, Render just re-pulls the old one.
+Always rebuild + push before triggering a deploy.
+
+### Step 3: Check if Render is serving the right thing
+```bash
+curl -s https://www.eyewaz.com/privacy | grep "Last updated"
+```
+If this returns old content but deploy shows "Live", it's a Cloudflare cache issue.
+Go to Cloudflare → eyewaz.com → Caching → Purge Everything.
+
+### Step 4: Wrong field in Render Settings
+If you ever see the Docker Command field in Render → Settings → Deploy containing
+a URL or GitHub link, clear it immediately. That field should be empty (the
+Dockerfile CMD handles startup). A URL there causes the container to fail to start.
+
+---
+
+## Troubleshooting: site completely down (NXDOMAIN / nothing loads)
+
+This means a DNS problem. Work through these in order:
+
+### Check 1: DNS resolves at all
+```bash
+dig www.eyewaz.com @8.8.8.8 +short
+```
+Should return two Cloudflare IPs (like 104.21.x.x and 172.67.x.x).
+If it returns nothing: the DNS record is missing in Cloudflare.
+
+### Check 2: Root domain also resolves
+```bash
+dig eyewaz.com @8.8.8.8 +short
+```
+Should return Cloudflare IPs. If only NS records appear (no A/CNAME), the root
+domain has no record. Add in Cloudflare DNS:
+- Type: CNAME, Name: `@`, Target: `www.eyewaz.com`, Proxy: ON
+
+### Check 3: Cloudflare has the www record
+In Cloudflare → eyewaz.com → DNS, you need:
+```
+CNAME   www   eyewaz.onrender.com       (Proxy: ON)
+CNAME   @     www.eyewaz.com            (Proxy: ON)
+CNAME   files s3.us-west-004.backblazeb2.com  (Proxy: ON, for B2 CDN)
+```
+If www or @ is missing, add it. Changes take 1-5 minutes with Cloudflare.
+
+### Check 4: Nameservers correctly set at registrar
+Cloudflare nameservers for eyewaz.com are:
+- `adaline.ns.cloudflare.com`
+- `garrett.ns.cloudflare.com`
+
+If you ever change registrar or accidentally revert nameservers, all DNS breaks.
+Check at: `dig eyewaz.com NS @8.8.8.8 +short`
+
+### Check 5: Local DNS cache (your machine shows NXDOMAIN but others don't)
+```bash
+sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder
+```
+Or in Chrome: `chrome://net-internals/#dns` → Clear host cache.
+Note: your ISP/carrier DNS may take up to a few hours to see changes even after
+Google DNS (8.8.8.8) resolves correctly. Use a VPN or mobile data from a different
+carrier as a quick test.
+
+### Check 6: Render service is healthy
+If DNS resolves but the site returns 502/503:
+- Render free tier takes ~50 seconds to wake from sleep. Wait and retry.
+- Check Render Logs for Python errors or missing env vars.
+- Check Events tab for a failed deploy.
+
+---
+
+## Cloudflare DNS records (full list — re-create if lost)
+
+| Type | Name | Target | Proxy |
+|------|------|--------|-------|
+| CNAME | `www` | `eyewaz.onrender.com` | ON |
+| CNAME | `@` | `www.eyewaz.com` | ON |
+| CNAME | `files` | `s3.us-west-004.backblazeb2.com` | ON |
+
+---
+
+## Render environment variables
+
+Set these in Render → eyewaz service → Environment:
+
+```
+MONGO_URI                    MongoDB Atlas SRV string
+JWT_SECRET_KEY               Long random secret
+FLASK_SECRET_KEY             Long random secret
+PUBLIC_BASE_URL              https://www.eyewaz.com
+STATIC_DIR                   templates/
+WEBAUTHN_RP_ID               eyewaz.com
+WEBAUTHN_ORIGIN              https://www.eyewaz.com
+
+# Azure AI
+REGION                       eastus
+VISION_KEY
+VISION_ENDPOINT
+TRANSLATION_KEY
+TEXT_TRANSLATION_ENDPOINT    https://api.cognitive.microsofttranslator.com/
+SPEECH_KEY
+
+# Email (Brevo/SMTP)
+SMTP_HOST
+SMTP_PORT
+SMTP_USER
+SMTP_PASSWORD
+SMTP_FROM
+
+# Anthropic (Ask EYEWAZ assistant)
+ANTHROPIC_API_KEY
+
+# Backblaze B2
+S3_BUCKET                    eyewaz-voicebank
+S3_ENDPOINT                  https://s3.us-west-004.backblazeb2.com
+S3_REGION                    us-west-004
+S3_ACCESS_KEY_ID
+S3_SECRET_ACCESS_KEY
+# S3_CDN_URL                 https://files.eyewaz.com  (enable once Cloudflare CDN confirmed)
+```
+
+---
+
+## Known gotchas
+
+1. **Render Logs vs Events**: Logs only shows gunicorn start/stop (sleep cycles).
+   Deploy activity is in the Events tab. Many wasted hours confusing the two.
+
+2. **Docker Hub image must be rebuilt**: git push alone does not update the Docker
+   image. You must `docker build + docker push` first, then trigger the deploy.
+   The GitHub webhook only triggers Render to pull whatever is currently on Docker Hub.
+
+3. **Root domain CNAME**: Cloudflare supports CNAME on `@` (apex) via CNAME
+   flattening. Other DNS providers do not. If you ever move DNS away from Cloudflare,
+   use an A record pointing to Cloudflare/Render IPs instead.
+
+4. **Cloudflare proxied (orange cloud ON)**: Keep it ON. This gives free CDN,
+   DDoS protection, and the Bandwidth Alliance for B2 egress. Turning it off
+   (grey cloud) exposes your Render IP directly and breaks B2 egress savings.
+
+5. **Free tier cold start**: Render free tier spins down after 15 minutes of
+   inactivity. First request after sleep takes ~50 seconds. This is normal.
+   Users see a blank/slow load, then it works. Upgrade to paid to eliminate this.
+
+6. **Docker Command field**: In Render → Settings → Deploy, the Docker Command
+   field must be empty. Never paste a URL or GitHub link there. It overrides the
+   Dockerfile CMD and will cause the container to fail to start silently.
+
+7. **Missing env var = silent crash**: A missing required env var (MONGO_URI,
+   JWT_SECRET_KEY, SPEECH_KEY etc.) causes the app to boot but fail on first use.
+   Check Render Logs for ImportError or KeyError on startup.
+
+---
+
+## Lessons from 26 June 2026 outage
+
+What went wrong and what fixed it:
+
+1. **Render stuck on old image**: Manual Deploy button didn't work. Fix: use the
+   deploy hook URL directly with curl. Also rebuild the Docker image first.
+
+2. **Accidental GitHub URL in Docker Command field**: Pasted into the wrong field
+   during attempted settings change. Caused deploy to silently use wrong CMD.
+   Fix: clear the field in Render Settings → Deploy.
+
+3. **DNS broke after Cloudflare nameserver migration**: Moving nameservers from
+   IONOS to Cloudflare did not auto-import the existing DNS records. Result: both
+   `www.eyewaz.com` and `eyewaz.com` returned NXDOMAIN. Fix: manually add CNAME
+   records for `www` and `@` in Cloudflare DNS panel.
+
+4. **NXDOMAIN on phone (3G)**: Even after fixing DNS, the user's carrier DNS
+   hadn't propagated. Fix: wait, or test with `dig @8.8.8.8` to confirm global
+   resolution before assuming it's still broken.
+
+---
+
+## Android TWA
+
+- Package: `com.eyewaz.app`
+- Target SDK: 35, Compile SDK: 36
+- Theme: `#1f3d3a`
+- Play Console pending: Data Safety form, assetlinks.json SHA-256 (get from Play Console → App integrity)
+
+---
+
+## Voice bank / Piper TTS
+
+Recorder at `/record/` saves WAV files to B2: `voicebank/{lang}/{speaker}/{sentence_id}.wav`
+Keep this endpoint live. When self-hosted Piper voice is ready:
+1. Set `SELF_HOST_TTS_URL` on Render
+2. Set `SELF_HOST_TTS_KEY` on Render
+3. Remove `SPEECH_KEY` and `SPEECH_REGION` from Render
+4. Restart service
+5. Test voice output
