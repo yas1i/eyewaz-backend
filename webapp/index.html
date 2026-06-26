@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#7BB2BE" />
-  <title>EYEWAZ — See better. Live better.</title>
+  <title>EYEWAZ: See better. Live better.</title>
   <link rel="icon" type="image/png" href="/app/assets/eyewaz-favicon.png" />
   <link rel="apple-touch-icon" href="/app/assets/eyewaz-favicon.png" />
   <!-- PWA: installable + offline -->
@@ -252,7 +252,7 @@
         <!-- ===== Ask Eyewaz: hands-free conversational assistant (off until an owner enables it) ===== -->
         <div class="card" id="assistantCard" hidden>
           <h3><svg class="ic" aria-hidden="true"><use href="#ic-chat"/></svg> Ask Eyewaz</h3>
-          <p class="hint">Tap the microphone and speak — ask about your day, your list, or anything else. Eyewaz listens and answers aloud.</p>
+          <p class="hint">Tap the microphone and speak. Ask about your day, your list, or anything else. Eyewaz listens and answers aloud.</p>
           <div class="player-bar">
             <button id="asstMicBtn" class="primary-btn" aria-label="Hold or tap to talk to Eyewaz"><svg class="ic" aria-hidden="true"><use href="#ic-mic"/></svg> Talk to Eyewaz</button>
             <button id="asstStopBtn" class="round-btn" aria-label="Stop speaking" hidden><svg class="ic" aria-hidden="true"><use href="#ic-stop"/></svg></button>
@@ -438,7 +438,7 @@
       <!-- ===== Fast sign-in (Face ID / Touch ID) ===== -->
       <div class="card" id="faceIdCard" hidden>
         <h3><svg class="ic" aria-hidden="true"><use href="#ic-person"/></svg> Fast sign-in</h3>
-        <p class="hint">Turn on Face ID, Touch ID, or fingerprint to sign in instantly on this device — no password or code to type.</p>
+        <p class="hint">Turn on Face ID, Touch ID, or fingerprint to sign in instantly on this device. No password or code to type.</p>
         <button type="button" id="faceIdEnableBtn" class="primary-btn">Enable Face ID on this device</button>
         <p class="status" id="faceIdStatus" role="status"></p>
       </div>
@@ -490,7 +490,7 @@
       <!-- ===== Pakistani dialects / regional voices ===== -->
       <div class="card" id="dialectCard">
         <h3>Pakistani dialect &amp; voice</h3>
-        <p class="hint">Choose the regional voice EYEWAZ reads in. More dialects are being added — ones marked “coming soon” use standard Urdu for now.</p>
+        <p class="hint">Choose the regional voice EYEWAZ reads in. More dialects are being added. Ones marked “coming soon” use standard Urdu for now.</p>
         <div id="dialectList" class="dialect-list" role="list"></div>
         <p id="dialectStatus" class="status" role="status"></p>
       </div>
@@ -501,7 +501,7 @@
         <p class="hint">Turn a consenting native-speaker recording into a cloned dialect voice. Requires your <code>DEV_PLAN_KEY</code> and <code>ELEVENLABS_API_KEY</code> on the server.</p>
         <div class="field"><label for="vbDialect">Dialect</label><select id="vbDialect"></select></div>
         <div class="field"><label for="vbSpeaker">Speaker name</label><input id="vbSpeaker" type="text" autocomplete="off" placeholder="e.g. Ahmed K." /></div>
-        <div class="field"><label for="vbAudio">Voice sample (clear audio, ~1–2 min) — upload a file…</label><input id="vbAudio" type="file" accept="audio/*" /></div>
+        <div class="field"><label for="vbAudio">Voice sample (clear audio, 1 to 2 min), upload a file…</label><input id="vbAudio" type="file" accept="audio/*" /></div>
         <div class="field">
           <label>…or record now</label>
           <div class="player-bar" style="justify-content:flex-start; margin:8px 0;">
@@ -531,8 +531,8 @@
         <h3>Listening voice</h3>
         <fieldset class="voice engine">
           <legend>Voice engine</legend>
-          <label><input type="radio" name="engine" value="azure" /> Azure — premium, 150+ languages</label>
-          <label><input type="radio" name="engine" value="browser" /> Browser — free, uses your device's voices</label>
+          <label><input type="radio" name="engine" value="azure" /> Azure (premium, 150+ languages)</label>
+          <label><input type="radio" name="engine" value="browser" /> Browser (free, uses your device's voices)</label>
         </fieldset>
 
         <div class="field">
@@ -553,7 +553,7 @@
         <div class="field">
           <label for="accTodoWeekday">Weekday to-do list</label>
           <textarea id="accTodoWeekday" class="reader-text" style="min-height:120px"
-            placeholder="One thing per line — e.g.&#10;Take morning medication&#10;Call the doctor at 10am&#10;Lunch with Sara"></textarea>
+            placeholder="One thing per line, e.g.&#10;Take morning medication&#10;Call the doctor at 10am&#10;Lunch with Sara"></textarea>
         </div>
         <div class="field">
           <label for="accTodoWeekend">Weekend to-do list</label>
@@ -596,7 +596,7 @@
   <nav id="bottomBar" class="bottombar" aria-label="Main navigation" hidden>
     <button class="bb-btn" data-nav="library" aria-label="Library"><svg class="ic" aria-hidden="true"><use href="#ic-books"/></svg><span>Library</span></button>
     <button class="bb-btn" data-nav="folders" aria-label="Folders"><svg class="ic" aria-hidden="true"><use href="#ic-folder"/></svg><span>Folders</span></button>
-    <button class="bb-btn bb-add" data-nav="add" aria-label="Add — choose a reading mode"><svg class="ic" aria-hidden="true"><use href="#ic-add"/></svg></button>
+    <button class="bb-btn bb-add" data-nav="add" aria-label="Add: choose a reading mode"><svg class="ic" aria-hidden="true"><use href="#ic-add"/></svg></button>
     <button class="bb-btn" data-nav="favourites" aria-label="Favourites"><svg class="ic" aria-hidden="true"><use href="#ic-heart"/></svg><span>Favourites</span></button>
     <button class="bb-btn" data-nav="profile" aria-label="Profile"><svg class="ic" aria-hidden="true"><use href="#ic-person"/></svg><span>Profile</span></button>
   </nav>
