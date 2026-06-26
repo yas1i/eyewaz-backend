@@ -3,59 +3,118 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#7BB2BE" />
-  <title>EYEWAZ — Privacy Policy</title>
+  <meta name="robots" content="index, follow" />
+  <title>EYEWAZ Privacy Policy</title>
   <style>
-    :root { --blue:#7BB2BE; --cream:#F7F6E9; --ink:#1f2b2e; --deep:#2e6675; }
+    :root { --blue:#7BB2BE; --cream:#F7F6E9; --ink:#1f2b2e; --deep:#2e6675; --header:#1f3d3a; }
     * { box-sizing:border-box; }
     body { margin:0; background:var(--cream); color:var(--ink);
-      font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif; line-height:1.6; }
-    header { background:var(--blue); color:var(--cream); padding:18px 20px; }
-    header a { color:var(--cream); font-weight:700; text-decoration:none; }
-    main { max-width:720px; margin:0 auto; padding:24px 18px 64px; }
-    h1 { color:var(--deep); } h2 { color:var(--deep); margin-top:1.6em; }
+      font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif; line-height:1.7; font-size:17px; }
+    header { background:var(--header); color:#F7F6E9; padding:18px 20px; }
+    header a { color:#F7F6E9; font-weight:700; text-decoration:none; }
+    main { max-width:740px; margin:0 auto; padding:28px 18px 72px; }
+    h1 { color:var(--deep); font-size:1.9rem; }
+    h2 { color:var(--deep); margin-top:2em; font-size:1.25rem; border-bottom:2px solid #dde8e6; padding-bottom:4px; }
+    h3 { color:var(--deep); margin-top:1.4em; font-size:1.05rem; }
     a { color:var(--deep); }
-    .updated { color:#5f7176; }
-    code { background:#fff; padding:1px 4px; border-radius:4px; }
+    .updated { color:#5f7176; font-size:.95rem; }
+    .box { background:#fff; border:1px solid #cde3de; border-radius:12px; padding:20px 22px; margin:24px 0; }
+    .box.green { border-color:#7ecfa0; background:#f2fbf6; }
+    table { width:100%; border-collapse:collapse; margin:12px 0; font-size:.95rem; }
+    th { background:var(--header); color:#fff; text-align:left; padding:9px 12px; }
+    td { padding:9px 12px; border-bottom:1px solid #e0ece9; vertical-align:top; }
+    tr:last-child td { border-bottom:none; }
+    code { background:#fff; padding:1px 5px; border-radius:4px; font-size:.9em; }
+    ul { padding-left:22px; }
+    li { margin-bottom:5px; }
   </style>
 </head>
 <body>
-  <header><a href="/app">‹ Back to EYEWAZ</a></header>
+  <header><a href="/app">&#8249; Back to EYEWAZ</a></header>
   <main>
-    <h1>EYEWAZ — Privacy Policy</h1>
-    <p class="updated">Last updated: 6 June 2026.</p>
-    <p>EYEWAZ (“we”, WAJD AI) helps blind and low-vision users hear written text read aloud. This policy explains what we collect and why.</p>
+    <h1>EYEWAZ Privacy Policy</h1>
+    <p class="updated">Last updated: 25 June 2026. Applies to: EYEWAZ web app and Android app (com.eyewaz.app).</p>
+    <p>EYEWAZ, operated by WAJD AI, is a free accessibility tool that reads written text aloud for blind and low-vision users. This policy explains what data we collect, why, and your rights.</p>
 
-    <h2>What we collect</h2>
+    <div class="box green">
+      <strong>Android app summary (plain language)</strong>
+      <ul>
+        <li>The Android app contains <strong>no in-app purchases</strong>. We never charge through the app.</li>
+        <li>We do <strong>not</strong> sell your data or use it for advertising.</li>
+        <li>Photos and documents you scan are processed to extract text and are <strong>not stored</strong> on our servers beyond the moment of processing.</li>
+        <li>You can delete your account and all data at any time.</li>
+      </ul>
+    </div>
+
+    <h2>1. Data we collect and why</h2>
+    <table>
+      <tr><th>Data type</th><th>Why collected</th><th>Stored?</th></tr>
+      <tr><td>Name, email address</td><td>Account creation and login</td><td>Yes, on our servers</td></tr>
+      <tr><td>Password (hashed)</td><td>Secure login</td><td>Yes, securely hashed — never plain text</td></tr>
+      <tr><td>Phone number (optional)</td><td>Optional account field</td><td>Yes, if provided</td></tr>
+      <tr><td>Photos / documents you submit</td><td>OCR text extraction only</td><td>Not retained after processing</td></tr>
+      <tr><td>Text you paste or type</td><td>To read aloud or translate</td><td>Only if you save to your library</td></tr>
+      <tr><td>Web links you paste</td><td>To extract and read the page text</td><td>Not retained</td></tr>
+      <tr><td>Voice input (microphone)</td><td>Voice commands and Ask EYEWAZ assistant</td><td>Not recorded or stored</td></tr>
+      <tr><td>Voice recordings (voice bank, optional)</td><td>Only if you voluntarily contribute with consent</td><td>Yes, with your explicit consent</td></tr>
+      <tr><td>Saved library items</td><td>Your personal reading library</td><td>Yes, linked to your account</td></tr>
+      <tr><td>Reminders</td><td>Spoken reminders you set</td><td>Yes, linked to your account</td></tr>
+      <tr><td>App preferences (language, voice, speed)</td><td>Personalised experience</td><td>Yes, linked to your account</td></tr>
+      <tr><td>Passkey public key (Face ID / fingerprint)</td><td>Biometric unlock — we never receive biometric data</td><td>Public key only</td></tr>
+      <tr><td>Usage counts</td><td>Free plan limits</td><td>Yes, linked to your account</td></tr>
+    </table>
+
+    <h2>2. Permissions used by the Android app</h2>
+    <table>
+      <tr><th>Permission</th><th>Why it is needed</th></tr>
+      <tr><td>Camera</td><td>Photograph printed text to have it read aloud (OCR). Only used when you tap the camera button.</td></tr>
+      <tr><td>Microphone</td><td>Voice commands and the Ask EYEWAZ voice assistant. Only active when you tap the microphone button.</td></tr>
+      <tr><td>Internet</td><td>Required to connect to EYEWAZ services (OCR, translation, speech).</td></tr>
+    </table>
+    <p>No other permissions are requested. The app does <strong>not</strong> access contacts, location, storage, or any other sensitive data.</p>
+
+    <h2>3. No in-app purchases or financial data</h2>
+    <p>The EYEWAZ Android app (<code>com.eyewaz.app</code>) does <strong>not</strong> process any payments or subscriptions. All billing is handled exclusively through our website in a standard browser. The app never collects, transmits, or stores any financial data, card details, or payment information.</p>
+
+    <h2>4. Service providers we share data with</h2>
+    <table>
+      <tr><th>Provider</th><th>Purpose</th><th>Data shared</th></tr>
+      <tr><td>Microsoft Azure</td><td>OCR, translation, text-to-speech</td><td>Text content only, processed in transit</td></tr>
+      <tr><td>Anthropic</td><td>Ask EYEWAZ AI assistant</td><td>Your message text only</td></tr>
+      <tr><td>Render</td><td>App hosting</td><td>Standard server logs (IP, timestamp)</td></tr>
+      <tr><td>MongoDB Atlas</td><td>Database</td><td>Account and library data</td></tr>
+      <tr><td>Brevo (SendGrid)</td><td>Verification emails</td><td>Email address only</td></tr>
+    </table>
+    <p>We never share data with advertising networks or data brokers.</p>
+
+    <h2>5. Data retention and deletion</h2>
     <ul>
-      <li><strong>Account:</strong> name, email, optional phone, and a securely hashed password.</li>
-      <li><strong>Content you submit to be read:</strong> photos of text, documents/PDFs, pasted text, web links — processed to extract and speak the text. Audio you choose to save stays <strong>on your device</strong>; we don’t keep your source photos/documents beyond what’s needed to process them.</li>
-      <li><strong>Voice input:</strong> when you use voice commands / Ask EYEWAZ, audio is processed to understand your request.</li>
-      <li><strong>Voice-bank recordings (optional, consented):</strong> with consent, a recording is used to create a synthetic “dialect voice.” We store the consent record and resulting voice and delete both on request.</li>
-      <li><strong>Reminders &amp; preferences;</strong> and <strong>usage counts</strong> for plan limits.</li>
-      <li><strong>Biometric unlock (Face ID / fingerprint):</strong> handled by your device. We only store a passkey public key. <strong>We never receive your biometric data.</strong></li>
+      <li>You can delete your account at any time in the app under <strong>Account</strong>.</li>
+      <li>Deletion removes all your data from our servers within 30 days.</li>
+      <li>Voice-bank contributors may withdraw consent and we delete the cloned voice on request.</li>
+      <li>Scanned photos and documents are not stored beyond processing.</li>
     </ul>
 
-    <h2>How it’s used</h2>
-    <p>Only to provide the reading, translation, assistant, reminder, library, and membership features. We do <strong>not</strong> sell your data or use it for advertising.</p>
+    <h2>6. Security</h2>
+    <ul>
+      <li>All data is encrypted in transit using HTTPS/TLS.</li>
+      <li>Passwords are stored as bcrypt hashes — we cannot read your password.</li>
+      <li>API keys and secrets are never shipped inside the app or exposed to users.</li>
+    </ul>
 
-    <h2>Service providers</h2>
-    <p>We share the minimum needed with Microsoft Azure (OCR, translation, text-to-speech), Anthropic (assistant), ElevenLabs (voice cloning, if used), SendGrid (verification emails), PayPal/Stripe (payments — card details go to them, never to us), and our hosting/database (Render, MongoDB Atlas).</p>
+    <h2>7. Children</h2>
+    <p>EYEWAZ is not directed at children under 13 (or 16 in the EEA/UK). We do not knowingly collect data from children. If you believe a child has provided data, contact us and we will delete it promptly.</p>
 
-    <h2>Payments</h2>
-    <p>Processed by PayPal and Stripe. We store your plan and a subscription reference, not your card details.</p>
+    <h2>8. Your rights</h2>
+    <p>Depending on your location you may have rights to access, correct, delete, or port your data (GDPR Article 15-20; UK GDPR; CCPA). To exercise these rights or to request account deletion, email us at <a href="mailto:privacy@eyewaz.com">privacy@eyewaz.com</a> or use the in-app Account section.</p>
 
-    <h2>Data retention &amp; deletion</h2>
-    <p>Saved recordings stay on your device until you delete them. You can delete your account and data anytime in the app (Account) or by emailing us. Voice-bank speakers may withdraw consent and we delete the cloned voice.</p>
+    <h2>9. Changes to this policy</h2>
+    <p>We will update this page if our practices change and update the "Last updated" date. Continued use of the app after changes means you accept the updated policy.</p>
 
-    <h2>Children</h2>
-    <p>Not directed at children under 13 (16 in some regions) without a parent/guardian. Voice-bank speakers must be 18+ or have guardian consent.</p>
-
-    <h2>Security</h2>
-    <p>Data is encrypted in transit (HTTPS). Secrets are never shipped in the app.</p>
-
-    <h2>Your rights</h2>
-    <p>Access, correction, deletion, and where applicable portability/objection (GDPR/CCPA). Contact: <a href="mailto:privacy@eyewaz.com">privacy@eyewaz.com</a>.</p>
+    <h2>10. Contact</h2>
+    <p>WAJD AI<br>
+    Email: <a href="mailto:privacy@eyewaz.com">privacy@eyewaz.com</a><br>
+    Support: <a href="mailto:support@eyewaz.com">support@eyewaz.com</a></p>
   </main>
 </body>
 </html>
