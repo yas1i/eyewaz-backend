@@ -203,3 +203,36 @@ class SpeakAPI(Resource):
 
         return _json({"audio_url": stored.url, "truncated": len(text) > SPEAK_MAX_CHARS,
                       "voice": voice}, 200)
+
+
+class ScreenReaderAPI(Resource):
+    """Single-call translate-then-speak for the EYEWAZ Android screen reader.
+
+    Accepts any-language text, translates to Urdu, synthesises with Neural
+    TTS, and returns an audio URL — all in one round-trip so the Android
+    client never needs to chain two network calls.
+    """
+
+    SR_MAX_CHARS = 500  # screen elements are short; cap to keep latency low
+
+    @jwt_required()
+    def post(self):
+        data = request.get_json(force=True, silent=True) or {}
+        text = (data.get("text") or "").strip()[:self.SR_MAX_CHARS]
+        voice = data.get("voice", "ur-PK-UzmaNeural")
+        rate = float(data.get("rate", 1.0))
+
+        if not text:
+            return _json({"message": "No text provided."}, 400)
+
+        try:
+            urdu = " ".join(
+                translate(piece, "en", "ur") for piece in _split_for_translate(text)
+            )
+            audio = b""
+            for piece in _split_for_translate(urdu, 2500):
+                audio += synthesize(piece, voice, rate).audio_data
+            stored = storage.save_file(audio, "sr.mp3")
+            return _json({"audio_url": stored.url, "voice": voice}, 200)
+        except Exception as e:
+            return _json({"message": f"Screen reader TTS failed: {e}"}, 502)
