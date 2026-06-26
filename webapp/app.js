@@ -249,8 +249,6 @@ function showAuthForm(name) {
   $("#otpForm").hidden = name !== "otp";
   $("#forgotForm").hidden = name !== "forgot";
   $("#resetForm").hidden = name !== "reset";
-  // Social buttons only make sense on the initial login/signup steps.
-  $("#socialBlock").hidden = !(name === "login" || name === "signup");
   const headings = {
     login: "Welcome back", signup: "Create your account",
     otp: "Verify your email", forgot: "Reset your password", reset: "Reset your password",
@@ -282,13 +280,6 @@ document.addEventListener("click", (e) => {
   t.textContent = show ? "Hide" : "Show";
   t.setAttribute("aria-pressed", String(show));
   t.setAttribute("aria-label", show ? "Hide password" : "Show password");
-});
-
-// Social sign-in: full-page redirect into the provider's OAuth flow.
-document.querySelectorAll(".social-btn").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    window.location.href = "/api/auth/" + btn.dataset.provider + "/start";
-  });
 });
 
 // Forgot password: request a reset code.
@@ -2218,53 +2209,10 @@ function checkoutReturn() {
   }
 }
 
-// Handle the return from a social sign-in redirect (/app#token=... or #auth_error=...).
-function handleAuthRedirect() {
-  const hash = window.location.hash.slice(1);
-  if (!hash) return false;
-  const params = new URLSearchParams(hash);
-  const token = params.get("token");
-  const err = params.get("auth_error");
-  // Clean the URL so the token/error isn't left in the address bar.
-  history.replaceState(null, "", window.location.pathname);
-  if (token) {
-    setToken(token);
-    return true;
-  }
-  if (err) {
-    const msgs = {
-      google_not_configured: "Google sign-in isn't set up yet. Use email, or add Google credentials.",
-      facebook_not_configured: "Facebook sign-in isn't set up yet. Use email, or add Facebook credentials.",
-      apple_not_configured: "Apple sign-in isn't set up yet. Use email for now.",
-      cancelled: "Sign-in was cancelled.",
-      no_email: "That account didn't share an email address.",
-    };
-    showView("auth");
-    showAuthForm("login");
-    showAuthError(msgs[err] || "Could not sign in with that provider.");
-    return false;
-  }
-  return false;
-}
-
-// Grey out social buttons whose provider isn't configured on the server.
-async function annotateProviders() {
-  try {
-    const cfg = await api("/auth/providers", { auth: false });
-    document.querySelectorAll(".social-btn").forEach((btn) => {
-      if (cfg && cfg[btn.dataset.provider] === false) {
-        btn.title = "Not set up yet — uses email instead";
-        btn.querySelector("span:last-child").textContent += " (setup needed)";
-      }
-    });
-  } catch (_) { /* best effort */ }
-}
-
-if (handleAuthRedirect() || getToken()) {
+if (getToken()) {
   enterApp();
 } else {
   showView("auth");
-  annotateProviders();
 }
 
 /* PWA: register the service worker for install + offline app shell. */

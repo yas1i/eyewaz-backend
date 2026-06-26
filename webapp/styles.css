@@ -53,7 +53,6 @@ body.dark {
 }
 body.dark .card,
 body.dark .reader-controls,
-body.dark .social-btn,
 body.dark .field input,
 body.dark .field select,
 body.dark .reader-text,
@@ -210,17 +209,6 @@ h4 { font-size: 1.15rem; margin: 18px 0 6px; }
 .auth-links { margin: 12px 0 0; text-align: center; }
 .switch { text-align: center; }
 
-/* Social sign-in buttons — large, clear logos, strong border. */
-.social-btn {
-  display: flex; align-items: center; gap: 12px;
-  width: 100%; min-height: 56px; padding: 12px 18px; margin-bottom: 12px;
-  background: #fff; color: var(--text);
-  border: 2px solid var(--border); border-radius: 999px;
-  font-size: 1.1rem; font-weight: 700; cursor: pointer;
-}
-.social-btn:hover { background: var(--surface); }
-.social-btn .social-logo { display: inline-flex; width: 24px; justify-content: center; }
-.social-btn > span:last-child { flex: 1; text-align: center; margin-right: 24px; }
 
 .divider {
   display: flex; align-items: center; text-align: center;
@@ -351,21 +339,6 @@ audio { width: 100%; margin-bottom: 14px; }
 .play-btn { background: var(--accent-strong); }
 .play-btn:hover { background: var(--accent-hover); }
 
-/* Social sign-in as a centered round-icon row (like the mockup) */
-#socialBlock { text-align: center; }
-.social-btn {
-  position: relative;
-  display: inline-flex; width: 60px; height: 60px; min-height: 60px;
-  padding: 0; margin: 6px 10px; border-radius: 50%;
-  border: 2px solid var(--border); background: #fff;
-  align-items: center; justify-content: center;
-}
-.social-btn:hover { background: var(--surface); }
-.social-btn > span:last-child {        /* keep the label for screen readers only */
-  position: absolute; width: 1px; height: 1px; overflow: hidden;
-  clip: rect(0 0 0 0); margin: -1px; padding: 0; border: 0; white-space: nowrap;
-}
-.social-btn .social-logo { width: auto; margin: 0; }
 
 /* Library / My Books cards: play triangle + info + favourite heart */
 .lib-item {
@@ -784,7 +757,3 @@ body.dark .plan-card[data-plan="free"] { background: #0f2e23; }
 body.dark .plan-card[data-plan="monthly"] { background: #0f2e35; }
 body.dark .plan-card[data-plan="supermax"] { background: #33290f; }
 
-/* Google Play TWA build: hide social sign-in. Google blocks its OAuth flow in
-   wrapped-app contexts ("disallowed_useragent"), so the store build signs in
-   with email + code only — reviewers and users never hit a broken flow. */
-.twa-build #socialBlock { display: none !important; }
