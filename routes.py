@@ -11,7 +11,7 @@ from resources.documents import DocumentTransSpeechAPI, DocumentAPI
 from resources.documents import UpdateDocumentFavAPI, UpdateDocumentUnFavAPI
 from resources.playback import PausePlaybackAPI
 from resources.folder import Folder, FolderApi
-from resources.web import ReadUrlAPI, TranslateTextAPI, SpeakAPI
+from resources.web import ReadUrlAPI, TranslateTextAPI, SpeakAPI, ScreenReaderAPI
 from resources.assistant import AssistantAPI, AssistantConfigAPI
 from resources.billing import (
     UsageAPI, DevPlanAPI,
@@ -43,6 +43,7 @@ def initialize_routes(api):
     api.add_resource(ReadUrlAPI, "/api/read-url")
     api.add_resource(TranslateTextAPI, "/api/translate")
     api.add_resource(SpeakAPI, "/api/speak")
+    api.add_resource(ScreenReaderAPI, "/api/screen-reader")
     api.add_resource(ProfileAPI, "/api/profile")
     api.add_resource(VoicesAPI, "/api/voices")
     api.add_resource(AssistantAPI, "/api/assistant")
