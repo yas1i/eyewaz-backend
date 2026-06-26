@@ -57,6 +57,11 @@ def _bucket():
 
 
 def _b2_public_url(blob_name):
+    # If a Cloudflare CDN domain is configured, use it (zero egress cost via
+    # Bandwidth Alliance). Falls back to direct B2 endpoint otherwise.
+    cdn = os.getenv("S3_CDN_URL", "").rstrip("/")
+    if cdn:
+        return f"{cdn}/{blob_name}"
     endpoint = os.getenv("S3_ENDPOINT", "").rstrip("/")
     return f"{endpoint}/{_bucket()}/{blob_name}"
 
