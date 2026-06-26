@@ -112,12 +112,15 @@ def _to_bytes(file):
     """Accept a werkzeug FileStorage, a file-like object, or raw bytes."""
     if isinstance(file, (bytes, bytearray)):
         return bytes(file)
-    if hasattr(file, "read"):
-        try:
-            file.seek(0)
-        except (OSError, ValueError):
-            pass
-        return file.read()
+    # werkzeug FileStorage: use .stream directly to avoid __getattr__ surprises
+    stream = getattr(file, "stream", None) or file
+    try:
+        stream.seek(0)
+    except Exception:
+        pass
+    data = stream.read()
+    if isinstance(data, (bytes, bytearray)):
+        return bytes(data)
     raise TypeError(f"Unsupported file type for storage: {type(file)!r}")
 
 
@@ -139,9 +142,11 @@ def save_file(file, filename):
     """
     safe = secure_filename(filename) or "file"
     blob_name = f"{uuid.uuid4().hex[:8]}_{safe}"
-    data = _to_bytes(file)
+
+    dest = os.path.join(UPLOAD_DIR, blob_name)
 
     if _cloud_enabled():
+        data = _to_bytes(file)
         _s3().put_object(
             Bucket=_bucket(),
             Key=blob_name,
@@ -150,9 +155,15 @@ def save_file(file, filename):
         )
         return StoredFile(blob_name, cloud_url=_b2_public_url(blob_name))
 
-    dest = os.path.join(UPLOAD_DIR, blob_name)
-    with open(dest, "wb") as fh:
-        fh.write(data)
+    # Local mode: use werkzeug .save() if available (most efficient for uploads),
+    # otherwise fall back to reading bytes.
+    save_fn = getattr(file, "save", None)
+    if callable(save_fn):
+        save_fn(dest)
+    else:
+        data = _to_bytes(file)
+        with open(dest, "wb") as fh:
+            fh.write(data)
     return StoredFile(blob_name, path=dest)
 
 

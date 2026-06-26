@@ -197,9 +197,9 @@ class SpeakAPI(Resource):
             audio = b""
             for piece in _split_for_translate(capped, 2500):
                 audio += synthesize(piece, voice, rate).audio_data
+            stored = storage.save_file(audio, "speech.mp3")
         except Exception as e:
             return _json({"message": f"Could not generate audio: {e}"}, 502)
 
-        stored = storage.save_file(audio, "speech.mp3")
         return _json({"audio_url": stored.url, "truncated": len(text) > SPEAK_MAX_CHARS,
                       "voice": voice}, 200)
