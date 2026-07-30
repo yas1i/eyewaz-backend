@@ -30,12 +30,12 @@ MODEL = os.getenv("ASSISTANT_MODEL", "claude-opus-4-8")
 
 
 def _is_enabled():
-    """Owner toggle (off by default). Stored in AppSettings, set via admin."""
-    try:
-        s = AppSettings.objects(key="singleton").first()
-        return bool(s and s.assistant_enabled)
-    except Exception:
-        return False
+    """Retired for the 1.0.1 release: EYEWAZ runs no hosted AI model.
+
+    The owner toggle still writes to AppSettings, but the assistant stays off
+    until EYEWAZ has its own conversational engine to serve it from.
+    """
+    return False
 MAX_TOKENS = 1024
 MAX_TURNS = 12          # cap client-supplied history so the prompt stays bounded
 MAX_MSG_CHARS = 4000    # cap a single user utterance

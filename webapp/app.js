@@ -2168,32 +2168,11 @@ function enterApp() {
   applyAssistantConfig();
 }
 
-/* Assistant is off by default; show its card only when an owner has enabled it,
-   and offer an owner-key-gated toggle in the account view. */
-let _asstConfig = null;
+/* Ask Eyewaz is retired for this release, so its card never shows. */
 async function applyAssistantConfig() {
-  try { _asstConfig = await api("/assistant/config", { auth: false }); }
-  catch (_) { _asstConfig = { enabled: false }; }
-  const on = !!(_asstConfig && _asstConfig.enabled);
   const card = document.getElementById("assistantCard");
-  if (card) card.hidden = !on;
-  const btn = document.getElementById("asstToggleBtn");
-  if (btn) btn.textContent = on ? "Turn assistant OFF" : "Turn assistant ON";
+  if (card) card.hidden = true;
 }
-async function toggleAssistant() {
-  const s = document.getElementById("asstToggleStatus");
-  const key = window.prompt("Enter the owner key to toggle the assistant:");
-  if (!key) return;
-  const enable = !(_asstConfig && _asstConfig.enabled);
-  try {
-    const d = await api("/assistant/config", { method: "POST", body: { key, enabled: enable } });
-    _asstConfig = d;
-    if (s) { s.className = "status ok"; s.textContent = "Assistant is now " + (d.enabled ? "ON" : "OFF") + "."; }
-    applyAssistantConfig();
-  } catch (e) { if (s) { s.className = "status error"; s.textContent = e.message || "Could not toggle."; } }
-}
-document.getElementById("asstToggleBtn") &&
-  document.getElementById("asstToggleBtn").addEventListener("click", toggleAssistant);
 
 // React to a return from Stripe Checkout (?checkout=success|cancel).
 function checkoutReturn() {
