@@ -31,7 +31,7 @@ def _settings():
 
 
 def _paypal_plans():
-    """Plan ids from env first, else the DB (saved by /api/paypal/setup) —
+    """Plan ids from env first, else the DB (saved by /api/paypal/setup) ,
     so setup needs no env round-trip or redeploy."""
     m = os.getenv("PAYPAL_PLAN_MONTHLY")
     s = os.getenv("PAYPAL_PLAN_SUPERMAX")
@@ -75,7 +75,7 @@ class UsageAPI(Resource):
 
 
 class DevPlanAPI(Resource):
-    """TEST ONLY. Set a user's plan without paying — guarded by the DEV_PLAN_KEY
+    """TEST ONLY. Set a user's plan without paying: guarded by the DEV_PLAN_KEY
     env var (disabled entirely when that var is unset). Remove once PayPal is live.
     """
 
@@ -180,14 +180,14 @@ class PayPalSetupAPI(Resource):
             ids = paypal_api.create_product_and_plans(prices, data.get("currency"))
         except Exception as e:
             return _resp({"message": f"PayPal setup failed: {e}"}, 502)
-        # Persist to the DB so PayPal goes live immediately — no env edit / redeploy.
+        # Persist to the DB so PayPal goes live immediately: no env edit / redeploy.
         st = _settings()
         st.paypal_product_id = ids.get("product_id")
         st.paypal_plan_monthly = ids.get("monthly")
         st.paypal_plan_supermax = ids.get("supermax")
         st.save()
         return _resp({
-            "message": "PayPal plans created and saved. PayPal checkout is now live — no redeploy needed.",
+            "message": "PayPal plans created and saved. PayPal checkout is now live. No redeploy needed.",
             "PAYPAL_PLAN_MONTHLY": ids.get("monthly"),
             "PAYPAL_PLAN_SUPERMAX": ids.get("supermax"),
             "product_id": ids.get("product_id"),

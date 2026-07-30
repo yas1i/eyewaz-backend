@@ -43,7 +43,7 @@ PROVIDERS = {
         "secret_env": "FACEBOOK_APP_SECRET",
         "userinfo_auth": "param",
     },
-    # Apple uses a signed-JWT client secret and form_post callback — configure
+    # Apple uses a signed-JWT client secret and form_post callback: configure
     # APPLE_CLIENT_ID etc. to enable; treated as "not configured" until then.
     "apple": {
         "id_env": "APPLE_CLIENT_ID",

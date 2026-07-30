@@ -15,7 +15,7 @@ def _resp(payload, status):
 
 
 class WebAuthnRegisterOptions(Resource):
-    """Step 1 of enrolling a passkey — must be signed in first."""
+    """Step 1 of enrolling a passkey: must be signed in first."""
 
     @jwt_required()
     def post(self):
@@ -28,7 +28,7 @@ class WebAuthnRegisterOptions(Resource):
 
 
 class WebAuthnRegisterVerify(Resource):
-    """Step 2 — store the new passkey on the user."""
+    """Step 2: store the new passkey on the user."""
 
     @jwt_required()
     def post(self):
@@ -59,7 +59,7 @@ class WebAuthnRegisterVerify(Resource):
 
 
 class WebAuthnLoginOptions(Resource):
-    """Step 1 of signing in with a passkey (no password). Email optional —
+    """Step 1 of signing in with a passkey (no password). Email optional ,
     omit it for usernameless Face ID where the device picks the passkey."""
 
     def post(self):
@@ -76,7 +76,7 @@ class WebAuthnLoginOptions(Resource):
 
 
 class WebAuthnLoginVerify(Resource):
-    """Step 2 — verify the assertion and issue a normal JWT."""
+    """Step 2: verify the assertion and issue a normal JWT."""
 
     def post(self):
         data = request.get_json(force=True, silent=True) or {}

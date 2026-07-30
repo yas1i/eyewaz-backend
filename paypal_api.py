@@ -1,5 +1,5 @@
 """
-Thin PayPal REST helper for subscriptions (no PayPal SDK — just `requests`).
+Thin PayPal REST helper for subscriptions (no PayPal SDK: just `requests`).
 
 Card details never touch our app: the user approves on PayPal's hosted pages
 via the JS SDK Smart Buttons; we only verify the resulting subscription and

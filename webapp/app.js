@@ -45,7 +45,7 @@ if (IS_TWA) {
 
 /* ------------------------- Browser text-to-speech --------------------------- */
 // Uses the Web Speech API (speechSynthesis) so the app can read text aloud with
-// the device's own voices — instant, offline, no server round-trip.
+// the device's own voices: instant, offline, no server round-trip.
 const TTS = (() => {
   const synth = window.speechSynthesis;
   let voices = [];
@@ -178,7 +178,7 @@ async function api(path, { method = "GET", body, auth = true, isForm = false } =
     const st = $("#status");
     if (st && st.classList.contains("busy") && !st.dataset.waking) {
       st.dataset.waking = "1";
-      st.textContent += " — the server may be waking up (up to a minute)…";
+      st.textContent += ". The server may be waking up (up to a minute)…";
     }
   }, 7000);
   let res;
@@ -332,7 +332,7 @@ $("#resetForm").addEventListener("submit", async (e) => {
   }
 });
 
-// After password/signup succeeds, the server emails a code — move to the OTP step.
+// After password/signup succeeds, the server emails a code: move to the OTP step.
 function goToOtp(email, data) {
   pendingEmail = email;
   $("#otpInstructions").textContent =
@@ -409,7 +409,7 @@ $("#signupForm").addEventListener("submit", async (e) => {
       showAuthError("An account with this email already exists. Please sign in instead.", "#suEmail");
       showAuthForm("login");
       $("#loginEmail").value = $("#suEmail").value.trim();
-      showAuthError("This email already has an account — please sign in.");
+      showAuthError("This email already has an account. Please sign in.");
     } else {
       showAuthError(err.message || "Could not create account.");
     }
@@ -525,7 +525,7 @@ function renderResult(doc) {
   // Hint if the device has no voice for the result's language.
   const hint = $("#ttsHint");
   if (TTS.supported && !TTS.hasVoice(doc.trans_lang)) {
-    hint.textContent = "Tip: your device may not have a voice for this language, so “Speak” can sound off — the natural audio above is best.";
+    hint.textContent = "Tip: your device may not have a voice for this language, so “Speak” can sound off. The natural audio above is best.";
     hint.hidden = false;
   } else {
     hint.hidden = true;
@@ -646,7 +646,7 @@ $("#pageUrduBtn")?.addEventListener("click", async (e) => {
     player.src = speech.audio_url;
     const note = speech.truncated ? " (reading the first part of a long page)" : "";
     announce("Playing the page in Urdu" + note + ".", "ok");
-    player.play().catch(() => announce("Urdu audio ready — press play to listen.", "ok"));
+    player.play().catch(() => announce("Urdu audio ready. Press play to listen.", "ok"));
   } catch (err) {
     announce(err.message || "Could not translate or read the page.", "error");
   } finally {
@@ -792,7 +792,7 @@ let recQuery = "";        // search text
 let openMenuId = null;    // id of the card whose ⋮ menu is open
 let menuMode = "main";    // "main" | "move"  (which menu page is showing)
 let recSort = localStorage.getItem("eyewaz_sort") || "new";  // new|old|az|prog
-const SORT_LABELS = { new: "Newest", old: "Oldest", az: "A–Z", prog: "In progress" };
+const SORT_LABELS = { new: "Newest", old: "Oldest", az: "A to Z", prog: "In progress" };
 const SORT_CYCLE = ["new", "old", "az", "prog"];
 function sortRecs(list) {
   const a = list.slice();
@@ -919,7 +919,7 @@ async function loadRecordings() {
     const opts = moveOptions.map((f) => `<option value="${escapeHtml(f)}"${f === rec.folder ? " selected" : ""}>${escapeHtml(f)}</option>`).join("");
     const menuOpen = openMenuId === rec.id;
     const resume = (rec.position > 5 && !rec.completed) ? " · resume " + fmtTime(rec.position) : "";
-    // Clean tap-menu — no native dropdowns. Two pages: main actions + folder picker.
+    // Clean tap-menu: no native dropdowns. Two pages: main actions + folder picker.
     let menuHtml = "";
     if (menuOpen && menuMode === "move") {
       menuHtml = `<div class="lib-menu" role="menu">` +
@@ -1016,7 +1016,7 @@ function createFolder() {
 $("#newFolderBtn")?.addEventListener("click", createFolder);
 $("#newFolderName")?.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); createFolder(); } });
 
-// Old callers used loadLibrary() (the server shelf) — keep them working.
+// Old callers used loadLibrary() (the server shelf): keep them working.
 function loadLibrary() { loadRecordings(); }
 
 function escapeHtml(s) {
@@ -1048,7 +1048,7 @@ const Billing = (() => {
       const u = userUsage;
       const line = document.getElementById("planLine");
       if (line) {
-        line.textContent = `Plan: ${u.plan_label} — ${u.remaining} of ${u.limit} commands left this month. `;
+        line.textContent = `Plan: ${u.plan_label}. ${u.remaining} of ${u.limit} commands left this month. `;
         if (!IS_TWA) {   // no in-app upgrade entry point inside the Play wrapper
           const a = document.createElement("a");
           a.href = "#"; a.className = "upgrade-link";
@@ -1059,7 +1059,7 @@ const Billing = (() => {
       }
       const cur = document.getElementById("currentPlanText");
       if (cur) cur.textContent =
-        `You're on the ${u.plan_label} plan — ${u.remaining} of ${u.limit} commands left this month.`;
+        `You're on the ${u.plan_label} plan. ${u.remaining} of ${u.limit} commands left this month.`;
     }
     document.querySelectorAll(".plan-card").forEach((c) =>
       c.classList.toggle("is-current", !!userUsage && c.dataset.plan === userUsage.plan));
@@ -1169,7 +1169,7 @@ const Plan = (() => {
       const d = await api("/paypal/setup", { method: "POST",
         body: { key, prices: PLAN_PRICES } });
       announce(d.message || "PayPal is now live.", "ok");
-      window.alert(d.message || "PayPal plans created — checkout is live.");
+      window.alert(d.message || "PayPal plans created. Checkout is live.");
       await setupPayPal();   // re-render with live buttons
     } catch (e) { announce(e.message || "PayPal setup failed.", "error"); }
   }
@@ -1290,7 +1290,7 @@ const Passkey = (() => {
     }
   }
 
-  // Sign in with a passkey (usernameless — the device offers the saved passkey).
+  // Sign in with a passkey (usernameless: the device offers the saved passkey).
   async function login() {
     if (!supported) { announce("This device doesn't support Face ID sign-in.", ""); return; }
     announce("Follow your device's Face ID prompt…", "busy");
@@ -1355,7 +1355,7 @@ function renderMyDay() {
   if ($("#dayDate")) $("#dayDate").textContent =
     new Date().toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" });
   const list = todayListText();
-  if ($("#dayList")) $("#dayList").textContent = list || "No list set for today — add one in Account.";
+  if ($("#dayList")) $("#dayList").textContent = list || "No list set for today. Add one in Account.";
 }
 $("#startDayBtn")?.addEventListener("click", async () => {
   const st = $("#dayStatus"), btn = $("#startDayBtn");
@@ -1374,7 +1374,7 @@ $("#startDayBtn")?.addEventListener("click", async () => {
     const sp = await api("/speak", { method: "POST", body: { text: speech, voiceName: userPrefs.voice, rate: userPrefs.rate } });
     const a = $("#dayAudio"); a.src = sp.audio_url; a.hidden = false;
     st.className = "status ok"; st.textContent = "Playing your morning brief.";
-    a.play().catch(() => (st.textContent = "Ready — press play to listen."));
+    a.play().catch(() => (st.textContent = "Ready. Press play to listen."));
   } catch (err) {
     st.className = "status error"; st.textContent = err.message || "Could not start your day.";
   } finally { btn.disabled = false; }
@@ -1447,7 +1447,7 @@ const Assistant = (() => {
 
   function startListening() {
     if (!SR) {
-      status("Voice input isn't supported in this browser — type your message instead.", "");
+      status("Voice input isn't supported in this browser. Type your message instead.", "");
       el("asstText")?.focus();
       return;
     }
@@ -1711,7 +1711,7 @@ async function populateVoiceControls() {
     (byLocale[lang] || []).forEach((v) => {
       const opt = document.createElement("option");
       opt.value = v.shortName;
-      opt.textContent = v.displayName + (v.gender ? " — " + v.gender : "");
+      opt.textContent = v.displayName + (v.gender ? ", " + v.gender : "");
       voiceSel.appendChild(opt);
     });
     if ([...voiceSel.options].some((o) => o.value === userPrefs.voice)) voiceSel.value = userPrefs.voice;
@@ -1762,7 +1762,7 @@ async function loadDialects() {
       }
       userPrefs.language = locale; userPrefs.voice = voice; userPrefs.engine = "azure";
       try { await api("/profile", { method: "PUT", body: { preferences: userPrefs } }); } catch (_) {}
-      const msg = live ? `Now reading in ${d.label}.` : `${d.label} is coming soon — using standard Urdu for now.`;
+      const msg = live ? `Now reading in ${d.label}.` : `${d.label} is coming soon. Using standard Urdu for now.`;
       if (s) { s.className = "status ok"; s.textContent = msg; }
       announce(msg, "ok");
       loadDialects();
@@ -1783,7 +1783,7 @@ function renderVoiceBank(dialects) {
   card.hidden = false;
   const sel = document.getElementById("vbDialect");
   if (sel) sel.innerHTML = dialects.map((d) =>
-    `<option value="${d.id}">${escapeHtml(d.label)} — ${escapeHtml(d.region)}${d.cloned ? " (cloned)" : ""}</option>`).join("");
+    `<option value="${d.id}">${escapeHtml(d.label)}, ${escapeHtml(d.region)}${d.cloned ? " (cloned)" : ""}</option>`).join("");
   const list = document.getElementById("vbList");
   const cloned = dialects.filter((d) => d.cloned);
   list.innerHTML = cloned.length
@@ -1819,7 +1819,7 @@ function bindVoiceBank() {
         const a = document.getElementById("vbRecAudio");
         a.src = URL.createObjectURL(vbRecBlob); a.hidden = false;
         recBtn.hidden = false; recStop.hidden = true;
-        vbStatus("Recording captured — ready to create.", "ok");
+        vbStatus("Recording captured. Ready to create.", "ok");
       };
       vbRec.start();
       recBtn.hidden = true; recStop.hidden = false;
@@ -2015,7 +2015,7 @@ async function initReaderControls() {
     const vs = $("#rcVoice"); vs.innerHTML = "";
     (byLocale[langSel.value] || []).forEach((v) => {
       const o = document.createElement("option");
-      o.value = v.shortName; o.textContent = v.displayName + (v.gender ? " — " + v.gender : "");
+      o.value = v.shortName; o.textContent = v.displayName + (v.gender ? ", " + v.gender : "");
       vs.appendChild(o);
     });
     if ([...vs.options].some((o) => o.value === userPrefs.voice)) vs.value = userPrefs.voice;
@@ -2029,7 +2029,7 @@ async function initReaderControls() {
   $("#rcRate").onchange = saveReaderPrefs;
   readerControlsReady = true;
 }
-// On-the-go change: applies to this session only — does NOT change the saved
+// On-the-go change: applies to this session only, does NOT change the saved
 // account default (set that in Account). Keeps Urdu as the default on next login.
 function saveReaderPrefs() {
   userPrefs = {
@@ -2055,7 +2055,7 @@ async function initReaderDialects() {
     chip.className = "rc-dialect-chip";
     chip.dataset.voice = voice; chip.dataset.locale = locale;
     chip.textContent = d.label + (d.status === "live" ? "" : " ·…");
-    chip.title = d.status === "live" ? d.region : d.region + " — coming soon (Urdu for now)";
+    chip.title = d.status === "live" ? d.region : d.region + ", coming soon (Urdu for now)";
     chip.addEventListener("click", () => {
       userPrefs.language = locale; userPrefs.voice = voice; userPrefs.engine = "azure";
       // reflect in the rc selects if the option exists
@@ -2083,7 +2083,7 @@ $("#textPlayBtn")?.addEventListener("click", async () => {
   try {
     // Reading typed text counts as one command (it has no heavy server endpoint).
     if (!(await Billing.consumeOne())) {
-      ts.className = "status error"; ts.textContent = "Monthly command limit reached — upgrade for more.";
+      ts.className = "status error"; ts.textContent = "Monthly command limit reached. Upgrade for more.";
       return;
     }
     const lang = $("#rcLanguage").value, voice = $("#rcVoice").value, rate = Number($("#rcRate").value);
@@ -2096,7 +2096,7 @@ $("#textPlayBtn")?.addEventListener("click", async () => {
     $("#textDownload").href = sp.audio_url; $("#textDownload").hidden = false;
     $("#textSaveBtn").hidden = false;
     ts.className = "status ok"; ts.textContent = "Playing.";
-    audio.play().catch(() => (ts.textContent = "Ready — press the player to listen."));
+    audio.play().catch(() => (ts.textContent = "Ready. Press the player to listen."));
   } catch (err) {
     ts.className = "status error"; ts.textContent = err.message || "Could not read the text.";
   } finally { btn.disabled = false; }
@@ -2108,7 +2108,7 @@ $("#textSaveBtn")?.addEventListener("click", async () => {
   const ts = $("#textStatus");
   try {
     await saveRecording($("#textAudio").src, $("#textInput").value || "Text", $("#rcLanguage").value);
-    ts.className = "status ok"; ts.textContent = "Saved on your device — find it in My Books.";
+    ts.className = "status ok"; ts.textContent = "Saved on your device. Find it in My Books.";
   } catch (e) { ts.className = "status error"; ts.textContent = "Could not save: " + (e.message || e); }
 });
 
@@ -2127,7 +2127,7 @@ $("#docSaveBtn")?.addEventListener("click", async () => {
   const st = $("#docStatus");
   try {
     await saveRecording($("#docAudio").src, docFile ? docFile.name : "Document", $("#docSaveBtn").dataset.lang || "");
-    st.className = "status ok"; st.textContent = "Saved on your device — find it in My Books.";
+    st.className = "status ok"; st.textContent = "Saved on your device. Find it in My Books.";
   } catch (e) { st.className = "status error"; st.textContent = "Could not save: " + (e.message || e); }
 });
 $("#docReadBtn")?.addEventListener("click", async () => {
@@ -2222,7 +2222,7 @@ if ("serviceWorker" in navigator) {
   });
 }
 
-/* PWA install prompt — show an "Install" button when the browser allows it. */
+/* PWA install prompt: show an "Install" button when the browser allows it. */
 let _deferredInstall = null;
 if (typeof window !== "undefined" && window.addEventListener) {
   window.addEventListener("beforeinstallprompt", (e) => {

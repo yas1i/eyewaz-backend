@@ -1,5 +1,5 @@
 """
-Voice cloning via ElevenLabs — used to build the EYEWAZ dialect voice bank from
+Voice cloning via ElevenLabs: used to build the EYEWAZ dialect voice bank from
 consenting native-speaker recordings. Dormant until ELEVENLABS_API_KEY is set.
 
 Env:

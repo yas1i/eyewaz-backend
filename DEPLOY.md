@@ -34,7 +34,7 @@ That's it. The GitHub webhook fires → Render re-deploys from Docker Hub.
 HTML, or anything in the repo, you must also rebuild and push the Docker image:
 
 ```bash
-cd "/Users/wajd/Documents/Claude Projects/eyewaz-backend-main"
+cd "/Users/wajd/Documents/WAJD Projects/eyewaz-backend-main"
 docker build --platform linux/amd64 -t aluminur/eyewaz-backend:latest .
 docker push aluminur/eyewaz-backend:latest
 ```
@@ -247,7 +247,7 @@ What went wrong and what fixed it:
 
 ## Android TWA
 
-- Package: `com.eyewaz.app`
+- Package: `ai.wajd.eyewaz`
 - Target SDK: 35, Compile SDK: 36
 - Theme: `#1f3d3a`
 - Play Console pending: Data Safety form, assetlinks.json SHA-256 (get from Play Console → App integrity)

@@ -3,9 +3,8 @@
     "relation": ["delegate_permission/common.handle_all_urls"],
     "target": {
       "namespace": "android_app",
-      "package_name": "com.eyewaz.app",
+      "package_name": "ai.wajd.eyewaz",
       "sha256_cert_fingerprints": [
-        "1A:E9:1E:9A:F2:4B:F0:49:8B:09:9E:5B:73:B6:FA:47:47:44:76:E6:EC:9A:8D:EE:77:15:FF:59:67:22:34:4E",
         "EE:8B:07:AC:8E:FC:0C:A6:9D:0D:04:09:4C:D8:16:30:E7:9B:72:AC:CD:4F:30:49:36:07:07:86:06:CF:CC:23"
       ]
     }

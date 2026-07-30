@@ -1,5 +1,5 @@
 """
-Online voice bank — collect recordings for many languages/dialects and export
+Online voice bank: collect recordings for many languages/dialects and export
 training-ready datasets.
 
 Native speakers (across provinces) record with the web recorder, which uploads
@@ -126,7 +126,7 @@ class VoiceBankClipAPI(Resource):
 
 
 class VoiceBankDoneAPI(Resource):
-    """Sentence ids a speaker has already uploaded — lets the recorder resume
+    """Sentence ids a speaker has already uploaded: lets the recorder resume
     across sessions/devices in online-only (no local folder) mode."""
 
     def get(self):

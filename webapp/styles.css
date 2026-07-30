@@ -1,4 +1,4 @@
-/* EYEWAZ web client — plain, high-contrast, large-text design for low vision. */
+/* EYEWAZ web client: plain, high-contrast, large-text design for low vision. */
 
 /* Brand display font. Drop the real file at /app/assets/fonts/GoodDogNew.*
    (see assets/README.md). Until then, a friendly rounded fallback is used. */
@@ -39,7 +39,7 @@
 
 * { box-sizing: border-box; }
 
-/* Dark mode — toggled by body.dark */
+/* Dark mode: toggled by body.dark */
 body.dark {
   --bg: #10211f;
   --surface: #18302f;
@@ -175,7 +175,7 @@ h4 { font-size: 1.15rem; margin: 18px 0 6px; }
   margin: 0 0 20px;
 }
 
-/* Form fields — large targets, strong borders, clear labels. */
+/* Form fields: large targets, strong borders, clear labels. */
 .field { margin-bottom: 18px; }
 .field label { display: block; font-weight: 700; margin-bottom: 6px; font-size: 1.05rem; }
 .field input {
@@ -241,7 +241,7 @@ h4 { font-size: 1.15rem; margin: 18px 0 6px; }
   margin: 0 0 16px;
 }
 
-/* Dev-mode verification code — large and obvious. */
+/* Dev-mode verification code: large and obvious. */
 .dev-code {
   background: #fff7e6;
   border: 2px dashed #b45309;
@@ -732,7 +732,7 @@ body.dark .lib-search input { background-color: transparent !important; }
 /* ---------- Palette tints: bring the brand colours into the app ----------
    Soft washes of the 2026 palette (Rose Smoke / Neo Mint / Electric Aqua /
    Amber Glow / Digital Lavender) so each card has its own identity. Text stays
-   var(--text) — all tints pass AA. Dark mode gets deep, muted equivalents. */
+   var(--text): all tints pass AA. Dark mode gets deep, muted equivalents. */
 :root {
   --tint-rose: #F2DCD2;
   --tint-mint: #D9F2E6;

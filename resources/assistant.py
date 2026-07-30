@@ -2,8 +2,8 @@
 EYEWAZ conversational assistant (optional, admin-enabled).
 
 A blind or low-vision user speaks to the app; the browser turns that speech
-into text and posts it here. We send the message — with the user's name and
-saved to-do lists — to a hosted AI model and return a short, spoken-friendly
+into text and posts it here. We send the message: with the user's name and
+saved to-do lists: to a hosted AI model and return a short, spoken-friendly
 reply that the client reads aloud (browser TTS or Azure Urdu voice).
 
 Off by default. An owner enables it from the admin toggle (AppSettings
@@ -42,7 +42,7 @@ MAX_MSG_CHARS = 4000    # cap a single user utterance
 
 # Stable persona. Kept first and byte-identical across every request so the
 # prompt-cache prefix is reused (cache_control below). Nothing user-specific
-# goes in here — that lives in the message turns so the cache stays shared.
+# goes in here: that lives in the message turns so the cache stays shared.
 SYSTEM_PROMPT = (
     "You are Eyewaz, a warm, patient voice companion for people who are blind "
     "or have low vision. Your replies are read aloud by a screen reader, so you "

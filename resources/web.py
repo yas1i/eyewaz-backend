@@ -172,7 +172,7 @@ class SpeakAPI(Resource):
             voice = "ur-PK-UzmaNeural"   # graceful fallback if engine not configured
 
         # Cloned dialect voices are stored as "el:<voice_id>" → synthesize via
-        # ElevenLabs; everything else uses Azure. Cloned voices are premium —
+        # ElevenLabs; everything else uses Azure. Cloned voices are premium ,
         # free members fall back to standard Azure Urdu.
         if isinstance(voice, str) and voice.startswith("el:"):
             import usage
@@ -209,7 +209,7 @@ class ScreenReaderAPI(Resource):
     """Single-call translate-then-speak for the EYEWAZ Android screen reader.
 
     Accepts any-language text, translates to Urdu, synthesises with Neural
-    TTS, and returns an audio URL — all in one round-trip so the Android
+    TTS, and returns an audio URL: all in one round-trip so the Android
     client never needs to chain two network calls.
     """
 

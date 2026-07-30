@@ -7,6 +7,7 @@ from flask_cors import CORS
 from mongoengine import connect
 from flask_jwt_extended import JWTManager
 import storage
+import security_headers
 
 # from celery import Celery
 
@@ -35,13 +36,14 @@ cors = CORS(app, resources={r"/api/*": {"origins": "*"}})
 # doesn't crash startup; wrap it too so a malformed URI just logs a warning.
 try:
     # serverSelectionTimeoutMS keeps requests from hanging when the DB is
-    # unreachable (e.g. Atlas IP allow-list expired) — they fail fast instead.
+    # unreachable (e.g. Atlas IP allow-list expired): they fail fast instead.
     db = connect(host=os.getenv("MONGO_URI"), connect=False, serverSelectionTimeoutMS=5000)
 except Exception as e:
     print(f"WARNING: MongoDB connection setup failed: {e}", flush=True)
     db = None
 api = Api(app)
 initialize_routes(api)
+security_headers.install(app)
 
 
 @app.route("/")
@@ -170,7 +172,7 @@ def privacy():
 
 @app.route("/.well-known/assetlinks.json")
 def assetlinks():
-    # Digital Asset Links — verifies the Android TWA (Play Store) owns this domain.
+    # Digital Asset Links: verifies the Android TWA (Play Store) owns this domain.
     return send_from_directory(os.path.join(WEBAPP_DIR, ".well-known"),
                                "assetlinks.json", mimetype="application/json")
 

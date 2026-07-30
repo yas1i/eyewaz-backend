@@ -1,5 +1,5 @@
 """
-Stripe Checkout (subscriptions) — this is how EYEWAZ offers **Klarna and card**.
+Stripe Checkout (subscriptions): this is how EYEWAZ offers **Klarna and card**.
 
 Stripe Checkout is a hosted page: the customer enters card/Klarna details on
 Stripe, never on our app. We create a Checkout Session, redirect to it, and
@@ -7,7 +7,7 @@ listen to webhooks to keep the plan in sync.
 
 Payment methods (card, Klarna, …) are controlled in the Stripe Dashboard
 (Settings → Payment methods). Leave STRIPE_PMT_METHODS unset to let the
-dashboard decide (recommended — enabling Klarna there makes it appear); or set
+dashboard decide (recommended: enabling Klarna there makes it appear); or set
 it to e.g. "card,klarna" to force a specific set.
 
 Env:

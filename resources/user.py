@@ -10,18 +10,33 @@ from flask_jwt_extended import create_access_token
 
 from database.models import Users
 from mailer import send_otp_email
+from ratelimit import rate_ok
 
 OTP_TTL_MINUTES = 10
 
 # App-store review login: a single designated account can verify with a fixed
 # code so Google/Apple reviewers (who can't read the OTP email) can sign in.
-# Inactive unless BOTH env vars are set — keep them set only while in review.
+# Inactive unless BOTH env vars are set. Keep them set only while in review.
 REVIEW_EMAIL = os.getenv("REVIEW_EMAIL")
 REVIEW_OTP = os.getenv("REVIEW_OTP")
 
 
 def _resp(payload, status):
     return Response(json.dumps(payload), status=status, mimetype="application/json")
+
+
+def _client_ip():
+    # Render and Cloudflare both put the real client first in X-Forwarded-For.
+    fwd = request.headers.get("X-Forwarded-For", "")
+    return fwd.split(",")[0].strip() if fwd else (request.remote_addr or "unknown")
+
+
+def _too_many(scope, limit, window, ident=None):
+    """None if the caller is under the limit, else a ready 429 response."""
+    key = f"{scope}:{ident or _client_ip()}"
+    if rate_ok(key, limit, window):
+        return None
+    return _resp({"message": "Too many attempts. Please wait a few minutes and try again."}, 429)
 
 
 def _verification_payload(email, dev_code):
@@ -32,7 +47,7 @@ def _verification_payload(email, dev_code):
     }
     if dev_code:  # SMTP not configured: surface the code so dev/testing works
         payload["dev_code"] = dev_code
-        payload["message"] = "Email delivery isn't set up yet — use the code shown below."
+        payload["message"] = "Email delivery isn't set up yet. Use the code shown below."
     return payload
 
 
@@ -55,6 +70,9 @@ class UserSignUpAPI(Resource):
     """Create an account, then email a verification code (step 1 of 2)."""
 
     def post(self):
+        blocked = _too_many("signup", 5, 3600)
+        if blocked:
+            return blocked
         data = request.get_json(force=True, silent=True) or {}
         for field in ("email", "name", "password", "confirmPassword"):
             if not data.get(field):
@@ -79,9 +97,12 @@ class UserLoginAPI(Resource):
     """Check the password, then email a verification code (step 1 of 2)."""
 
     def post(self):
+        blocked = _too_many("login", 10, 300)
+        if blocked:
+            return blocked
         data = request.get_json(force=True, silent=True) or {}
 
-        # Hardcoded test/review logins — NO_OTP_USERS="a@b.com:pass1,c@d.com:pass2".
+        # Hardcoded test/review logins. NO_OTP_USERS="a@b.com:pass1,c@d.com:pass2".
         # Exact email+password pairs sign in immediately, no email code: for
         # app-store reviewers and test devices. Unset the env var to disable.
         email_in = (data.get("email") or "").strip().lower()
@@ -124,6 +145,9 @@ class VerifyOtpAPI(Resource):
         data = request.get_json(force=True, silent=True) or {}
         email = data.get("email")
         code = (data.get("code") or "").strip()
+        blocked = _too_many("otp", 10, 600) or _too_many("otp-email", 10, 600, ident=email)
+        if blocked:
+            return blocked
         try:
             user = Users.objects.get(email=email)
         except Users.DoesNotExist:
@@ -154,7 +178,7 @@ class VerifyOtpAPI(Resource):
         if not check_password_hash(user.otp_hash, code):
             return _resp({"message": "Incorrect code. Please try again."}, 401)
 
-        # Success — clear the one-time code and mark verified.
+        # Success: clear the one-time code and mark verified.
         user.is_verified = True
         user.otp_hash = None
         user.otp_expires = None
@@ -177,6 +201,9 @@ class ResendOtpAPI(Resource):
 
     def post(self):
         data = request.get_json(force=True, silent=True) or {}
+        blocked = _too_many("resend", 3, 600, ident=data.get("email"))
+        if blocked:
+            return blocked
         try:
             user = Users.objects.get(email=data.get("email"))
         except Users.DoesNotExist:
@@ -185,7 +212,7 @@ class ResendOtpAPI(Resource):
         payload = {"message": "A new code is on its way."}
         if dev_code:
             payload["dev_code"] = dev_code
-            payload["message"] = "Email delivery isn't set up yet — use the code shown below."
+            payload["message"] = "Email delivery isn't set up yet. Use the code shown below."
         return _resp(payload, 200)
 
 
@@ -195,6 +222,9 @@ class ForgotPasswordAPI(Resource):
     def post(self):
         data = request.get_json(force=True, silent=True) or {}
         email = data.get("email")
+        blocked = _too_many("forgot", 5, 3600)
+        if blocked:
+            return blocked
         generic = "If that email has an account, we've sent a reset code."
         try:
             user = Users.objects.get(email=email)
@@ -204,7 +234,7 @@ class ForgotPasswordAPI(Resource):
         payload = {"message": generic, "email": email}
         if dev_code:
             payload["dev_code"] = dev_code
-            payload["message"] = "Email delivery isn't set up yet — use the code shown below."
+            payload["message"] = "Email delivery isn't set up yet. Use the code shown below."
         return _resp(payload, 200)
 
 
@@ -216,6 +246,9 @@ class ResetPasswordAPI(Resource):
         email = data.get("email")
         code = (data.get("code") or "").strip()
         new_password = data.get("newPassword") or ""
+        blocked = _too_many("reset", 10, 600, ident=email)
+        if blocked:
+            return blocked
         if len(new_password) < 8:
             return _resp({"message": "Your new password must be at least 8 characters."}, 400)
         try:

@@ -4,7 +4,7 @@ Pakistani dialect / regional-voice picker.
 Phase 1: a curated catalogue of Pakistani regional varieties. At request time we
 check which entries actually have a working Azure voice and mark the rest
 "coming soon" (they fall back to standard Urdu until a cloned dialect voice is
-added in Phase 2 — at which point we just fill in `clone_voice` for that entry).
+added in Phase 2: at which point we just fill in `clone_voice` for that entry).
 
 Picking a dialect sets the user's translation language + TTS voice, so the whole
 read-aloud pipeline (photo, document, web, My Day, assistant) speaks it.
@@ -30,7 +30,7 @@ FALLBACK_LOCALE = "ur-PK"
 # "coming soon" (Phase 2 cloned voice bank).
 CATALOG = [
     {"id": "urdu",    "label": "Standard Urdu",        "region": "National",            "locale": "ur-PK", "voices": ["ur-PK-UzmaNeural", "ur-PK-AsadNeural"]},
-    {"id": "urdu-selfhost", "label": "Urdu — open-source (free)", "region": "Self-hosted", "locale": "ur-PK", "voices": [], "selfhost": True},
+    {"id": "urdu-selfhost", "label": "Urdu: open-source (free)", "region": "Self-hosted", "locale": "ur-PK", "voices": [], "selfhost": True},
     {"id": "punjabi", "label": "Punjabi · Urdu",       "region": "Punjab",              "locale": "pa-IN", "voices": ["pa-IN-VaaniNeural", "pa-IN-OjasNeural", "pa-IN-GurpreetNeural"]},
     {"id": "pashto",  "label": "Pashto · Urdu",        "region": "Khyber Pakhtunkhwa",  "locale": "ps-AF", "voices": ["ps-AF-LatifaNeural", "ps-AF-GulNawazNeural"]},
     {"id": "sindhi",  "label": "Sindhi · Karachi Urdu","region": "Sindh",               "locale": "ur-PK", "voices": []},
@@ -76,7 +76,7 @@ class DialectsAPI(Resource):
             dv = cloned.get(d["id"])
             present = [by_name[n] for n in d["voices"] if n in by_name]
             if dv and dv.voice_id:
-                # A cloned dialect voice exists — it wins. Voice value is "el:<id>";
+                # A cloned dialect voice exists: it wins. Voice value is "el:<id>";
                 # text is still translated to Urdu, the clone speaks it in-dialect.
                 voices = [{"shortName": "el:" + dv.voice_id, "gender": "", "engine": "clone",
                            "name": (dv.speaker or d["label"]) + " (cloned)"}]

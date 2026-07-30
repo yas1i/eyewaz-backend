@@ -2,9 +2,9 @@
 Membership plans + daily command quotas.
 
 Plans (command allowance resets monthly):
-  free      — 3 commands/month, 1 reminder, 3 saved recordings
-  monthly   — 50 commands/month
-  supermax  — 100 commands/month
+  free     : 3 commands/month, 1 reminder, 3 saved recordings
+  monthly  : 50 commands/month
+  supermax : 100 commands/month
 
 A "command" is one functional action: a photo/picture/document upload
 (translate + read), a web-page read, or an assistant message. The reminder and
@@ -26,12 +26,12 @@ DEFAULT_PLAN = "free"
 
 
 def _period():
-    """Current quota period — a calendar month, e.g. '2026-06'."""
+    """Current quota period: a calendar month, e.g. '2026-06'."""
     return datetime.now(timezone.utc).strftime("%Y-%m")
 
 
 def effective_plan(user):
-    """The plan that's actually in force — a paid plan past its expiry is free."""
+    """The plan that's actually in force: a paid plan past its expiry is free."""
     plan = (getattr(user, "plan", None) or DEFAULT_PLAN)
     if plan not in PLAN_LIMITS:
         plan = DEFAULT_PLAN

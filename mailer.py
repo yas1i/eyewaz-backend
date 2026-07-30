@@ -2,9 +2,9 @@
 Email sending for 2-step verification codes.
 
 Order of preference:
-  1. SendGrid HTTP API (SENDGRID_API_KEY) — works on PaaS hosts that block SMTP.
-  2. SMTP (SMTP_* env) — legacy; blocked on many free hosts.
-  3. Dev fallback — log the message so the OTP flow stays testable with no setup.
+  1. SendGrid HTTP API (SENDGRID_API_KEY): works on PaaS hosts that block SMTP.
+  2. SMTP (SMTP_* env): legacy; blocked on many free hosts.
+  3. Dev fallback: log the message so the OTP flow stays testable with no setup.
 """
 
 import os
@@ -23,7 +23,7 @@ def _from_address():
 
 
 def _send_via_sendgrid(to, subject, body):
-    """Send via SendGrid's HTTP API (HTTPS — not blocked by PaaS)."""
+    """Send via SendGrid's HTTP API (HTTPS: not blocked by PaaS)."""
     resp = requests.post(
         "https://api.sendgrid.com/v3/mail/send",
         headers={
@@ -54,7 +54,7 @@ def send_email(to, subject, body):
 
     host = os.getenv("SMTP_HOST")
     if not host:
-        print(f"\n[DEV-EMAIL — no email provider configured]\n  To: {to}\n  Subject: {subject}\n  {body}\n", flush=True)
+        print(f"\n[DEV-EMAIL: no email provider configured]\n  To: {to}\n  Subject: {subject}\n  {body}\n", flush=True)
         return False
 
     port = int(os.getenv("SMTP_PORT", "587"))
@@ -95,5 +95,5 @@ def send_otp_email(to, code):
         return send_email(to, subject, body)
     except Exception as e:
         # Never let a mail problem break sign-up: fall back to the dev code path.
-        print(f"\n[EMAIL FAILED — falling back to on-screen code]\n  {e}\n  Code for {to}: {code}\n", flush=True)
+        print(f"\n[EMAIL FAILED: falling back to on-screen code]\n  {e}\n  Code for {to}: {code}\n", flush=True)
         return False

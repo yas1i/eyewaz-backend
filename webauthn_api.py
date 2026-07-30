@@ -1,7 +1,7 @@
 """
 Passkey (Face ID / Touch ID / fingerprint) sign-in via WebAuthn.
 
-The biometric never leaves the device — the authenticator holds a private key
+The biometric never leaves the device: the authenticator holds a private key
 and we store only the public key. Challenges are handed to the client inside a
 short-lived signed token (stateless across gunicorn workers) and checked on the
 way back.
