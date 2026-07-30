@@ -60,6 +60,12 @@ def contact_page():
     return _no_cache(send_from_directory(WEBAPP_DIR, "contact.html"))
 
 
+@app.route("/delete-account")
+def delete_account_page():
+    # Public account-deletion instructions (required by Google Play data safety).
+    return _no_cache(send_from_directory(WEBAPP_DIR, "delete-account.html"))
+
+
 @app.route("/site.css")
 def site_css():
     return _no_cache(send_from_directory(WEBAPP_DIR, "site.css"))
