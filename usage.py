@@ -2,7 +2,7 @@
 Membership plans + daily command quotas.
 
 Plans (command allowance resets monthly):
-  free     : 3 commands/month, 1 reminder, 3 saved recordings
+  free     : 10 commands/month, 1 reminder, 3 saved recordings
   monthly  : 50 commands/month
   supermax : 100 commands/month
 
@@ -18,7 +18,7 @@ from datetime import datetime, timezone
 from flask import Response
 
 PLAN_LIMITS = {
-    "free":     {"monthly": 3,    "reminders": 1,     "recordings": 3,     "label": "Free"},
+    "free":     {"monthly": 10,   "reminders": 1,     "recordings": 3,     "label": "Free"},
     "monthly":  {"monthly": 50,   "reminders": 99999, "recordings": 99999, "label": "Monthly"},
     "supermax": {"monthly": 100,  "reminders": 99999, "recordings": 99999, "label": "Super Max"},
 }
