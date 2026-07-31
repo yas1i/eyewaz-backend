@@ -1,5 +1,19 @@
-# Auto-HTTPS for the TTS engine. Replace the hostname with yours and point its
-# DNS A record at this server's IP, then: docker compose --profile tls up -d
+# NOT a standalone Caddyfile. The production box runs one system Caddy for every
+# site, so this is the site block to append to /etc/caddy/Caddyfile there, then
+# `caddy validate --config /etc/caddy/Caddyfile && systemctl reload caddy`.
+#
+# Starting a second Caddy (in Docker) would fight the system one for 80/443 and
+# take the WAJD sites down with it.
+#
+# The DNS A record for tts.eyewaz.com must be DNS-only (grey cloud) in
+# Cloudflare, otherwise Caddy cannot complete its own ACME challenge.
 tts.eyewaz.com {
-    reverse_proxy tts:8090
+    reverse_proxy 127.0.0.1:8090
+
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "no-referrer"
+        -Server
+    }
 }

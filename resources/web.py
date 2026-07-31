@@ -19,14 +19,38 @@ from flask_jwt_extended import get_jwt_identity
 from database.models import Users
 from helpers import translate, synthesize
 
-SPEAK_MAX_CHARS = 6000  # cap Azure synthesis so long pages stay responsive
+SPEAK_MAX_CHARS = 6000  # cap synthesis so long pages stay responsive
 
 MAX_BYTES = 3_000_000   # don't download more than ~3 MB of HTML
 MAX_CHARS = 20_000      # cap extracted text so TTS stays manageable
 
+# Azure's Urdu voices. Still the safety net if our own engine is unreachable,
+# and still the engine for every OTHER language.
+AZURE_URDU_FEMALE = "ur-PK-UzmaNeural"
+AZURE_URDU_MALE = "ur-PK-AsadNeural"
+
 
 def _json(payload, status):
     return Response(json.dumps(payload), status=status, mimetype="application/json")
+
+
+def urdu_voice(prefer_gender=None):
+    """The voice id to speak Urdu with, our own trained voices first.
+
+    Returns an "sh:" id when the self-hosted engine is configured and answering,
+    otherwise the Azure short-name, so Urdu keeps speaking either way.
+    """
+    import selfhost_tts
+    if selfhost_tts.configured():
+        available = selfhost_tts.voices()
+        if prefer_gender:
+            for v in available:
+                if v.get("language") == "ur" and v.get("gender") == prefer_gender:
+                    return "sh:" + v["id"]
+        default = selfhost_tts.default_voice()
+        if default:
+            return default
+    return AZURE_URDU_MALE if prefer_gender == "male" else AZURE_URDU_FEMALE
 
 
 def _host_is_safe(host):
@@ -152,46 +176,50 @@ class SpeakAPI(Resource):
         prefs = user.preferences() if user else {}
 
         # Resolve the voice: explicit request > legacy female/male > saved pref.
-        legacy = {"female": "ur-PK-UzmaNeural", "male": "ur-PK-AsadNeural"}
-        voice = data.get("voiceName") or legacy.get(data.get("voice")) \
-            or prefs.get("voice", "ur-PK-UzmaNeural")
+        # "female"/"male" and an absent preference both mean Urdu, which is our
+        # own trained voice whenever the engine is up.
+        voice = data.get("voiceName") \
+            or (urdu_voice(data.get("voice")) if data.get("voice") in ("female", "male") else None) \
+            or prefs.get("voice") or urdu_voice()
         rate = data.get("rate", prefs.get("rate", 1.0))
 
         capped = text[:SPEAK_MAX_CHARS]
-        # Self-hosted open-source Urdu voice ("sh:...") → our own TTS service.
+
+        # Cloned dialect voices are stored as "el:<voice_id>". They are premium,
+        # so free members, and the case where no ElevenLabs key is set, fall back
+        # to Urdu: which now means our own trained voice, not Azure.
+        if isinstance(voice, str) and voice.startswith("el:"):
+            import usage
+            import elevenlabs_api
+            if usage.effective_plan(user) == "free" or not elevenlabs_api.configured():
+                voice = urdu_voice()
+
+        # Our own Urdu voices ("sh:...") → the self-hosted TTS engine. If it is
+        # unreachable we fall through to Azure rather than failing the request.
         if isinstance(voice, str) and voice.startswith("sh:"):
             import selfhost_tts
             if selfhost_tts.configured():
                 try:
-                    audio = selfhost_tts.synth(capped, rate)
+                    audio = selfhost_tts.synth(capped, rate, voice=voice[3:])
                     stored = storage.save_file(audio, "speech.wav")
                     return _json({"audio_url": stored.url,
                                   "truncated": len(text) > SPEAK_MAX_CHARS, "voice": voice}, 200)
                 except Exception as e:
-                    return _json({"message": f"Could not generate audio: {e}"}, 502)
-            voice = "ur-PK-UzmaNeural"   # graceful fallback if engine not configured
+                    print(f"self-hosted TTS failed, falling back to Azure: {e}", flush=True)
+            voice = AZURE_URDU_MALE if ("male" in voice and "female" not in voice) \
+                else AZURE_URDU_FEMALE
 
-        # Cloned dialect voices are stored as "el:<voice_id>" → synthesize via
-        # ElevenLabs; everything else uses Azure. Cloned voices are premium ,
-        # free members fall back to standard Azure Urdu.
-        if isinstance(voice, str) and voice.startswith("el:"):
-            import usage
-            if usage.effective_plan(user) == "free":
-                voice = "ur-PK-UzmaNeural"
         if isinstance(voice, str) and voice.startswith("el:"):
             import elevenlabs_api
-            if not elevenlabs_api.configured():
-                voice = "ur-PK-UzmaNeural"   # graceful fallback if key absent
-            else:
-                try:
-                    audio = b""
-                    for piece in _split_for_translate(capped, 2200):
-                        audio += elevenlabs_api.tts(voice[3:], piece)
-                    stored = storage.save_file(audio, "speech.mp3")
-                    return _json({"audio_url": stored.url,
-                                  "truncated": len(text) > SPEAK_MAX_CHARS, "voice": voice}, 200)
-                except Exception as e:
-                    return _json({"message": f"Could not generate audio: {e}"}, 502)
+            try:
+                audio = b""
+                for piece in _split_for_translate(capped, 2200):
+                    audio += elevenlabs_api.tts(voice[3:], piece)
+                stored = storage.save_file(audio, "speech.mp3")
+                return _json({"audio_url": stored.url,
+                              "truncated": len(text) > SPEAK_MAX_CHARS, "voice": voice}, 200)
+            except Exception as e:
+                return _json({"message": f"Could not generate audio: {e}"}, 502)
 
         try:
             audio = b""
@@ -219,7 +247,7 @@ class ScreenReaderAPI(Resource):
     def post(self):
         data = request.get_json(force=True, silent=True) or {}
         text = (data.get("text") or "").strip()[:self.SR_MAX_CHARS]
-        voice = data.get("voice", "ur-PK-UzmaNeural")
+        voice = data.get("voice") or urdu_voice()
         rate = float(data.get("rate", 1.0))
 
         if not text:
@@ -229,6 +257,24 @@ class ScreenReaderAPI(Resource):
             urdu = " ".join(
                 translate(piece, "en", "ur") for piece in _split_for_translate(text)
             )
+        except Exception as e:
+            return _json({"message": f"Screen reader TTS failed: {e}"}, 502)
+
+        # Our own voice first; Azure remains the safety net so the reader never
+        # goes silent if the engine is down.
+        if isinstance(voice, str) and voice.startswith("sh:"):
+            import selfhost_tts
+            if selfhost_tts.configured():
+                try:
+                    audio = selfhost_tts.synth(urdu, rate, voice=voice[3:])
+                    stored = storage.save_file(audio, "sr.wav")
+                    return _json({"audio_url": stored.url, "voice": voice}, 200)
+                except Exception as e:
+                    print(f"self-hosted TTS failed, falling back to Azure: {e}", flush=True)
+            voice = AZURE_URDU_MALE if ("male" in voice and "female" not in voice) \
+                else AZURE_URDU_FEMALE
+
+        try:
             audio = b""
             for piece in _split_for_translate(urdu, 2500):
                 audio += synthesize(piece, voice, rate).audio_data

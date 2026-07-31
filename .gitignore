@@ -118,3 +118,11 @@ twa/build/
 # Editor / AI-tool configs
 .claude/
 webapp/app
+
+# Trained Piper voices: large binaries, shipped to the host separately
+tts-service/voices/
+tts-local/voices/
+tts-train/voices/
+tts-train/*-raw/
+tts-train/.vastenv/
+tts-train/*-qc.csv

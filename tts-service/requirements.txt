@@ -1,8 +1,9 @@
+# Piper-only runtime: onnxruntime under the bonnet, no torch, no transformers.
+# Keeps the image near 400 MB instead of several GB.
 fastapi
 uvicorn[standard]
-transformers>=4.41
-torch
-soundfile
-numpy
-uroman
 piper-tts
+
+# The MMS fallback engine (facebook/mms-tts-urd) additionally needs:
+#   transformers>=4.41  torch  uroman  soundfile  numpy
+# Install those only if you intend to run without our own trained voices.

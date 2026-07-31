@@ -21,6 +21,7 @@ from flask_jwt_extended import jwt_required
 from helpers import list_voices
 from database.models import DialectVoice
 import elevenlabs_api
+import selfhost_tts
 
 FALLBACK_VOICE = "ur-PK-UzmaNeural"
 FALLBACK_LOCALE = "ur-PK"
@@ -29,8 +30,7 @@ FALLBACK_LOCALE = "ur-PK"
 # only the ones the live catalogue actually has are surfaced. Empty / missing =>
 # "coming soon" (Phase 2 cloned voice bank).
 CATALOG = [
-    {"id": "urdu",    "label": "Standard Urdu",        "region": "National",            "locale": "ur-PK", "voices": ["ur-PK-UzmaNeural", "ur-PK-AsadNeural"]},
-    {"id": "urdu-selfhost", "label": "Urdu: open-source (free)", "region": "Self-hosted", "locale": "ur-PK", "voices": [], "selfhost": True},
+    {"id": "urdu",    "label": "Standard Urdu",        "region": "National",            "locale": "ur-PK", "voices": ["ur-PK-UzmaNeural", "ur-PK-AsadNeural"], "selfhost": True},
     {"id": "punjabi", "label": "Punjabi · Urdu",       "region": "Punjab",              "locale": "pa-IN", "voices": ["pa-IN-VaaniNeural", "pa-IN-OjasNeural", "pa-IN-GurpreetNeural"]},
     {"id": "pashto",  "label": "Pashto · Urdu",        "region": "Khyber Pakhtunkhwa",  "locale": "ps-AF", "voices": ["ps-AF-LatifaNeural", "ps-AF-GulNawazNeural"]},
     {"id": "sindhi",  "label": "Sindhi · Karachi Urdu","region": "Sindh",               "locale": "ur-PK", "voices": []},
@@ -60,15 +60,17 @@ class DialectsAPI(Resource):
         cloned = {dv.dialect_id: dv for dv in DialectVoice.objects()}
 
         out = []
-        selfhost_on = bool(os.getenv("SELF_HOST_TTS_URL"))
+        # Urdu is spoken by our own trained voices whenever the engine answers.
+        # Azure's Urdu stays listed only as the fallback when it does not.
+        own_voices = selfhost_tts.voices()
         for d in CATALOG:
-            if d.get("selfhost"):
-                live = selfhost_on
+            if d.get("selfhost") and own_voices:
                 out.append({
                     "id": d["id"], "label": d["label"], "region": d["region"],
-                    "locale": "ur-PK", "status": "live" if live else "soon",
-                    "voices": ([{"shortName": "sh:urdu", "gender": "", "engine": "selfhost",
-                                 "name": "Open-source Urdu"}] if live else []),
+                    "locale": "ur-PK", "status": "live",
+                    "voices": [{"shortName": "sh:" + v["id"], "gender": v.get("gender", ""),
+                                "engine": "eyewaz", "name": v.get("name", v["id"])}
+                               for v in own_voices if v.get("language") == "ur"],
                     "cloned": False, "tier": "free",
                     "fallback_voice": FALLBACK_VOICE, "fallback_locale": FALLBACK_LOCALE,
                 })

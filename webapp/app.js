@@ -1735,17 +1735,56 @@ async function loadDialects() {
     const voice = (live && d.voices[0]) ? d.voices[0].shortName : d.fallback_voice;
     const locale = live ? d.locale : d.fallback_locale;
     const active = d.voices.some((v) => v.shortName === cur);
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "dialect-item" + (active ? " is-active" : "") + (locked ? " is-locked" : "");
-    btn.setAttribute("role", "listitem");
     let badge;
     if (premium) badge = `<span class="dialect-badge premium">${locked ? "Premium · locked" : "Premium"}</span>`;
     else if (live) badge = `<span class="dialect-badge live">Free</span>`;
     else badge = `<span class="dialect-badge soon">Coming soon</span>`;
-    btn.innerHTML =
+    const main =
       `<span class="dialect-main"><span class="dialect-name">${escapeHtml(d.label)}</span>` +
-      `<span class="dialect-region">${escapeHtml(d.region)}</span></span>` + badge;
+      `<span class="dialect-region">${escapeHtml(d.region)}</span></span>`;
+    const head = main + badge;
+
+    const pick = async (shortName, label) => {
+      userPrefs.language = locale; userPrefs.voice = shortName; userPrefs.engine = "azure";
+      try { await api("/profile", { method: "PUT", body: { preferences: userPrefs } }); } catch (_) {}
+      const s = document.getElementById("dialectStatus");
+      const msg = `Now reading in ${label}.`;
+      if (s) { s.className = "status ok"; s.textContent = msg; }
+      announce(msg, "ok");
+      loadDialects();
+    };
+
+    // More than one voice (our Urdu male and female): offer both, because a
+    // nested button inside a button is invalid, the row is a div here.
+    if (live && !locked && d.voices.length > 1) {
+      const row = document.createElement("div");
+      row.className = "dialect-item" + (active ? " is-active" : "");
+      row.setAttribute("role", "listitem");
+      row.innerHTML = main;   // badge goes after the pills, so the row reads left to right
+      const pills = document.createElement("span");
+      pills.className = "dialect-voices";
+      d.voices.forEach((v) => {
+        const p = document.createElement("button");
+        p.type = "button";
+        p.className = "voice-pill" + (v.shortName === cur ? " is-active" : "");
+        const gender = (v.gender || "").toLowerCase();
+        p.textContent = gender ? gender.charAt(0).toUpperCase() + gender.slice(1) : v.name;
+        p.setAttribute("aria-pressed", v.shortName === cur ? "true" : "false");
+        p.setAttribute("aria-label", `${d.label}, ${p.textContent} voice`);
+        p.addEventListener("click", () => pick(v.shortName, `${d.label} (${p.textContent.toLowerCase()})`));
+        pills.appendChild(p);
+      });
+      row.appendChild(pills);
+      row.insertAdjacentHTML("beforeend", badge);
+      wrap.appendChild(row);
+      return;
+    }
+
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "dialect-item" + (active ? " is-active" : "") + (locked ? " is-locked" : "");
+    btn.setAttribute("role", "listitem");
+    btn.innerHTML = head;
     btn.addEventListener("click", async () => {
       const s = document.getElementById("dialectStatus");
       if (locked) {

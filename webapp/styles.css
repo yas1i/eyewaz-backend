@@ -693,6 +693,21 @@ body.dark .lib-menu-item.current, body.dark .lib-menu-item.accent { color: var(-
 .dialect-badge.premium { background: #f4d58d; color: #5b430a; }
 .dialect-item.is-locked { opacity: .9; }
 body.dark .dialect-item { background: #10211f; }
+
+/* Male / female choice inside a dialect row */
+.dialect-voices { display: flex; gap: 8px; flex: 0 0 auto; margin-left: 10px; }
+.voice-pill {
+  font: inherit; font-size: .85rem; font-weight: 700; cursor: pointer;
+  padding: 8px 16px; min-height: 40px; border-radius: 999px;
+  border: 2px solid var(--border); background: var(--surface); color: var(--text);
+  transition: border-color .15s, background .15s;
+}
+.voice-pill:hover { border-color: var(--accent-strong); }
+.voice-pill.is-active { background: var(--accent-strong); border-color: var(--accent-strong); color: #fff; }
+body.dark .voice-pill { background: #10211f; }
+/* Must out-specify `body.dark .voice-pill` above, or the chosen voice looks
+   exactly like the unchosen one in dark mode. */
+body.dark .voice-pill.is-active { background: var(--accent-hover); border-color: var(--accent-hover); color: #06201f; }
 body.dark .dialect-badge.live { color: #06222a; }
 body.dark .dialect-badge.premium { background: #6b5418; color: #ffe7ad; }
 

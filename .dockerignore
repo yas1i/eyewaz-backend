@@ -25,6 +25,14 @@ __pycache__/
 twa/
 tts-train/Awan/
 tts-train/*.zip
+tts-train/*.wav
+tts-train/*-raw/
+tts-train/dataset-*/
+tts-train/.vastenv/
+# Trained voices are served by tts-service on its own host, never by this image
+tts-train/voices/
+tts-service/voices/
+tts-local/voices/
 
 # https://github.com/github/gitignore/blob/master/Global/macOS.gitignore
 

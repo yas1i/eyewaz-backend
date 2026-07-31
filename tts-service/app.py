@@ -1,31 +1,34 @@
 """
 EYEWAZ self-hosted Urdu TTS microservice (open-source, no per-character fees).
 
-Engine: Meta MMS-TTS (`facebook/mms-tts-urd`) — an open, multilingual VITS model
-with a real Urdu voice. Runs on CPU (fine for short screen-reader utterances) or
-GPU (faster). This one HTTP service is the shared backbone for:
-  - the EYEWAZ app (set SELF_HOST_TTS_URL and route "selfhost" voices here),
+Engine: our own Piper voices, trained on the EYEWAZ voice bank. The service
+serves a FOLDER of voices (`VOICES_DIR`), so male and female, and later other
+languages, are one deployment rather than one container per voice. This one HTTP
+service is the shared backbone for:
+  - the EYEWAZ app (set SELF_HOST_TTS_URL and route "sh:" voices here),
   - an Android system TTS-engine app (stream /tts to TalkBack),
   - an NVDA add-on / Chrome read-aloud extension.
 
-Dialect voices: clone native speakers with OpenVoice/XTTS on top of this base and
-serve them as additional /tts?voice=... ids (see README, Phase 2).
+Fallbacks, in priority order, are kept so a box without the voice files still
+speaks: Piper (ours) > Azure Neural (if SPEECH_KEY set) > Meta MMS. torch and
+transformers are imported lazily, so a Piper-only image does not need them.
 
 Endpoints:
-  GET  /healthz            -> {"ok": true, "model": ...}
-  POST /tts  {text, ...}   -> audio/wav   (also GET /tts?text=... for quick tests)
+  GET  /healthz            -> {"ok": true, "engine": ..., "voices": [...]}
+  GET  /voices             -> [{"id","name","gender","language","sample_rate"}]
+  POST /tts  {text, voice, speed}   -> audio/wav
+  GET  /tts?text=...&voice=...      -> audio/wav   (quick tests)
 """
 
 import io
 import os
+import wave
 
-import numpy as np
-import soundfile as sf
-import torch
 from fastapi import Depends, FastAPI, Header, HTTPException, Response
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from transformers import VitsModel, AutoTokenizer
+
+import voices as registry
 
 
 def require_key(x_api_key: str | None = Header(default=None)):
@@ -34,40 +37,55 @@ def require_key(x_api_key: str | None = Header(default=None)):
     if key and x_api_key != key:
         raise HTTPException(status_code=401, detail="Invalid API key")
 
+
+_HERE = os.path.dirname(os.path.abspath(__file__))
+VOICES_DIR = os.getenv("VOICES_DIR", os.path.join(_HERE, "voices"))
 MODEL_ID = os.getenv("TTS_MODEL", "facebook/mms-tts-urd-script_arabic")
-# Our own trained voice: set PIPER_MODEL to a Piper .onnx path to use it instead
-# of MMS (cheap CPU inference, our licence). Swapping models = one env var.
+# Legacy single-voice env, kept so an old deployment keeps working after upgrade.
 PIPER_MODEL = os.getenv("PIPER_MODEL")
-# Interim Azure-quality Urdu: set SPEECH_KEY + REGION to route /tts through Azure
-# Neural TTS until the trained Piper voice is ready. Priority: Piper > Azure > MMS.
 AZURE_KEY = os.getenv("SPEECH_KEY")
 AZURE_REGION = os.getenv("SPEECH_REGION") or os.getenv("REGION")
 AZURE_VOICE = os.getenv("AZURE_VOICE", "ur-PK-UzmaNeural")
-DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 MAX_CHARS = int(os.getenv("TTS_MAX_CHARS", "1200"))
+
+VOICES = registry.discover(VOICES_DIR)
+if PIPER_MODEL and os.path.exists(PIPER_MODEL):
+    VOICES.update(registry.discover(os.path.dirname(os.path.abspath(PIPER_MODEL))))
+ALIASES = registry.alias_map(VOICES)
+DEFAULT_VOICE = registry.default_id(VOICES)
 
 app = FastAPI(title="EYEWAZ Urdu TTS")
 _model = None
 _tok = None
 _uro = None
-_piper = None
+_loaded = {}      # canonical id -> PiperVoice, loaded on first use and kept
 
 
-def _piper_voice():
-    global _piper
-    if _piper is None:
+def _piper_voice(voice_id):
+    """Load and cache one Piper voice. Each costs roughly 200 MB resident."""
+    if voice_id not in _loaded:
         from piper import PiperVoice
-        cfg = PIPER_MODEL + ".json"
-        _piper = PiperVoice.load(PIPER_MODEL, config_path=cfg if os.path.exists(cfg) else None)
-    return _piper
+        info = VOICES[voice_id]
+        _loaded[voice_id] = PiperVoice.load(info["model"], config_path=info["config"])
+    return _loaded[voice_id]
 
 
 def _load():
     global _model, _tok
     if _model is None:
+        import torch
+        from transformers import VitsModel, AutoTokenizer
         _tok = AutoTokenizer.from_pretrained(MODEL_ID)
-        _model = VitsModel.from_pretrained(MODEL_ID).to(DEVICE).eval()
+        _model = VitsModel.from_pretrained(MODEL_ID).to(_device()).eval()
     return _model, _tok
+
+
+def _device():
+    try:
+        import torch
+        return "cuda" if torch.cuda.is_available() else "cpu"
+    except Exception:
+        return "cpu"
 
 
 def _romanize(text: str) -> str:
@@ -81,27 +99,49 @@ def _romanize(text: str) -> str:
 
 class TTSIn(BaseModel):
     text: str
-    speed: float | None = None   # 0.5–2.0 (MMS exposes a length/speaking-rate scale)
+    voice: str | None = None     # "eyewaz-urdu-female", "female", "sh:urdu-male", ...
+    speed: float | None = None   # 0.5-2.0
 
 
-def _synth(text: str, speed: float | None) -> bytes:
+def _resolve(voice):
+    """Canonical voice id, or raise 400 listing what we do have.
+
+    An unknown id is never silently swapped for another voice: a listener who
+    picked male must not be handed female without being told.
+    """
+    if not VOICES:
+        return None
+    if not voice:
+        return DEFAULT_VOICE
+    hit = registry.resolve(voice, VOICES, ALIASES)
+    if not hit:
+        raise HTTPException(status_code=400,
+                            detail=f"Unknown voice '{voice}'. Available: {', '.join(VOICES)}")
+    return hit
+
+
+def _synth(text: str, speed: float | None, voice: str | None = None) -> bytes:
     text = (text or "").strip()[:MAX_CHARS]
     if not text:
         return b""
     norm = os.getenv("TTS_NORMALIZE", "1") != "0"
-    # Our trained Piper voice (if configured).
-    if PIPER_MODEL:
-        return _synth_piper(_maybe_normalize(text, norm), speed)
-    # Interim: Azure Neural Urdu (good quality) if keys are set. Azure handles its
-    # own text/number normalization, so we pass the raw text.
+    voice_id = _resolve(voice)
+    # Our own trained voices.
+    if voice_id:
+        return _synth_piper(_maybe_normalize(text, norm), speed, voice_id)
+    # Interim: Azure Neural Urdu if keys are set. Azure handles its own text and
+    # number normalization, so we pass the raw text.
     if AZURE_KEY and AZURE_REGION:
         return _synth_azure(text, speed)
     # Otherwise MMS.
+    import numpy as np
+    import soundfile as sf
+    import torch
     model, tok = _load()
     text = _maybe_normalize(text, norm and "urd" in MODEL_ID)
     if getattr(tok, "is_uroman", False):
         text = _romanize(text)
-    inputs = tok(text, return_tensors="pt").to(DEVICE)
+    inputs = tok(text, return_tensors="pt").to(_device())
     if speed:
         try:
             model.speaking_rate = max(0.5, min(2.0, float(speed)))
@@ -127,11 +167,10 @@ def _maybe_normalize(text: str, enabled: bool) -> str:
         return text
 
 
-def _synth_piper(text: str, speed: float | None) -> bytes:
-    """piper-tts 1.3.x (OHF-Voice) API: synthesize() yields AudioChunk objects;
+def _synth_piper(text: str, speed: float | None, voice_id: str) -> bytes:
+    """piper-tts (OHF-Voice) API: synthesize() yields AudioChunk objects;
     we assemble them into a WAV ourselves."""
-    import wave
-    voice = _piper_voice()
+    voice = _piper_voice(voice_id)
     length_scale = (1.0 / float(speed)) if (speed and float(speed) != 1.0) else 1.0
     try:
         from piper import SynthesisConfig
@@ -140,7 +179,7 @@ def _synth_piper(text: str, speed: float | None) -> bytes:
         chunks = list(voice.synthesize(text))   # tolerate signature changes
     if not chunks:
         return b""
-    rate = getattr(chunks[0], "sample_rate", 22050)
+    rate = getattr(chunks[0], "sample_rate", VOICES[voice_id]["sample_rate"])
     audio = b"".join(getattr(c, "audio_int16_bytes", b"") for c in chunks)
     buf = io.BytesIO()
     with wave.open(buf, "wb") as wf:
@@ -157,7 +196,7 @@ def _xml_escape(s: str) -> str:
 
 
 def _synth_azure(text: str, speed: float | None) -> bytes:
-    """Azure Neural TTS via REST (returns 22.05 kHz mono 16-bit WAV)."""
+    """Azure Neural TTS via REST (returns 24 kHz mono 16-bit WAV)."""
     import urllib.request
     body = _xml_escape(text)
     if speed and float(speed) != 1.0:
@@ -176,24 +215,33 @@ def _synth_azure(text: str, speed: float | None) -> bytes:
         return r.read()
 
 
+def _public(info):
+    return {k: info[k] for k in ("id", "name", "gender", "language", "sample_rate")}
+
+
 @app.get("/healthz")
 def healthz():
-    engine = "piper" if PIPER_MODEL else ("azure" if (AZURE_KEY and AZURE_REGION) else "mms")
-    model = PIPER_MODEL or (AZURE_VOICE if engine == "azure" else MODEL_ID)
-    return {"ok": True, "engine": engine, "model": model, "device": DEVICE}
+    engine = "piper" if VOICES else ("azure" if (AZURE_KEY and AZURE_REGION) else "mms")
+    return {"ok": True, "engine": engine, "voices": list(VOICES),
+            "default": DEFAULT_VOICE, "voices_dir": VOICES_DIR, "device": _device()}
+
+
+@app.get("/voices")
+def list_voices():
+    return [_public(v) for v in VOICES.values()]
 
 
 @app.post("/tts", dependencies=[Depends(require_key)])
 def tts_post(body: TTSIn):
-    audio = _synth(body.text, body.speed)
+    audio = _synth(body.text, body.speed, body.voice)
     if not audio:
         return JSONResponse({"message": "No text."}, status_code=400)
     return Response(content=audio, media_type="audio/wav")
 
 
 @app.get("/tts", dependencies=[Depends(require_key)])
-def tts_get(text: str = "", speed: float | None = None):
-    audio = _synth(text, speed)
+def tts_get(text: str = "", voice: str | None = None, speed: float | None = None):
+    audio = _synth(text, speed, voice)
     if not audio:
         return JSONResponse({"message": "No text."}, status_code=400)
     return Response(content=audio, media_type="audio/wav")
