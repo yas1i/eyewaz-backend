@@ -89,6 +89,12 @@ class ProfileAPI(Resource):
 
 
 class VoicesAPI(Resource):
+    """The voice picker's catalogue: our own Urdu voices first, then Azure's.
+
+    Ours have to appear HERE, not only in the dialect picker, because this is the
+    dropdown people actually open when they want to change voice.
+    """
+
     @jwt_required()
     def get(self):
         global _VOICES_CACHE
@@ -97,4 +103,26 @@ class VoicesAPI(Resource):
                 _VOICES_CACHE = list_voices()
             except Exception as e:
                 return _resp({"message": f"Could not load voices: {e}"}, 502)
-        return _resp({"voices": _VOICES_CACHE}, 200)
+        return _resp({"voices": _own_urdu_voices() + _VOICES_CACHE}, 200)
+
+
+def _own_urdu_voices():
+    """Our trained voices, shaped like Azure entries so the picker needs no change.
+
+    Empty when the engine is not configured or not answering, so the picker
+    quietly falls back to Azure rather than offering a voice that cannot speak.
+    """
+    import selfhost_tts
+    out = []
+    for v in selfhost_tts.voices():
+        if v.get("language") != "ur":
+            continue
+        gender = (v.get("gender") or "").capitalize()
+        out.append({
+            "shortName": "sh:" + v["id"],
+            "locale": "ur-PK",
+            "localeName": "Urdu (Pakistan)",
+            "displayName": f"EYEWAZ Urdu{f' ({gender.lower()})' if gender else ''}",
+            "gender": gender,
+        })
+    return out

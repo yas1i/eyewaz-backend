@@ -183,6 +183,12 @@ class SpeakAPI(Resource):
             or prefs.get("voice") or urdu_voice()
         rate = data.get("rate", prefs.get("rate", 1.0))
 
+        # Urdu means our own voice now. Preferences saved before the trained voices
+        # existed still hold an Azure Urdu name, so map those across, keeping the
+        # gender the listener chose. Every other language is untouched.
+        if voice in (AZURE_URDU_FEMALE, AZURE_URDU_MALE):
+            voice = urdu_voice("male" if voice == AZURE_URDU_MALE else "female")
+
         capped = text[:SPEAK_MAX_CHARS]
 
         # Cloned dialect voices are stored as "el:<voice_id>". They are premium,
