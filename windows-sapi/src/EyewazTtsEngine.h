@@ -13,11 +13,16 @@
 
 #include <sapi.h>
 #include <sapiddk.h>
-#include <atlbase.h>
+#include <wrl/client.h>   // Microsoft::WRL::ComPtr (Windows SDK; no ATL dependency)
 #include <string>
 #include <vector>
 
-class ATL_NO_VTABLE CEyewazTtsEngine
+// NOTE: this class is instantiated DIRECTLY (dll.cpp does `new CEyewazTtsEngine`),
+// so it must NOT use __declspec(novtable) — that suppresses vtable setup in the
+// constructor and the first virtual call SAPI makes would crash (AccessViolation).
+// The original scaffold's ATL_NO_VTABLE was a latent bug; we deliberately drop it.
+
+class CEyewazTtsEngine
     : public ISpTTSEngine
     , public ISpObjectWithToken
 {
@@ -51,9 +56,12 @@ private:
     void LoadEndpointFromToken();
 
     LONG                       m_cRef;
-    CComPtr<ISpObjectToken>    m_cpToken;
+    Microsoft::WRL::ComPtr<ISpObjectToken> m_cpToken;
     std::wstring               m_endpoint;   // e.g. http://127.0.0.1:59125/tts
     std::wstring               m_apiKey;     // usually empty for localhost
+    std::wstring               m_voice;      // server voice id from the token
+                                             // (e.g. eyewaz-urdu-male); the token
+                                             // the listener picked chooses gender
 
     // Native output format we produce (Piper medium = 22.05 kHz mono 16-bit).
     static const DWORD kSampleRate = 22050;

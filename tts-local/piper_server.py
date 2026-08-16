@@ -28,6 +28,7 @@ import argparse
 import io
 import json
 import os
+import subprocess
 import wave
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, parse_qs
@@ -63,12 +64,51 @@ def _normalize(text):
         return text
 
 
+def _synth_via_exe(text, speed, info):
+    """Synthesize by shelling out to the bundled rhasspy piper.exe.
+
+    Used where piper1-gpl's compiled espeakbridge is unavailable (Windows on
+    ARM, or any machine without the pip wheel), and to share ONE runtime with
+    the NVDA add-on. piper.exe streams raw 16-bit PCM to stdout; we wrap it in a
+    WAV container so the HTTP reply is identical to the piper1-gpl path.
+    """
+    exe = _args.piper_exe
+    length_scale = (1.0 / float(speed)) if speed else 1.0
+    args = [exe, "--model", info["model"], "--output_raw",
+            "--length_scale", "%.3f" % length_scale]
+    if info.get("config"):
+        args += ["--config", info["config"]]
+    creationflags = 0x08000000 if os.name == "nt" else 0  # CREATE_NO_WINDOW
+    proc = subprocess.run(
+        args, input=text.encode("utf-8"),
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        cwd=os.path.dirname(os.path.abspath(exe)),  # so piper finds its DLLs + espeak-ng-data
+        creationflags=creationflags,
+    )
+    pcm = proc.stdout or b""
+    if not pcm:
+        raise RuntimeError(proc.stderr.decode("utf-8", "replace")[-300:]
+                           or "piper.exe produced no audio")
+    rate = int(info.get("sample_rate", 22050))
+    buf = io.BytesIO()
+    wf = wave.open(buf, "wb")
+    wf.setnchannels(1)
+    wf.setsampwidth(2)
+    wf.setframerate(rate)
+    wf.writeframes(pcm)
+    wf.close()
+    return buf.getvalue()
+
+
 def synth(text, speed, voice_id=None):
     text = (text or "").strip()
     if not text:
         return b""
     text = _normalize(text)
-    voice = _load_voice(voice_id or DEFAULT_VOICE)
+    vid = voice_id or DEFAULT_VOICE
+    if _args.piper_exe:
+        return _synth_via_exe(text, speed, VOICES[vid])
+    voice = _load_voice(vid)
 
     # piper-tts (piper1-gpl) synthesize() returns an iterable of AudioChunk,
     # it no longer writes into a wave.Wave_write directly (older rhasspy API did).
@@ -171,6 +211,10 @@ def main():
                    help="single .onnx voice, instead of a folder (or set PIPER_MODEL)")
     p.add_argument("--config", default=os.getenv("PIPER_CONFIG"),
                    help="path to the .onnx.json (defaults to <model>.json)")
+    p.add_argument("--piper-exe", default=os.getenv("PIPER_EXE"),
+                   help="shell out to this rhasspy piper.exe instead of the "
+                        "piper1-gpl Python bindings (needed on Windows/ARM, "
+                        "shares one runtime with the NVDA add-on)")
     p.add_argument("--host", default=os.getenv("HOST", "127.0.0.1"))
     p.add_argument("--port", type=int, default=int(os.getenv("PORT", "59125")))
     p.add_argument("--api-key", default=os.getenv("TTS_API_KEY", ""),

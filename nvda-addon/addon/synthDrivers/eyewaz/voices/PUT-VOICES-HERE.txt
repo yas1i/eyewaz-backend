@@ -1,0 +1,13 @@
+Put your trained EYEWAZ Piper voices in THIS folder.
+
+Each voice is two files with matching names, for example:
+  eyewaz-urdu-female.onnx
+  eyewaz-urdu-female.onnx.json
+  eyewaz-urdu-male.onnx
+  eyewaz-urdu-male.onnx.json
+
+These are the files produced by the training pipeline (see ../../../../tts-train/
+train_colab.md, the export to ONNX step). Drop them in and the driver lists each
+one as a voice in NVDA, Speech settings (for example "EYEWAZ Urdu Female").
+
+The file name becomes the voice name: eyewaz-urdu-female -> EYEWAZ Urdu Female.

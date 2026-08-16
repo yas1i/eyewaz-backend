@@ -88,6 +88,33 @@ def download_page():
     return _no_cache(send_from_directory(WEBAPP_DIR, "download.html"))
 
 
+@app.route("/voice")
+def voice_page():
+    # Public page for the Windows screen-reader voice (NVDA add-on + SAPI installer).
+    return _no_cache(send_from_directory(WEBAPP_DIR, "voice.html"))
+
+
+# Stable eyewaz.com download links that redirect to the current release assets, so
+# the /voice page never changes when a new version ships. Override the targets with
+# env vars once the first signed build is hosted (GitHub release or B2).
+_NVDA_ADDON_URL = os.getenv(
+    "NVDA_ADDON_URL",
+    "https://github.com/yas1i/eyewaz-backend/releases/latest/download/EyewazUrdu.nvda-addon")
+_WINDOWS_VOICE_URL = os.getenv(
+    "WINDOWS_VOICE_URL",
+    "https://github.com/yas1i/eyewaz-backend/releases/latest/download/EyewazUrduVoiceSetup.exe")
+
+
+@app.route("/download/nvda-voice")
+def download_nvda_voice():
+    return redirect(_NVDA_ADDON_URL, code=302)
+
+
+@app.route("/download/windows-voice")
+def download_windows_voice():
+    return redirect(_WINDOWS_VOICE_URL, code=302)
+
+
 @app.route("/site-logo.js")
 def site_logo_js():
     return _no_cache(send_from_directory(WEBAPP_DIR, "site-logo.js"))

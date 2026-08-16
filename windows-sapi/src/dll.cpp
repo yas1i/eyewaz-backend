@@ -52,6 +52,29 @@ static LONG SetStr(HKEY root, const wchar_t* sub, const wchar_t* name, const wch
     return r;
 }
 
+// Both voices share ONE engine DLL/CLSID; the only difference is the token, whose
+// ServerVoice attribute tells the engine which model to request from the local
+// server. Registering another gender is just another call to this helper.
+static const wchar_t* kTokensRoot =
+    L"SOFTWARE\\Microsoft\\Speech\\Voices\\Tokens\\";
+
+static void RegisterVoiceToken(const wchar_t* clsid, const wchar_t* tokenId,
+                               const wchar_t* displayName, const wchar_t* gender,
+                               const wchar_t* serverVoice) {
+    std::wstring tok = std::wstring(kTokensRoot) + tokenId;
+    SetStr(HKEY_LOCAL_MACHINE, tok.c_str(), nullptr, displayName);
+    SetStr(HKEY_LOCAL_MACHINE, tok.c_str(), L"CLSID", clsid);
+    std::wstring attr = tok + L"\\Attributes";
+    SetStr(HKEY_LOCAL_MACHINE, attr.c_str(), L"Name",     displayName);
+    SetStr(HKEY_LOCAL_MACHINE, attr.c_str(), L"Vendor",   L"WAJD AI");
+    SetStr(HKEY_LOCAL_MACHINE, attr.c_str(), L"Language", L"420");   // Urdu (Pakistan)
+    SetStr(HKEY_LOCAL_MACHINE, attr.c_str(), L"Gender",   gender);
+    SetStr(HKEY_LOCAL_MACHINE, attr.c_str(), L"Age",      L"Adult");
+    // Read by the engine (else it falls back to the localhost default):
+    SetStr(HKEY_LOCAL_MACHINE, attr.c_str(), L"Endpoint", L"http://127.0.0.1:59125/tts");
+    SetStr(HKEY_LOCAL_MACHINE, attr.c_str(), L"ServerVoice", serverVoice);
+}
+
 STDAPI DllRegisterServer() {
     wchar_t path[MAX_PATH];
     GetModuleFileNameW(g_hModule, path, MAX_PATH);
@@ -66,18 +89,11 @@ STDAPI DllRegisterServer() {
     SetStr(HKEY_CLASSES_ROOT, inproc.c_str(), nullptr, path);
     SetStr(HKEY_CLASSES_ROOT, inproc.c_str(), L"ThreadingModel", L"Both");
 
-    // 2) SAPI voice token — this is what makes JAWS/Narrator list the voice.
-    const wchar_t* tok = L"SOFTWARE\\Microsoft\\Speech\\Voices\\Tokens\\EYEWAZ-Urdu";
-    SetStr(HKEY_LOCAL_MACHINE, tok, nullptr, EYEWAZ_VOICE_NAME);
-    SetStr(HKEY_LOCAL_MACHINE, tok, L"CLSID", clsid);
-    std::wstring attr = std::wstring(tok) + L"\\Attributes";
-    SetStr(HKEY_LOCAL_MACHINE, attr.c_str(), L"Name",     EYEWAZ_VOICE_NAME);
-    SetStr(HKEY_LOCAL_MACHINE, attr.c_str(), L"Vendor",   L"WAJD AI");
-    SetStr(HKEY_LOCAL_MACHINE, attr.c_str(), L"Language", L"420");   // Urdu (Pakistan)
-    SetStr(HKEY_LOCAL_MACHINE, attr.c_str(), L"Gender",   L"Female");
-    SetStr(HKEY_LOCAL_MACHINE, attr.c_str(), L"Age",      L"Adult");
-    // Optional overrides read by the engine (else it uses the localhost default):
-    SetStr(HKEY_LOCAL_MACHINE, attr.c_str(), L"Endpoint", L"http://127.0.0.1:59125/tts");
+    // 2) SAPI voice tokens — one per gender, so JAWS/Narrator list both voices.
+    RegisterVoiceToken(clsid, L"EYEWAZ-Urdu",      L"EYEWAZ Urdu (Female)",
+                       L"Female", L"eyewaz-urdu-female");
+    RegisterVoiceToken(clsid, L"EYEWAZ-Urdu-Male", L"EYEWAZ Urdu (Male)",
+                       L"Male",   L"eyewaz-urdu-male");
     return S_OK;
 }
 
@@ -86,7 +102,9 @@ STDAPI DllUnregisterServer() {
     std::wstring base = std::wstring(L"CLSID\\") + clsid;
     RegDeleteTreeW(HKEY_CLASSES_ROOT, base.c_str());
     RegDeleteTreeW(HKEY_LOCAL_MACHINE,
-        L"SOFTWARE\\Microsoft\\Speech\\Voices\\Tokens\\EYEWAZ-Urdu");
+        (std::wstring(kTokensRoot) + L"EYEWAZ-Urdu").c_str());
+    RegDeleteTreeW(HKEY_LOCAL_MACHINE,
+        (std::wstring(kTokensRoot) + L"EYEWAZ-Urdu-Male").c_str());
     return S_OK;
 }
 

@@ -1,0 +1,139 @@
+# Build the shippable EYEWAZ Urdu voice on a real x64 Windows runner.
+#
+# Produces two release assets:
+#   - EyewazUrduVoiceSetup.exe   (SAPI5 voice: JAWS, Narrator, Word, any SAPI app)
+#   - EyewazUrdu-<ver>.nvda-addon (NVDA add-on)
+#
+# The trained voices are large, so they are NOT in the repo: set a VOICES_URL
+# secret pointing at a zip of the .onnx + .onnx.json files (e.g. a private
+# release asset or your B2 bucket). Code-signing is optional but REQUIRED before
+# public release - set SIGN_PFX_BASE64 + SIGN_PASSWORD (or swap in Azure Trusted
+# Signing). Without a cert the build still runs and uploads UNSIGNED artifacts
+# for internal testing only.
+#
+# Trigger: push a tag like v1.0.0 (attaches to a GitHub Release), or run manually.
+
+name: Build EYEWAZ Urdu Voice
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write   # create/attach releases
+
+jobs:
+  build:
+    runs-on: windows-latest   # x64 - the architecture JAWS users run
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up MSVC (x64)
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Set up Python (x64)
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          architecture: x64
+
+      - name: Fetch the Piper Windows runtime
+        shell: pwsh
+        run: ./nvda-addon/setup.ps1
+
+      - name: Fetch the trained voices
+        shell: pwsh
+        env:
+          VOICES_URL: ${{ secrets.VOICES_URL }}
+        run: |
+          if (-not $env:VOICES_URL) {
+            throw "Set the VOICES_URL secret to a zip of the .onnx + .onnx.json voices."
+          }
+          Invoke-WebRequest $env:VOICES_URL -OutFile voices.zip
+          Expand-Archive voices.zip -DestinationPath nvda-addon/addon/synthDrivers/eyewaz/voices -Force
+
+      - name: Build the SAPI DLL (x64)
+        shell: cmd
+        working-directory: windows-sapi/src
+        run: >
+          cl /nologo /LD /EHsc /std:c++17 /DUNICODE /D_UNICODE /DWIN32_LEAN_AND_MEAN
+          EyewazTtsEngine.cpp dll.cpp /Fe:EyewazTts-x64.dll
+          /link /DEF:EyewazTts.def winhttp.lib ole32.lib oleaut32.lib advapi32.lib sapi.lib
+
+      - name: Build the NVDA add-on
+        shell: pwsh
+        run: |
+          python nvda-addon/build.py --out dist
+          # Also publish under a FIXED name so the eyewaz.com /download/nvda-voice
+          # redirect (releases/latest/download/EyewazUrdu.nvda-addon) always works.
+          Copy-Item dist/EyewazUrdu-*.nvda-addon dist/EyewazUrdu.nvda-addon
+
+      - name: Freeze the voice server (no Python needed on the target)
+        shell: pwsh
+        run: |
+          python -m pip install --quiet pyinstaller
+          python -m PyInstaller --noconfirm --onefile --console --name eyewaz-voice-server `
+            --paths tts-local --hidden-import voices `
+            --exclude-module piper --exclude-module torch --exclude-module numpy --exclude-module onnxruntime `
+            --distpath dist-server tts-local/piper_server.py
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup -y --no-progress
+
+      - name: Stage the installer payload
+        shell: pwsh
+        run: |
+          $stage = "windows-sapi/installer/stage"
+          New-Item -ItemType Directory -Force -Path $stage, "$stage/piper", "$stage/voices" | Out-Null
+          Copy-Item windows-sapi/src/EyewazTts-x64.dll "$stage/EyewazTts.dll"
+          Copy-Item dist-server/eyewaz-voice-server.exe "$stage/"
+          Copy-Item nvda-addon/addon/synthDrivers/eyewaz/runtime/* "$stage/piper" -Recurse -Force
+          Copy-Item nvda-addon/addon/synthDrivers/eyewaz/voices/*.onnx "$stage/voices"
+          Copy-Item nvda-addon/addon/synthDrivers/eyewaz/voices/*.onnx.json "$stage/voices"
+          # The bundled rhasspy piper.exe rejects multi-codepoint phoneme keys, so
+          # trim them from the staged configs (same fix build.py applies to the add-on).
+          python windows-sapi/installer/trim_voice_maps.py windows-sapi/installer/stage/voices
+
+      - name: Compile the installer
+        shell: pwsh
+        run: |
+          $v = "${{ github.ref_name }}" -replace '^v', ''
+          if (-not $v -or $v -eq (Split-Path -Leaf $env:GITHUB_REF)) { $v = "1.0.0" }
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "/DAppVersion=$v" windows-sapi/installer/eyewaz-voice.iss
+
+      - name: Code-sign (skipped automatically if no cert secret)
+        shell: pwsh
+        env:
+          SIGN_PFX_BASE64: ${{ secrets.SIGN_PFX_BASE64 }}
+          SIGN_PASSWORD: ${{ secrets.SIGN_PASSWORD }}
+        run: |
+          if (-not $env:SIGN_PFX_BASE64) { Write-Host "No signing cert - uploading UNSIGNED (internal testing only)."; exit 0 }
+          $pfx = Join-Path $env:RUNNER_TEMP cert.pfx
+          [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:SIGN_PFX_BASE64))
+          $signtool = (Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin" -Recurse -Filter signtool.exe |
+                       Where-Object { $_.FullName -like '*x64*' } | Select-Object -First 1).FullName
+          # Sign the DLL, the server exe and the installer (Authenticode + RFC3161 timestamp).
+          & $signtool sign /f $pfx /p $env:SIGN_PASSWORD /fd SHA256 /tr http://timestamp.sectigo.com /td SHA256 `
+            windows-sapi/installer/stage/EyewazTts.dll `
+            windows-sapi/installer/stage/eyewaz-voice-server.exe `
+            windows-sapi/installer/Output/EyewazUrduVoiceSetup.exe
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: eyewaz-urdu-voice
+          path: |
+            windows-sapi/installer/Output/EyewazUrduVoiceSetup.exe
+            dist/*.nvda-addon
+
+      - name: Attach to the GitHub Release (on a tag)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            windows-sapi/installer/Output/EyewazUrduVoiceSetup.exe
+            dist/*.nvda-addon

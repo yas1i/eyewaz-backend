@@ -126,3 +126,15 @@ tts-train/voices/
 tts-train/*-raw/
 tts-train/.vastenv/
 tts-train/*-qc.csv
+
+# Voice build artifacts: trained models ship as release assets, never in git.
+nvda-addon/addon/synthDrivers/eyewaz/voices/*.onnx
+nvda-addon/addon/synthDrivers/eyewaz/voices/*.onnx.json
+nvda-addon/addon/synthDrivers/eyewaz/runtime/
+nvda-addon/*.nvda-addon
+windows-sapi/installer/stage/
+windows-sapi/installer/Output/
+windows-sapi/src/*.dll
+windows-sapi/src/*.obj
+windows-sapi/src/*.lib
+windows-sapi/src/*.exp

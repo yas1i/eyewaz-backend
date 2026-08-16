@@ -36,7 +36,7 @@ STDMETHODIMP CEyewazTtsEngine::SetObjectToken(ISpObjectToken* pToken) {
 }
 STDMETHODIMP CEyewazTtsEngine::GetObjectToken(ISpObjectToken** ppToken) {
     if (!ppToken) return E_POINTER;
-    *ppToken = m_cpToken;
+    *ppToken = m_cpToken.Get();
     if (*ppToken) (*ppToken)->AddRef();
     return S_OK;
 }
@@ -45,12 +45,16 @@ void CEyewazTtsEngine::LoadEndpointFromToken() {
     // Optional: let the installed token override the endpoint / key via its
     // attributes ("Endpoint", "ApiKey"). Falls back to the localhost default.
     if (!m_cpToken) return;
-    CComPtr<ISpDataKey> attrs;
-    if (SUCCEEDED(m_cpToken->OpenKey(L"Attributes", &attrs)) && attrs) {
+    Microsoft::WRL::ComPtr<ISpDataKey> attrs;
+    if (SUCCEEDED(m_cpToken->OpenKey(L"Attributes", attrs.GetAddressOf())) && attrs) {
         LPWSTR v = nullptr;
         if (SUCCEEDED(attrs->GetStringValue(L"Endpoint", &v)) && v) { m_endpoint = v; CoTaskMemFree(v); }
         v = nullptr;
         if (SUCCEEDED(attrs->GetStringValue(L"ApiKey", &v)) && v) { m_apiKey = v; CoTaskMemFree(v); }
+        v = nullptr;
+        // Which server voice this token maps to (female vs male). Absent => the
+        // server's default voice, so a single-voice install still works.
+        if (SUCCEEDED(attrs->GetStringValue(L"ServerVoice", &v)) && v) { m_voice = v; CoTaskMemFree(v); }
     }
 }
 
@@ -74,9 +78,46 @@ STDMETHODIMP CEyewazTtsEngine::GetOutputFormat(const GUID*, const WAVEFORMATEX*,
     return S_OK;
 }
 
+// A spoken word's position in SAPI's source text plus the estimated byte offset
+// of its first sample within a fragment's PCM.
+struct WordMark { size_t byteOffset; ULONG charPos; ULONG charLen; };
+
+static inline bool isWordSpace(wchar_t c) {
+    return c == L' '  || c == L'\t' || c == L'\n' || c == L'\r' ||
+           c == L'\f' || c == L'\v' || c == 0x00A0 /*nbsp*/ ||
+           c == 0x3000 /*ideographic space*/;
+}
+
+// Split `text` into whitespace-delimited words and map each word's start to a
+// 16-bit-aligned byte offset in `pcmBytes`, PROPORTIONAL to its character
+// position. piper.exe hands back no per-word alignment, so this is an estimate:
+// monotonic and accurate enough for a screen reader to follow the spoken word.
+// Precise timings would require synthesizing each word alone, which would wreck
+// sentence prosody, so we deliberately trade exactness for natural speech.
+// `srcOffset` is the fragment's offset in SAPI's overall text stream.
+static std::vector<WordMark> ComputeWordMarks(const std::wstring& text,
+                                              size_t pcmBytes, ULONG srcOffset) {
+    std::vector<WordMark> marks;
+    const size_t n = text.size();
+    if (n == 0 || pcmBytes < 2) return marks;
+    for (size_t i = 0; i < n; ) {
+        while (i < n && isWordSpace(text[i])) ++i;
+        if (i >= n) break;
+        const size_t wordStart = i;
+        while (i < n && !isWordSpace(text[i])) ++i;
+        size_t byteOff = (size_t)((double)wordStart / (double)n * (double)pcmBytes);
+        byteOff &= ~static_cast<size_t>(1);           // align to a 16-bit sample
+        if (byteOff > pcmBytes - 2) byteOff = pcmBytes - 2;
+        marks.push_back({ byteOff, (ULONG)(srcOffset + wordStart),
+                          (ULONG)(i - wordStart) });
+    }
+    return marks;
+}
+
 // ---------- ISpTTSEngine::Speak ----------
-// Walk the fragment list, synthesize each run, write PCM to the site, and bail
-// out promptly if SAPI signals an abort (e.g. the user interrupts speech).
+// Walk the fragment list, synthesize each run, write PCM to the site, report
+// word-boundary events for caret tracking, and bail out promptly if SAPI
+// signals an abort (e.g. the user interrupts speech).
 STDMETHODIMP CEyewazTtsEngine::Speak(DWORD, REFGUID, const WAVEFORMATEX*,
                                      const SPVTEXTFRAG* pFrag,
                                      ISpTTSEngineSite* pSite) {
@@ -86,6 +127,14 @@ STDMETHODIMP CEyewazTtsEngine::Speak(DWORD, REFGUID, const WAVEFORMATEX*,
     pSite->GetRate(&rate);          // SAPI rate: -10..+10  -> map to speed
     USHORT volume = 100;
     pSite->GetVolume(&volume);      // 0..100
+
+    // Only compute word events if the listener (JAWS/Narrator) asked for them.
+    // Audio offsets accumulate across every fragment because SAPI tracks ONE
+    // continuous output stream for the whole Speak() call.
+    ULONGLONG interest = 0;
+    pSite->GetEventInterest(&interest);
+    const bool wantWord = (interest & SPFEI(SPEI_WORD_BOUNDARY)) != 0;
+    ULONGLONG audioBase = 0;
 
     for (; pFrag != nullptr; pFrag = pFrag->pNext) {
         if (pSite->GetActions() & SPVES_ABORT) break;
@@ -103,16 +152,35 @@ STDMETHODIMP CEyewazTtsEngine::Speak(DWORD, REFGUID, const WAVEFORMATEX*,
             for (size_t i = 0; i < n; ++i) s[i] = (short)(s[i] * volume / 100);
         }
 
-        // Write in blocks so an abort is honoured mid-utterance.
+        // Estimate this fragment's word boundaries (empty unless wantWord).
+        std::vector<WordMark> marks;
+        if (wantWord) marks = ComputeWordMarks(text, pcm.size(), pFrag->ulTextSrcOffset);
+
+        auto addWordEvent = [&](const WordMark& m) {
+            SPEVENT ev = {};
+            ev.eEventId             = SPEI_WORD_BOUNDARY;
+            ev.elParamType          = SPET_LPARAM_IS_UNDEFINED;
+            ev.ullAudioStreamOffset = audioBase + m.byteOffset;
+            ev.wParam               = m.charLen;   // word length, in characters
+            ev.lParam               = m.charPos;   // word start in the text stream
+            pSite->AddEvents(&ev, 1);
+        };
+
+        // Write in blocks so an abort is honoured mid-utterance, adding each
+        // word event just before the block that carries its first sample so the
+        // offset is always ahead of SAPI's write cursor, never in the past.
         const ULONG kBlock = kSampleRate / 4 * (kBitsPerSample / 8); // ~0.25s
+        size_t mi = 0;
         for (size_t off = 0; off < pcm.size(); off += kBlock) {
             if (pSite->GetActions() & SPVES_ABORT) return S_OK;
             ULONG chunk = (ULONG)min((size_t)kBlock, pcm.size() - off);
+            for (; mi < marks.size() && marks[mi].byteOffset < off + chunk; ++mi)
+                addWordEvent(marks[mi]);
             ULONG written = 0;
             pSite->Write(pcm.data() + off, chunk, &written);
         }
-        // TODO: report SPEI_WORD_BOUNDARY events here for caret tracking by
-        //       mapping character offsets -> sample offsets (pSite->AddEvents).
+        for (; mi < marks.size(); ++mi) addWordEvent(marks[mi]);  // safety net
+        audioBase += pcm.size();
     }
     return S_OK;
 }
@@ -138,7 +206,11 @@ bool CEyewazTtsEngine::Synthesize(const std::wstring& text, int rate,
         if (c == '\n' || c == '\r') { body += "\\n"; continue; }
         body.push_back(c);
     }
-    body += "\",\"speed\":" + std::to_string(speed) + "}";
+    body += "\",\"speed\":" + std::to_string(speed);
+    // Tell the server which voice this token wants (female/male). The id is a
+    // plain ASCII slug with no JSON-special characters, so no escaping needed.
+    if (!m_voice.empty()) body += ",\"voice\":\"" + utf8(m_voice) + "\"";
+    body += "}";
 
     // Parse endpoint into host/port/path.
     URL_COMPONENTS uc{}; uc.dwStructSize = sizeof(uc);
@@ -150,6 +222,12 @@ bool CEyewazTtsEngine::Synthesize(const std::wstring& text, int rate,
     HINTERNET hS = WinHttpOpen(L"EYEWAZ-SAPI/1.0", WINHTTP_ACCESS_TYPE_NO_PROXY,
                                WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
     if (!hS) return false;
+    // Fail FAST if the local server is down or hung: a screen reader must never
+    // freeze. Without these, WinHTTP's ~60 s defaults would stall speech. Values
+    // (ms): resolve, connect, send, receive. Localhost resolves/connects in ms;
+    // receive is generous because a long line can take a couple of seconds to
+    // synthesize, but still bounded so a wedged server can't hang the voice.
+    WinHttpSetTimeouts(hS, 1000, 2000, 3000, 10000);
     HINTERNET hC = WinHttpConnect(hS, host, uc.nPort, 0);
     HINTERNET hR = hC ? WinHttpOpenRequest(hC, L"POST", path, nullptr,
                         WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES,
