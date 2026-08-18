@@ -140,7 +140,9 @@ BATCH1 = [
     ("dates", systematic_dates()), ("misc", systematic_misc()),
 ]
 
-BATCHES = [BATCH1, b2.CATEGORIES_BATCH2]
+import handwritten_batch3 as b3
+
+BATCHES = [BATCH1, b2.CATEGORIES_BATCH2, b3.CATEGORIES_BATCH3]
 
 
 def interleave(cats):
