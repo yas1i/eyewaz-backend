@@ -99,7 +99,7 @@ def voice_page():
 # env vars once the first signed build is hosted (GitHub release or B2).
 _NVDA_ADDON_URL = os.getenv(
     "NVDA_ADDON_URL",
-    "https://github.com/yas1i/eyewaz-backend/releases/latest/download/EyewazUrdu.nvda-addon")
+    "https://github.com/yas1i/eyewaz-backend/releases/latest/download/EyewazUrdu-1.0.0.nvda-addon")
 _WINDOWS_VOICE_URL = os.getenv(
     "WINDOWS_VOICE_URL",
     "https://github.com/yas1i/eyewaz-backend/releases/latest/download/EyewazUrduVoiceSetup.exe")

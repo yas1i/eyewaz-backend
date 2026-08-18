@@ -1,22 +1,22 @@
 # EYEWAZ — App Store & Play Store submission kit
 
 ## Listing copy
-**Name:** EYEWAZ — See better. Live better.
+**Name:** EYEWAZ, see better, live better.
 **Subtitle / short:** Hear any text read aloud, in Urdu & more.
 **Full description:**
 > EYEWAZ turns the written world into spoken words. Photograph printed text,
-> upload a document or PDF, paste a web link, or type — EYEWAZ reads it aloud in
-> Urdu and many languages, with regional Pakistani dialects. Built for blind and
-> low-vision users: large controls, full screen-reader support, and a voice
-> assistant that helps you start your day, set spoken medication reminders, and
-> keep a personal library you can replay offline.
+> upload a document or PDF, paste a web link, or type, and EYEWAZ reads it aloud
+> in Urdu and many languages, with regional Pakistani dialects, now in our own
+> trained voices. Built for blind and low-vision users: large controls, full
+> screen-reader support, spoken reminders, and a personal library you can
+> replay offline.
 >
 > • Read photos, documents, web pages and text aloud
-> • Urdu plus regional dialects; many world languages
-> • Ask EYEWAZ — a friendly voice assistant
+> • Urdu in our own trained voices, plus regional dialects and many world languages
 > • Spoken reminders for medicine, prayers, appointments
 > • Save recordings into folders and replay offline
 > • Fast, accessible sign-in with Face ID / fingerprint
+> • Free to use, with 10 reads included every month
 
 **Keywords:** text to speech, screen reader, blind, low vision, Urdu, OCR, read aloud, accessibility, dyslexia, audiobook.
 **Category:** primary **Education** (or Productivity); secondary Utilities. Mark as Accessibility.
