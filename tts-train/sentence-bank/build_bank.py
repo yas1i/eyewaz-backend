@@ -120,7 +120,12 @@ def systematic_misc():
     return out
 
 
-CATEGORIES = [
+# Batches are FROZEN SEGMENTS: once a batch has shipped to the recorder, its
+# internal order must never change (ids are positional). Only ever append new
+# batches to this list; never edit or reorder an existing batch's categories.
+import handwritten_batch2 as b2
+
+BATCH1 = [
     ("qaf", hp.QAF), ("ghain", hp.GHAIN), ("khe", hp.KHE), ("ain", hp.AIN),
     ("zhe", hp.ZHE), ("retroflex", hp.RETROFLEX), ("rra", hp.RRA),
     ("aspirates", hp.ASPIRATES), ("nasal", hp.NASAL), ("izafat", hp.IZAFAT),
@@ -134,6 +139,8 @@ CATEGORIES = [
     ("numbers", systematic_numbers()), ("time", systematic_time()),
     ("dates", systematic_dates()), ("misc", systematic_misc()),
 ]
+
+BATCHES = [BATCH1, b2.CATEGORIES_BATCH2]
 
 
 def interleave(cats):
@@ -162,7 +169,7 @@ def validate(sentences):
         if re.search(r"[A-Za-z]", s):
             problems.append(f"latin letters [{i}]: {s}")
         n_words = len(s.split())
-        if not 2 <= n_words <= 22:
+        if not 2 <= n_words <= 24:
             problems.append(f"odd length ({n_words}w) [{i}]: {s}")
     return problems
 
@@ -177,16 +184,30 @@ def coverage(sentences):
     return {name: text.count(ch) for ch, name in targets.items()}
 
 
+def load_published():
+    """Every sentence currently in sentences.js, in order. These ids may
+    already have recordings against them, so they are all frozen."""
+    text = open(SENTENCES_JS, encoding="utf-8").read()
+    return re.findall(r'^\s*"(.*)",?\s*$', text, flags=re.M)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--check", action="store_true", help="validate only")
+    ap.add_argument("--allow-reorder", action="store_true",
+                    help="skip the published-prefix guard (ONLY safe before a "
+                         "batch has been deployed to the recorder)")
     args = ap.parse_args()
 
     original = load_original()
-    new = interleave(CATEGORIES)
-    # Never duplicate something already recorded.
-    orig_set = set(original)
-    new = [s for s in new if s not in orig_set]
+    # Build batch segments in order; dedupe each against everything before it.
+    seen = set(original)
+    new = []
+    for batch in BATCHES:
+        for s in interleave(batch):
+            if s not in seen:
+                new.append(s)
+                seen.add(s)
 
     problems = validate(new)
     if problems:
@@ -196,6 +217,20 @@ def main():
         raise SystemExit(1)
 
     bank = original + new
+
+    # Append-only guard: everything already published keeps its exact position.
+    published = load_published()
+    if not args.allow_reorder and bank[:len(published)] != published:
+        for i, (a, b) in enumerate(zip(published, bank)):
+            if a != b:
+                raise SystemExit(
+                    f"REFUSING TO WRITE: published id {i+1} would change.\n"
+                    f"  was: {a}\n  now: {b}\n"
+                    "Published ids are frozen (recordings map to them). Append "
+                    "new batches only, or pass --allow-reorder if this batch "
+                    "truly never reached the recorder.")
+        raise SystemExit("REFUSING TO WRITE: bank is shorter than the published file.")
+
     print(f"original: {len(original)}   new: {len(new)}   total: {len(bank)}")
     print("coverage (occurrences across the full bank):")
     for name, n in coverage(bank).items():
