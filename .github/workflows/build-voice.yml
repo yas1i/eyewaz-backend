@@ -47,13 +47,13 @@ jobs:
       - name: Fetch the trained voices
         shell: pwsh
         env:
-          VOICES_URL: ${{ secrets.VOICES_URL }}
+          # The models live on the public voices-v1 release; a VOICES_URL secret,
+          # if set, overrides it (e.g. to pin different models for a build).
+          VOICES_URL: ${{ secrets.VOICES_URL || 'https://github.com/yas1i/eyewaz-backend/releases/download/voices-v1/eyewaz-voices-v1.zip' }}
         run: |
-          if (-not $env:VOICES_URL) {
-            throw "Set the VOICES_URL secret to a zip of the .onnx + .onnx.json voices."
-          }
           Invoke-WebRequest $env:VOICES_URL -OutFile voices.zip
           Expand-Archive voices.zip -DestinationPath nvda-addon/addon/synthDrivers/eyewaz/voices -Force
+          Get-ChildItem nvda-addon/addon/synthDrivers/eyewaz/voices
 
       - name: Build the SAPI DLL (x64)
         shell: cmd
