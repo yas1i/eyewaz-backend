@@ -141,8 +141,10 @@ BATCH1 = [
 ]
 
 import handwritten_batch3 as b3
+import handwritten_batch4 as b4
 
-BATCHES = [BATCH1, b2.CATEGORIES_BATCH2, b3.CATEGORIES_BATCH3]
+BATCHES = [BATCH1, b2.CATEGORIES_BATCH2, b3.CATEGORIES_BATCH3,
+           b4.CATEGORIES_BATCH4]
 
 
 def interleave(cats):
