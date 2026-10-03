@@ -2,6 +2,9 @@ import random
 import string
 import io
 import requests, os, time
+import hashlib
+import re
+from datetime import datetime
 import storage
 from azure.cognitiveservices.vision.computervision import ComputerVisionClient
 from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient
@@ -48,42 +51,102 @@ def detect_language(text):
     return language
 
 
-def translate(text, source_language, target_language="ur-PK"):
-    # Use the Translator translate function
+# Characters only Urdu uses (not Arabic or Persian). Text in Arabic script that
+# contains one of these is already Urdu, so translating it into Urdu is paid-for
+# work that returns the same words.
+_URDU_ONLY = re.compile("[\u0679\u0688\u0691\u06BA\u06D2\u06D3\u06BE\u06D4]")
+_ARABIC_SCRIPT = re.compile("[\u0600-\u06FF\u0750-\u077F]")
+_LATIN = re.compile("[A-Za-z]")
+_LETTER = re.compile(r"[^\W\d_]")
+
+
+def looks_urdu(text):
+    """True when text is mostly Arabic script and carries Urdu-only letters."""
+    a = len(_ARABIC_SCRIPT.findall(text))
+    l = len(_LATIN.findall(text))
+    return a > 0 and a >= 0.6 * (a + l) and bool(_URDU_ONLY.search(text))
+
+
+def _cache_key(src, tgt, text):
+    return hashlib.sha256(f"{src or 'auto'}|{tgt}|{text}".encode("utf-8")).hexdigest()
+
+
+def _cache_get(k):
+    try:
+        from database.models import TranslationCache
+        row = TranslationCache.objects(key=k).first()
+        return (row.translated, row.detected) if row else None
+    except Exception as e:  # the cache must never break a translation
+        print(f"translation cache read skipped: {e}", flush=True)
+        return None
+
+
+def _cache_put(k, translated, detected):
+    try:
+        from database.models import TranslationCache
+        TranslationCache.objects(key=k).update_one(
+            set__translated=translated, set__detected=detected or "",
+            set_on_insert__created_at=datetime.utcnow(), upsert=True)
+    except Exception as e:
+        print(f"translation cache write skipped: {e}", flush=True)
+
+
+def translate_detect(text, target_language="ur-PK", source_language=None):
+    """Translate text and return (translation, detected_source).
+
+    Cost rules, because Azure Translator bills every character sent:
+    - no letters (numbers, punctuation) or already-Urdu text going to Urdu is
+      returned as is, without a call;
+    - repeats come from the TranslationCache;
+    - with no source_language, Azure detects the language inside the same
+      translate call, so we never pay a separate /detect on the same text.
+    """
+    tgt_base = target_language.split("-")[0]
+    if not text or not _LETTER.search(text):
+        return text, source_language or ""
+    if tgt_base == "ur" and looks_urdu(text):
+        return text, "ur"
+
+    k = _cache_key(source_language, target_language, text)
+    hit = _cache_get(k)
+    if hit:
+        return hit
+
     url = os.getenv("TEXT_TRANSLATION_ENDPOINT") + "/translate"
-    # Build the request
-    params = {"api-version": "3.0", "from": source_language, "to": target_language}
+    params = {"api-version": "3.0", "to": target_language}
+    if source_language:
+        params["from"] = source_language
     headers = {
         "Ocp-Apim-Subscription-Key": os.getenv("TRANSLATION_KEY"),
         "Ocp-Apim-Subscription-Region": os.getenv("REGION"),
         "Content-type": "application/json",
     }
-    body = [{"text": text}]
-    # Send the request and get response
-    request = requests.post(url, params=params, headers=headers, json=body)
-    response = request.json()
-    # Get translation
-    translation = response[0]["translations"][0]["text"]
-    # Return the translation
-    return translation
+    response = requests.post(url, params=params, headers=headers, json=[{"text": text}]).json()
+    item = response[0]
+    translated = item["translations"][0]["text"]
+    detected = source_language or (item.get("detectedLanguage") or {}).get("language", "")
+    _cache_put(k, translated, detected)
+    return translated, detected
+
+
+def translate(text, source_language, target_language="ur-PK"):
+    return translate_detect(text, target_language, source_language)[0]
 
 
 def ConvertEnglishtoUrdu(text):
-    lang = detect_language(text)
+    trans_lang, lang = translate_detect(text, "ur-PK")
     print("Detected Language:", lang)
-    trans_lang = translate(text, lang, "ur-PK")
-    print("Translation in Urdu Language:", trans_lang)
     return trans_lang, lang
 
 
 def ConvertText(text, target_lang="ur-PK"):
     """Translate text into target_lang. Returns (translated_text, source_lang).
     If the text is already in the target language, returns it unchanged."""
-    src = detect_language(text)
+    translated, src = translate_detect(text, target_lang)
     print(f"Detected source: {src} -> target: {target_lang}")
     if src == target_lang.split("-")[0]:
         return text, src
-    return translate(text, src, target_lang), src
+    return translated, src
 
 
 # This example requires environment variables named "SPEECH_KEY" and "SPEECH_REGION"

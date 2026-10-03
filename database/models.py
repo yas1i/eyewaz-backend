@@ -190,3 +190,15 @@ class Images(Document):
     lang = StringField(max_length=10)
     trans_lang = StringField(max_length=10)
     trans_text = StringField(max_length=5000)
+
+
+class TranslationCache(Document):
+    """Azure Translator results, keyed by a hash of (source, target, text), so the
+    same screen label, page or photo is never paid for twice. Rows expire after
+    90 days via a TTL index, which keeps the collection small."""
+    key = StringField(max_length=64, required=True, unique=True)  # sha256 hex
+    translated = StringField(default="")
+    detected = StringField(max_length=20, default="")
+    created_at = DateTimeField(default=datetime.utcnow)
+    meta = {"indexes": [{"fields": ["created_at"], "expireAfterSeconds": 90 * 24 * 3600}]}
+    objects = QuerySetManager()
