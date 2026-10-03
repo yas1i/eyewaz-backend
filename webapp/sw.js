@@ -1,6 +1,6 @@
 /* EYEWAZ service worker: installable PWA + offline app shell.
    Bump CACHE when you ship new assets so clients update. */
-const CACHE = "eyewaz-v2";
+const CACHE = "eyewaz-v3";
 const SHELL = [
   "/app",
   "/app/",
@@ -9,6 +9,7 @@ const SHELL = [
   "/app/manifest.webmanifest",
   "/app/assets/eyewaz-logo.png",
   "/app/assets/eyewaz-favicon.png",
+  "/app/assets/apple-touch-icon.png",
   "/app/assets/icon-192.png",
   "/app/assets/icon-512.png",
   "/app/assets/icon-maskable-512.png",
