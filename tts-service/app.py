@@ -35,6 +35,11 @@ def require_key(x_api_key: str | None = Header(default=None)):
     """If TTS_API_KEY is set, require a matching X-API-Key header on /tts."""
     key = os.getenv("TTS_API_KEY")
     if key and x_api_key != key:
+        # Fingerprint only, never the key: tells a stale key from stray quotes or spaces.
+        import hashlib
+        got = x_api_key or ""
+        print(f"auth reject: len={len(got)} sha8={hashlib.sha256(got.encode()).hexdigest()[:8]} "
+              f"strip_ok={got.strip().strip(chr(34)).strip(chr(39)) == key}", flush=True)
         raise HTTPException(status_code=401, detail="Invalid API key")
 
 
