@@ -6,6 +6,8 @@ from dotenv import load_dotenv, find_dotenv
 from flask_cors import CORS
 from mongoengine import connect
 from flask_jwt_extended import JWTManager
+from flask_jwt_extended.exceptions import JWTExtendedException
+from jwt.exceptions import PyJWTError
 import storage
 import security_headers
 
@@ -30,6 +32,20 @@ app.config["JWT_ACCESS_TOKEN_EXPIRES"] = False
 app.config["SECRET_KEY"] = os.getenv("FLASK_SECRET_KEY")
 
 jwt = JWTManager(app)
+
+
+# A missing, malformed or revoked sign-in token is the caller's problem, not a
+# server crash: answer 401 with a message the web app shows as is.
+def _sign_in_again(*_):
+    return {"message": "Please sign in again."}, 401
+
+
+jwt.unauthorized_loader(_sign_in_again)
+jwt.invalid_token_loader(_sign_in_again)
+jwt.expired_token_loader(_sign_in_again)
+jwt.revoked_token_loader(_sign_in_again)
+jwt.needs_fresh_token_loader(_sign_in_again)
+jwt.user_lookup_error_loader(_sign_in_again)
 cors = CORS(app, resources={r"/api/*": {"origins": "*"}})
 
 # connect=False defers the actual connection so a bad/unreachable MONGO_URI
@@ -41,7 +57,18 @@ try:
 except Exception as e:
     print(f"WARNING: MongoDB connection setup failed: {e}", flush=True)
     db = None
-api = Api(app)
+class JWTAwareApi(Api):
+    """Flask-RESTful turns every exception into a 500 before Flask's own error
+    handlers run, which hid flask_jwt_extended's 401s on every protected
+    endpoint. Hand JWT errors back to Flask so the loaders above answer."""
+
+    def handle_error(self, e):
+        if isinstance(e, (JWTExtendedException, PyJWTError)):
+            raise e
+        return super().handle_error(e)
+
+
+api = JWTAwareApi(app)
 initialize_routes(api)
 security_headers.install(app)
 
