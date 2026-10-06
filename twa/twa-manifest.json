@@ -20,19 +20,19 @@
     "path": "./android.keystore",
     "alias": "eyewaz"
   },
-  "appVersionName": "1.0.1",
-  "appVersionCode": 2,
+  "appVersionName": "1.0.2",
+  "appVersionCode": 3,
   "webManifestUrl": "https://www.eyewaz.com/app/manifest.webmanifest",
-  "fallbackType": "customtabs",
+  "fallbackType": "webview",
   "features": {},
   "enableSiteSettingsShortcut": true,
   "isChromeOSOnly": false,
   "isMetaQuest": false,
   "fullScopeUrl": "https://www.eyewaz.com/app/",
-  "minSdkVersion": 21,
-  "orientation": "portrait",
+  "minSdkVersion": 24,
+  "orientation": "default",
   "fingerprints": [],
   "additionalTrustedOrigins": [],
   "retainedBundles": [],
-  "appVersion": "1.0.1"
+  "appVersion": "1.0.2"
 }
