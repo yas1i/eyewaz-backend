@@ -34,6 +34,15 @@ def _json(payload, status):
     return Response(json.dumps(payload), status=status, mimetype="application/json")
 
 
+def _log_urdu_fallback(where, reason):
+    """One greppable line each time Urdu is spoken by Azure instead of our own voice.
+
+    The fallback is deliberately silent to the listener, so this log is the only
+    way to measure it: `grep TTS-FALLBACK` in the Render logs.
+    """
+    print(f"[TTS-FALLBACK] urdu->azure where={where} reason={reason}", flush=True)
+
+
 def urdu_voice(prefer_gender=None):
     """The voice id to speak Urdu with, our own trained voices first.
 
@@ -50,6 +59,9 @@ def urdu_voice(prefer_gender=None):
         default = selfhost_tts.default_voice()
         if default:
             return default
+        _log_urdu_fallback("urdu_voice", "engine returned no voices")
+    else:
+        _log_urdu_fallback("urdu_voice", "SELF_HOST_TTS_URL not set")
     return AZURE_URDU_MALE if prefer_gender == "male" else AZURE_URDU_FEMALE
 
 
@@ -212,6 +224,7 @@ class SpeakAPI(Resource):
                                   "truncated": len(text) > SPEAK_MAX_CHARS, "voice": voice}, 200)
                 except Exception as e:
                     print(f"self-hosted TTS failed, falling back to Azure: {e}", flush=True)
+                    _log_urdu_fallback("speak", f"{type(e).__name__}: {e}"[:200])
             voice = AZURE_URDU_MALE if ("male" in voice and "female" not in voice) \
                 else AZURE_URDU_FEMALE
 
@@ -277,6 +290,7 @@ class ScreenReaderAPI(Resource):
                     return _json({"audio_url": stored.url, "voice": voice}, 200)
                 except Exception as e:
                     print(f"self-hosted TTS failed, falling back to Azure: {e}", flush=True)
+                    _log_urdu_fallback("screen-reader", f"{type(e).__name__}: {e}"[:200])
             voice = AZURE_URDU_MALE if ("male" in voice and "female" not in voice) \
                 else AZURE_URDU_FEMALE
 
