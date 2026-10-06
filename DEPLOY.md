@@ -258,8 +258,23 @@ What went wrong and what fixed it:
 
 Recorder at `/record/` saves WAV files to B2: `voicebank/{lang}/{speaker}/{sentence_id}.wav`
 Keep this endpoint live. When self-hosted Piper voice is ready:
-1. Set `SELF_HOST_TTS_URL` on Render
-2. Set `SELF_HOST_TTS_KEY` on Render
-3. Remove `SPEECH_KEY` and `SPEECH_REGION` from Render
+1. Set `SELF_HOST_TTS_URL` to `https://tts.eyewaz.com` on Render
+2. Set `SELF_HOST_TTS_KEY` on Render to the same value as `TTS_API_KEY` in
+   `/opt/eyewaz-tts/tts-service/deploy/.env` on the Hetzner box
+3. **KEEP `SPEECH_KEY` and `SPEECH_REGION`.** Do not remove them. Routing is by
+   voice-id prefix: only `sh:` voices go to our engine, and we have self-hosted
+   voices for **Urdu only**. Punjabi (`pa-IN`) and Pashto (`ps-AF`) still resolve
+   to Azure short-names, so deleting the Azure speech credentials silently kills
+   read-aloud for those two dialects. Azure Urdu also remains the fallback for
+   when the engine does not answer (`resources/web.py::_default_voice`).
+   Translator is a separate meter and is not affected by this switch at all.
 4. Restart service
-5. Test voice output
+5. Test voice output: pick Standard Urdu and confirm the audio is our voice,
+   then pick Punjabi and confirm it still speaks.
+
+**Before switching on, check the engine has a memory ceiling.** On 9 Sep 2026 an
+unbounded container grew to 1.9 GB during a long synthesis and the *host* OOM
+killer fired on a 4 GB box that also serves wajd.co.uk. `deploy/docker-compose.yml`
+now pins `mem_limit: 1g`; normal load peaks near 293 MB. Verify with
+`docker inspect eyewaz-tts-piper --format '{{.HostConfig.Memory}}'` (expect
+`1073741824`, not `0`).

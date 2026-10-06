@@ -14,6 +14,16 @@ services:
     image: eyewaz-tts:piper
     container_name: eyewaz-tts-piper
     restart: unless-stopped
+    # Hard memory ceiling. WITHOUT ONE, a long synthesis run grew this process to
+    # 1.9 GB and the HOST out-of-memory killer fired (9 Sep 2026, dmesg shows
+    # "global_oom ... Killed process (uvicorn)"). This box has 4 GB, no swap, and
+    # also serves wajd.co.uk, learn, skills, group, analytics, voice, quran,
+    # forge, shield, homeschool and the Mazdurr API, so an unbounded container
+    # here is an estate-wide outage risk. Measured normal load: a 3,600-character
+    # document peaks near 293 MB. 1 GB is generous headroom; the point is that
+    # the container dies alone rather than taking the host with it.
+    mem_limit: 1g
+    memswap_limit: 1g
     environment:
       - PORT=8090
       - VOICES_DIR=/srv/voices
