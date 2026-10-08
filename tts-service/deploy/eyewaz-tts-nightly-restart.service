@@ -1,0 +1,11 @@
+[Unit]
+Description=Nightly restart of the EYEWAZ speech container when it is quiet (it grows to its 1 GB limit)
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+User=root
+# It may wait up to an hour for a quiet moment.
+TimeoutStartSec=75min
+ExecStart=/usr/local/sbin/eyewaz-tts-nightly-restart

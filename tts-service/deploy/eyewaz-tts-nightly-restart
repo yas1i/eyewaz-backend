@@ -1,0 +1,31 @@
+#!/bin/sh
+# Nightly restart of the EYEWAZ speech container.
+# It grows towards its 1 GB limit and stays there while idle (8 October 2026: 956 MB plus 525 MB of
+# swap with no requests). It waits for a quiet moment: if speech was asked for in the last five
+# minutes it tries again every ten minutes for an hour, then leaves it until the next night.
+# DRY=1 says what it would do and changes nothing.
+set -eu
+C=eyewaz-tts-piper
+URL=http://127.0.0.1:8090/voices
+if [ "$(docker inspect -f '{{.State.Running}}' "$C" 2>/dev/null || true)" != "true" ]; then echo "$C is not running; left alone"; exit 0; fi
+try=0
+while [ $try -lt 6 ]; do
+  try=$((try + 1))
+  busy=$(docker logs --since 5m "$C" 2>&1 | grep -c 'POST /tts' || true)
+  if [ "$busy" = "0" ]; then
+    if [ "${DRY:-}" = "1" ]; then echo "would restart $C (quiet for five minutes)"; exit 0; fi
+    docker restart "$C" >/dev/null
+    i=0
+    while [ $i -lt 30 ]; do
+      i=$((i + 1))
+      code=$(curl -s -o /dev/null -m 3 -w '%{http_code}' "$URL" || true)
+      if [ "$code" = "200" ]; then echo "$C restarted, answering again after about $((i * 2)) s"; exit 0; fi
+      sleep 2
+    done
+    echo "$C was restarted but $URL is not answering 200"
+    exit 1
+  fi
+  if [ "${DRY:-}" = "1" ]; then echo "would wait: $C answered $busy speech requests in the last five minutes"; exit 0; fi
+  sleep 600
+done
+echo "$C was busy for an hour; not restarted tonight"

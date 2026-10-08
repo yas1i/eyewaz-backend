@@ -1,0 +1,11 @@
+[Unit]
+Description=Schedule: nightly restart of the EYEWAZ speech container
+
+[Timer]
+# 04:24 UTC: after the backups (03:15 to 03:45 UTC) and ten minutes after the Academy restart.
+OnCalendar=*-*-* 04:24:00
+Persistent=false
+AccuracySec=30s
+
+[Install]
+WantedBy=timers.target
