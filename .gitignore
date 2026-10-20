@@ -109,6 +109,9 @@ tts-train/male/
 # Android TWA build — keystore & secrets never commit
 twa/android.keystore
 twa/keystore-password.txt
+# Play publishing credential. Full release rights on the account, so it never goes in git.
+twa/play-service-account.json
+twa/*service-account*.json
 twa/*.aab
 twa/*.apk
 twa/.gradle/

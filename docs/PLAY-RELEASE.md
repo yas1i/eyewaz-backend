@@ -70,6 +70,34 @@ device. Verify after install: the Account screen shows no prices or buy buttons.
 ---
 
 ## 1. Build the TWA (AAB) with Bubblewrap
+
+**Build with `twa/build-android.sh`, never with a bare `bubblewrap build`.** Two
+things go wrong silently otherwise, and in both cases the build still succeeds and
+the bundle still looks correct:
+
+- Bubblewrap 1.24.1 writes `targetSdkVersion 35`. Play has refused anything below
+  36 since 31 August 2026, so the upload is rejected and nothing local warns you.
+- Regenerating the project reverts the hand edits in `twa/app`: the launch crash
+  fallback, the edge to edge inset handling, the proguard rules and the
+  androidbrowserhelper 2.7.4 pin. Both `bubblewrap update` and `bubblewrap build`
+  can trigger this, the latter whenever `twa-manifest.json` does not match
+  `manifest-checksum.txt`, which it offers to fix with the default answer set to yes.
+
+```bash
+cd twa && ./build-android.sh
+```
+
+The script refreshes that checksum so the build stops offering, fails if any hand
+edit has gone, enforces the target SDK floor, then reads the version back out of
+the built APK and AAB rather than out of gradle. To bump the version first, edit
+`appVersionCode` and `appVersion` in `twa-manifest.json`.
+
+If the hand edits are ever reported missing, restore them with `git restore twa/app/`.
+The generated project is tracked in git precisely so that is possible.
+
+<details>
+<summary>First time setup only, already done for this repo</summary>
+
 ```bash
 npm i -g @bubblewrap/cli
 mkdir -p twa && cd twa
@@ -77,8 +105,8 @@ bubblewrap init --manifest https://eyewaz.com/app/manifest.webmanifest
 # answers: package = ai.wajd.eyewaz ; host = eyewaz.com ;
 #          start url = /app?twa=1  (the ?twa=1 flag triggers the no-purchase mode) ;
 #          name = EYEWAZ ; display = standalone
-bubblewrap build      # creates app-release-bundle.aab + signs with an upload key
 ```
+</details>
 - On first build Bubblewrap **creates an upload keystore** — back it up
   (`android.keystore` + the passwords). Losing it = can't update the app.
 - Output to upload: **`app-release-bundle.aab`**.
@@ -135,6 +163,49 @@ track) → release notes → **staged rollout** (start 10–20%). **Send for rev
 - First review for a new app: typically **a few days to ~7 days** (longer for new
   accounts). Subsequent updates are faster.
 - Watch **Policy status** and your email for any rejection reasons; fix and resubmit.
+
+---
+
+## 7b. Automated uploads (service account)
+
+Uploading by hand means signing in and dragging the file in every time.
+`twa/publish-play.sh` does it from the terminal instead.
+
+```bash
+cd twa
+./publish-play.sh              # internal track, the default
+./publish-play.sh beta         # alpha, beta or internal
+./publish-play.sh production   # asks you to type 'production' to confirm
+```
+
+Before it will run, it needs a key. This part cannot be scripted, it is a one off
+in the Console, and it must be done in this order:
+
+1. **Play Console → Setup → API access**, then link or create a Google Cloud project.
+2. In that Cloud project: **IAM and admin → Service accounts → Create service
+   account**, then **Keys → Add key → Create new key → JSON**. The file downloads
+   once and cannot be downloaded again.
+3. Back in **Play Console → Users and permissions → Invite user**, paste the service
+   account email and give it **Release** permissions for Eyewaz. Skipping this is the
+   usual cause of a key that authenticates but then fails every upload with a
+   permissions error.
+4. Put the file at `twa/play-service-account.json`.
+
+That file can create releases across the account, so it is treated like the keystore:
+gitignored, and `twa/` is in `.dockerignore` so it never reaches the Render image.
+Back it up somewhere safe, and if it ever leaks, delete the key in the Cloud console,
+which revokes it immediately.
+
+The script refuses to upload a bundle whose target SDK Play would reject, and runs
+`bubblewrap play versionCheck` first, which is what catches a version code already
+used. If it reports that, bump `appVersionCode` in `twa-manifest.json`, rebuild with
+`./build-android.sh`, and run it again.
+
+On first run it records the key path in `twa-manifest.json`. Commit that one line.
+
+Uploading is not releasing. Internal, alpha and beta go to testers; production still
+goes for review. And note the target API rule counts **every track holding an old
+bundle**, not just production, so an abandoned test release can keep the warning alive.
 
 ---
 
