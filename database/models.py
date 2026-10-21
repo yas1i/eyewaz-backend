@@ -34,7 +34,7 @@ class Users(Document):
     # Listening preferences
     pref_engine = StringField(max_length=10, default="azure")      # azure | browser
     pref_language = StringField(max_length=10, default="ur-PK")
-    pref_voice = StringField(default="ur-PK-UzmaNeural")
+    pref_voice = StringField(default="sh:eyewaz-urdu-female")  # our own Urdu voice
     pref_rate = FloatField(default=1.0)                            # speed multiplier
     # Morning-assistant to-do lists
     todo_weekday = StringField(default="")
@@ -56,7 +56,7 @@ class Users(Document):
         return {
             "engine": self.pref_engine or "azure",
             "language": self.pref_language or "ur-PK",
-            "voice": self.pref_voice or "ur-PK-UzmaNeural",
+            "voice": self.pref_voice or "sh:eyewaz-urdu-female",
             "rate": self.pref_rate or 1.0,
         }
 

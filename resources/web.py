@@ -65,6 +65,17 @@ def urdu_voice(prefer_gender=None):
     return AZURE_URDU_MALE if prefer_gender == "male" else AZURE_URDU_FEMALE
 
 
+def ours_for_azure_urdu(voice):
+    """Urdu means our own voice now. Preferences saved before the trained voices
+    existed (and the Android app's default) still hold an Azure Urdu name, so map
+    those across, keeping the gender the listener chose. Every other language is
+    untouched. Used by every route that speaks, so none of them pays Azure for Urdu.
+    """
+    if voice in (AZURE_URDU_FEMALE, AZURE_URDU_MALE):
+        return urdu_voice("male" if voice == AZURE_URDU_MALE else "female")
+    return voice
+
+
 def _host_is_safe(host):
     """Block loopback/private/link-local/reserved targets (basic SSRF guard)."""
     try:
@@ -195,11 +206,7 @@ class SpeakAPI(Resource):
             or prefs.get("voice") or urdu_voice()
         rate = data.get("rate", prefs.get("rate", 1.0))
 
-        # Urdu means our own voice now. Preferences saved before the trained voices
-        # existed still hold an Azure Urdu name, so map those across, keeping the
-        # gender the listener chose. Every other language is untouched.
-        if voice in (AZURE_URDU_FEMALE, AZURE_URDU_MALE):
-            voice = urdu_voice("male" if voice == AZURE_URDU_MALE else "female")
+        voice = ours_for_azure_urdu(voice)
 
         capped = text[:SPEAK_MAX_CHARS]
 
@@ -266,7 +273,7 @@ class ScreenReaderAPI(Resource):
     def post(self):
         data = request.get_json(force=True, silent=True) or {}
         text = (data.get("text") or "").strip()[:self.SR_MAX_CHARS]
-        voice = data.get("voice") or urdu_voice()
+        voice = ours_for_azure_urdu(data.get("voice") or urdu_voice())
         rate = float(data.get("rate", 1.0))
 
         if not text:

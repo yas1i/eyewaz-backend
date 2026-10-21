@@ -79,23 +79,35 @@ def translationSpeechTask(f, target_lang="ur-PK", voice="ur-PK-UzmaNeural", rate
     # Translate into the user's chosen language and speak with their chosen voice.
     Trans_text, lang = ConvertText(text, target_lang)
     # Route non-Azure voices: "sh:" self-hosted engine, "el:" ElevenLabs.
+    # A saved Azure Urdu name means our own Urdu voice now (see web.py).
+    from resources.web import ours_for_azure_urdu, urdu_voice, _log_urdu_fallback, \
+        AZURE_URDU_FEMALE, AZURE_URDU_MALE
+    import elevenlabs_api
+    voice = ours_for_azure_urdu(voice)
+    if isinstance(voice, str) and voice.startswith("el:") and not elevenlabs_api.configured():
+        voice = urdu_voice()
+    audio_data, _ext = None, "mp3"
     if isinstance(voice, str) and voice.startswith("sh:"):
         import selfhost_tts
-        audio_data = (selfhost_tts.synth(Trans_text, rate) if selfhost_tts.configured()
-                      else synthesize_long(Trans_text, "ur-PK-UzmaNeural", rate))
+        if selfhost_tts.configured():
+            try:
+                audio_data = selfhost_tts.synth(Trans_text, rate, voice=voice[3:])
+                _ext = "wav"
+            except Exception as e:
+                print(f"self-hosted TTS failed, falling back to Azure: {e}", flush=True)
+                _log_urdu_fallback("document", f"{type(e).__name__}: {e}"[:200])
+        if audio_data is None:
+            azure = AZURE_URDU_MALE if ("male" in voice and "female" not in voice) \
+                else AZURE_URDU_FEMALE
+            audio_data = synthesize_long(Trans_text, azure, rate)
     elif isinstance(voice, str) and voice.startswith("el:"):
-        import elevenlabs_api
-        if elevenlabs_api.configured():
-            audio_data = elevenlabs_api.tts(voice[3:], Trans_text)
-        else:
-            audio_data = synthesize_long(Trans_text, "ur-PK-UzmaNeural", rate)
+        audio_data = elevenlabs_api.tts(voice[3:], Trans_text)
     else:
         audio_data = synthesize_long(Trans_text, voice, rate)
     try:
         audio_duration = get_audio_duration_from_bytes(audio_data)
     except Exception:
         audio_duration = 0
-    _ext = "wav" if (isinstance(voice, str) and voice.startswith("sh:")) else "mp3"
     audio_filename = blob_client.blob_name.split(".")[0] + "_audio." + _ext
     audio_blob_client = UploadOnAzure(audio_data, audio_filename)
     return text, Trans_text, lang, audio_duration, blob_client, audio_blob_client
@@ -125,7 +137,7 @@ class DocumentTransSpeechAPI(Resource):
         voice = prefs.get("voice", "ur-PK-UzmaNeural")
         rate = prefs.get("rate", 1.0)
         # Cloned dialect voices ("el:") are premium: free members read in
-        # standard Azure Urdu.
+        # standard Urdu, which is our own voice (remapped in translationSpeechTask).
         if isinstance(voice, str) and voice.startswith("el:") and \
                 usage.effective_plan(user) == "free":
             voice = "ur-PK-UzmaNeural"
