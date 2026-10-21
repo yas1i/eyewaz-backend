@@ -148,5 +148,27 @@ class DocumentTests(_EngineUp):
         self.assertEqual(self.azure.call_args.args[1], "pa-IN-VaaniNeural")
 
 
+class DialectFallbackTests(_EngineUp):
+    """Dialects with no voice of their own (Sindhi, Saraiki...) fall back to Urdu."""
+
+    def _fallbacks(self):
+        from resources import dialects
+        with mock.patch.object(dialects, "list_voices", return_value=[]), \
+                mock.patch.object(dialects.DialectVoice, "objects", return_value=[]):
+            dialects._VOICE_CACHE = None
+            with app.app_context():
+                tok = create_access_token(identity="voice-test@example.com")
+            r = app.test_client().get("/api/dialects",
+                                      headers={"Authorization": "Bearer " + tok})
+        return {d["fallback_voice"] for d in r.get_json()["dialects"]}
+
+    def test_fallback_is_our_voice(self):
+        self.assertEqual(self._fallbacks(), {"sh:eyewaz-urdu-female"})
+
+    def test_fallback_is_azure_when_engine_off(self):
+        with mock.patch.object(selfhost_tts, "voices", return_value=[]):
+            self.assertEqual(self._fallbacks(), {"ur-PK-UzmaNeural"})
+
+
 if __name__ == "__main__":
     unittest.main()

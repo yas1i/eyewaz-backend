@@ -1025,7 +1025,7 @@ function escapeHtml(s) {
 
 /* ------------------------------ Account & voice ----------------------------- */
 
-let userPrefs = { engine: "azure", language: "ur-PK", voice: "ur-PK-UzmaNeural", rate: 1.0 };
+let userPrefs = { engine: "azure", language: "ur-PK", voice: "sh:eyewaz-urdu-female", rate: 1.0 };
 let azureVoices = null;
 
 let userProfile = {};

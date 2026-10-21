@@ -1,6 +1,6 @@
 /* EYEWAZ service worker: installable PWA + offline app shell.
    Bump CACHE when you ship new assets so clients update. */
-const CACHE = "eyewaz-v3";
+const CACHE = "eyewaz-v4";
 const SHELL = [
   "/app",
   "/app/",

@@ -23,6 +23,8 @@ from database.models import DialectVoice
 import elevenlabs_api
 import selfhost_tts
 
+# Dialects with no voice of their own are read in Urdu: our own voice when the
+# engine answers, Azure only when it does not (worked out per request in get()).
 FALLBACK_VOICE = "ur-PK-UzmaNeural"
 FALLBACK_LOCALE = "ur-PK"
 
@@ -63,6 +65,7 @@ class DialectsAPI(Resource):
         # Urdu is spoken by our own trained voices whenever the engine answers.
         # Azure's Urdu stays listed only as the fallback when it does not.
         own_voices = selfhost_tts.voices()
+        fallback_voice = selfhost_tts.default_voice() or FALLBACK_VOICE
         for d in CATALOG:
             if d.get("selfhost") and own_voices:
                 out.append({
@@ -72,7 +75,7 @@ class DialectsAPI(Resource):
                                 "engine": "eyewaz", "name": v.get("name", v["id"])}
                                for v in own_voices if v.get("language") == "ur"],
                     "cloned": False, "tier": "free",
-                    "fallback_voice": FALLBACK_VOICE, "fallback_locale": FALLBACK_LOCALE,
+                    "fallback_voice": fallback_voice, "fallback_locale": FALLBACK_LOCALE,
                 })
                 continue
             dv = cloned.get(d["id"])
@@ -97,7 +100,7 @@ class DialectsAPI(Resource):
                 # Azure + open-source self-host voices are free; cloned dialect
                 # voices are part of the premium package.
                 "tier": "premium" if is_clone else "free",
-                "fallback_voice": FALLBACK_VOICE, "fallback_locale": FALLBACK_LOCALE,
+                "fallback_voice": fallback_voice, "fallback_locale": FALLBACK_LOCALE,
             })
         return _resp({"dialects": out}, 200)
 
