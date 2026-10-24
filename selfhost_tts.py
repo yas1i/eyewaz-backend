@@ -72,22 +72,6 @@ def default_voice():
     return "sh:" + available[0]["id"]
 
 
-def picker_voices():
-    """The two voices a listener chooses between: female is our Urdu voice, male
-    is our Punjabi voice (our Urdu male only when there is no Punjabi voice).
-    Engine-side voice dicts, female first; empty when the engine has nothing."""
-    available = voices()
-
-    def pick(gender, languages):
-        for lang in languages:
-            for v in available:
-                if v.get("gender") == gender and v.get("language") == lang:
-                    return v
-        return None
-
-    return [v for v in (pick("female", ("ur",)), pick("male", ("pa", "ur"))) if v]
-
-
 def _chunks(text, size=900):
     words, cur, out = text.split(" "), "", []
     for w in words:

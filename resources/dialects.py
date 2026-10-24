@@ -18,7 +18,7 @@ from flask import Response, request
 from flask_restful import Resource
 from flask_jwt_extended import jwt_required
 
-from helpers import list_voices
+from helpers import list_voices, PUNJABI_SHAHMUKHI
 from database.models import DialectVoice
 import elevenlabs_api
 import selfhost_tts
@@ -71,11 +71,12 @@ class DialectsAPI(Resource):
         for d in CATALOG:
             ours = [v for v in own_voices if d.get("selfhost") and v.get("language") == d["selfhost"]]
             if ours:
-                # Text is translated to Urdu, as for a cloned dialect voice: our
-                # Punjabi voice reads Urdu script (Shahmukhi), not Azure's Gurmukhi.
+                # Punjabi is its own language: text is translated into Punjabi and
+                # written in Shahmukhi, which our Punjabi voice reads.
+                punjabi = d["selfhost"] == "pa"
                 out.append({
-                    "id": d["id"], "label": d["label"], "region": d["region"],
-                    "locale": "ur-PK", "status": "live",
+                    "id": d["id"], "label": "Punjabi" if punjabi else d["label"], "region": d["region"],
+                    "locale": PUNJABI_SHAHMUKHI if punjabi else "ur-PK", "status": "live",
                     "voices": [{"shortName": "sh:" + v["id"], "gender": v.get("gender", ""),
                                 "engine": "eyewaz", "name": v.get("name", v["id"])}
                                for v in ours],

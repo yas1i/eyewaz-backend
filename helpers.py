@@ -91,6 +91,11 @@ def _cache_put(k, translated, detected):
         print(f"translation cache write skipped: {e}", flush=True)
 
 
+# Our own Punjabi voice reads Shahmukhi. Azure translates Punjabi only into
+# Gurmukhi, so this locale means: translate to "pa", then transliterate.
+PUNJABI_SHAHMUKHI = "pa-PK"
+
+
 def translate_detect(text, target_language="ur-PK", source_language=None):
     """Translate text and return (translation, detected_source).
 
@@ -106,6 +111,14 @@ def translate_detect(text, target_language="ur-PK", source_language=None):
         return text, source_language or ""
     if tgt_base == "ur" and looks_urdu(text):
         return text, "ur"
+    if target_language == PUNJABI_SHAHMUKHI:
+        import shahmukhi
+        if shahmukhi.has_gurmukhi(text):
+            return shahmukhi.to_shahmukhi(text), "pa"
+        if _ARABIC_SCRIPT.search(text) and len(_ARABIC_SCRIPT.findall(text)) >= len(_LATIN.findall(text)):
+            return text, "pnb"      # Shahmukhi (or Urdu) already: the voice reads it as is
+        translated, detected = translate_detect(text, "pa", source_language)
+        return shahmukhi.to_shahmukhi(translated), detected
 
     k = _cache_key(source_language, target_language, text)
     hit = _cache_get(k)
@@ -144,6 +157,8 @@ def ConvertText(text, target_lang="ur-PK"):
     If the text is already in the target language, returns it unchanged."""
     translated, src = translate_detect(text, target_lang)
     print(f"Detected source: {src} -> target: {target_lang}")
+    if target_lang == PUNJABI_SHAHMUKHI:
+        return translated, src      # already converted to Shahmukhi when needed
     if src == target_lang.split("-")[0]:
         return text, src
     return translated, src

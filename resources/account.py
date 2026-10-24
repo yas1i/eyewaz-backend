@@ -113,21 +113,26 @@ class VoicesAPI(Resource):
 def _own_urdu_voices():
     """Our trained voices, shaped like Azure entries so the picker needs no change.
 
-    Two choices under Urdu: female is our Urdu voice, male is our Punjabi voice.
-    Both read Urdu script. Empty when the engine is not configured or not
-    answering, so the picker quietly falls back to Azure rather than offering a
-    voice that cannot speak.
+    Urdu (female, male) under Urdu, and Punjabi under its own language,
+    "Punjabi (Shahmukhi)": text for it is translated into Punjabi, not Urdu.
+    Empty when the engine is not configured or not answering, so the picker
+    quietly falls back to Azure rather than offering a voice that cannot speak.
     """
     import selfhost_tts
+    from helpers import PUNJABI_SHAHMUKHI
+    langs = {"ur": ("ur-PK", "Urdu (Pakistan)", "Urdu"),
+             "pa": (PUNJABI_SHAHMUKHI, "Punjabi (Shahmukhi)", "Punjabi")}
     out = []
-    for v in selfhost_tts.picker_voices():
+    for v in selfhost_tts.voices():
+        if v.get("language") not in langs:
+            continue
+        locale, locale_name, name = langs[v["language"]]
         gender = (v.get("gender") or "").capitalize()
-        language = "Punjabi" if v.get("language") == "pa" else "Urdu"
         out.append({
             "shortName": "sh:" + v["id"],
-            "locale": "ur-PK",
-            "localeName": "Urdu (Pakistan)",
-            "displayName": f"EYEWAZ {language}{f' ({gender.lower()})' if gender else ''}",
+            "locale": locale,
+            "localeName": locale_name,
+            "displayName": f"EYEWAZ {name}{f' ({gender.lower()})' if gender else ''}",
             "gender": gender,
         })
     return out

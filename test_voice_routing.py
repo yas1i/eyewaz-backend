@@ -192,10 +192,11 @@ class PunjabiTests(_EngineUp):
                                       headers={"Authorization": "Bearer " + tok})
         return {d["id"]: d for d in r.get_json()["dialects"]}
 
-    def test_punjabi_dialect_uses_our_voice_and_urdu_script(self):
+    def test_punjabi_dialect_uses_our_voice_in_punjabi(self):
         pa = self._dialects()["punjabi"]
         self.assertEqual([v["shortName"] for v in pa["voices"]], ["sh:eyewaz-punjabi-male"])
-        self.assertEqual(pa["locale"], "ur-PK")   # Shahmukhi, never Azure's Gurmukhi
+        self.assertEqual(pa["locale"], "pa-PK")   # Punjabi in Shahmukhi, not Urdu, not Gurmukhi
+        self.assertEqual(pa["label"], "Punjabi")
         self.assertEqual(pa["tier"], "free")
 
     def test_urdu_does_not_list_the_punjabi_voice(self):
@@ -236,21 +237,69 @@ class PunjabiTests(_EngineUp):
         r = app.test_client().get("/api/voices", headers={"Authorization": "Bearer " + tok})
         return r.get_json()["voices"]
 
-    def test_profile_offers_urdu_female_and_punjabi_male_only(self):
+    def test_profile_offers_our_three_voices(self):
         vs = self._profile_voices([FEMALE, MALE, PUNJABI])
-        urdu = [(v["shortName"], v["displayName"]) for v in vs if v["locale"] == "ur-PK"]
-        self.assertEqual(urdu, [("sh:eyewaz-urdu-female", "EYEWAZ Urdu (female)"),
-                                ("sh:eyewaz-punjabi-male", "EYEWAZ Punjabi (male)")])
-        self.assertIn("en-GB-SoniaNeural", [v["shortName"] for v in vs])   # other languages stay
+        ours = [(v["shortName"], v["locale"], v["displayName"]) for v in vs if v["shortName"].startswith("sh:")]
+        self.assertEqual(sorted(ours), [
+            ("sh:eyewaz-punjabi-male", "pa-PK", "EYEWAZ Punjabi (male)"),
+            ("sh:eyewaz-urdu-female", "ur-PK", "EYEWAZ Urdu (female)"),
+            ("sh:eyewaz-urdu-male", "ur-PK", "EYEWAZ Urdu (male)")])
+        names = [v["shortName"] for v in vs]
+        self.assertNotIn("ur-PK-UzmaNeural", names)    # Azure Urdu hidden while ours answer
+        self.assertNotIn("ur-PK-AsadNeural", names)
+        self.assertIn("en-GB-SoniaNeural", names)       # other languages stay
 
     def test_profile_shows_azure_urdu_when_engine_is_off(self):
         names = [v["shortName"] for v in self._profile_voices([])]
         self.assertIn("ur-PK-UzmaNeural", names)
         self.assertIn("ur-PK-AsadNeural", names)
 
-    def test_male_means_punjabi(self):
-        self.assertEqual(web.ours_for_azure_urdu("ur-PK-AsadNeural"), "sh:eyewaz-punjabi-male")
-        self.assertEqual(web.ours_for_azure_urdu("ur-PK-UzmaNeural"), "sh:eyewaz-urdu-female")
+    def test_urdu_male_stays_urdu(self):
+        self.assertEqual(web.ours_for_azure_urdu("ur-PK-AsadNeural"), "sh:eyewaz-urdu-male")
+        self.assertEqual(web.urdu_voice("male"), "sh:eyewaz-urdu-male")
+
+
+
+class PunjabiTextTests(unittest.TestCase):
+    """Punjabi is translated into Punjabi and written in Shahmukhi for our voice."""
+
+    def test_gurmukhi_becomes_shahmukhi(self):
+        import shahmukhi
+        cases = {
+            "ਸਤਿ ਸ੍ਰੀ ਅਕਾਲ, ਤੁਸੀਂ ਕਿਵੇਂ ਹੋ?": "ست سری اکال، تسیں کویں ہو؟",
+            "ਮੈਂ ਠੀਕ ਹਾਂ, ਧੰਨਵਾਦ।": "میں ٹھیک ہاں، دھنواد۔",
+            "ਅਸੀਂ ਘਰ ਜਾ ਰਹੇ ਹਾਂ।": "اسیں گھر جا رہے ہاں۔",
+            "ਉਹ ਸਕੂਲ ਗਈ।": "اوہ سکول گئی۔",
+            "ਖ਼ਬਰ": "خبر", "ਕਿ": "کہ", "ਕੰਮ": "کم",
+        }
+        for g, want in cases.items():
+            self.assertEqual(shahmukhi.to_shahmukhi(g), want)
+
+    def test_non_gurmukhi_passes_through(self):
+        import shahmukhi
+        self.assertEqual(shahmukhi.to_shahmukhi("Room 1,000"), "Room 1,000")
+
+    def _translate(self, text, gurmukhi="ਮੈਂ ਠੀਕ ਹਾਂ।"):
+        import helpers
+        resp = mock.Mock()
+        resp.json.return_value = [{"translations": [{"text": gurmukhi}],
+                                   "detectedLanguage": {"language": "en"}}]
+        with mock.patch.object(helpers, "_cache_get", return_value=None), \
+                mock.patch.object(helpers, "_cache_put"), \
+                mock.patch.dict(os.environ, {"TEXT_TRANSLATION_ENDPOINT": "https://t.invalid"}), \
+                mock.patch.object(helpers.requests, "post", return_value=resp) as post:
+            out = helpers.ConvertText(text, "pa-PK")
+        return out, post
+
+    def test_english_is_translated_to_punjabi_then_shahmukhi(self):
+        (text, src), post = self._translate("I am fine.")
+        self.assertEqual(post.call_args.kwargs["params"]["to"], "pa")   # Azure only knows Gurmukhi
+        self.assertEqual((text, src), ("میں ٹھیک ہاں۔", "en"))
+
+    def test_shahmukhi_input_is_read_as_is_without_paying(self):
+        (text, _), post = self._translate("تسیں کویں ہو؟")
+        self.assertEqual(text, "تسیں کویں ہو؟")
+        post.assert_not_called()
 
 
 if __name__ == "__main__":

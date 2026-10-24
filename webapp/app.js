@@ -507,9 +507,10 @@ function audioUrlFor(doc, voice) {
 let currentDoc = null;
 
 const RTL_LANGS = ["ar", "ur", "fa", "he", "ps", "sd", "ug", "yi", "dv"];
-function isRTL(lang) { return RTL_LANGS.includes((lang || "").slice(0, 2)); }
+// pa-PK is our Shahmukhi Punjabi (Perso-Arabic script); Gurmukhi pa-IN stays left to right.
+function isRTL(lang) { return lang === "pa-PK" || RTL_LANGS.includes((lang || "").slice(0, 2)); }
 function applyLangDir(el, lang) {
-  el.lang = (lang || "").slice(0, 2) || "en";
+  el.lang = lang === "pa-PK" ? "pa-Arab" : ((lang || "").slice(0, 2) || "en");
   el.dir = isRTL(lang) ? "rtl" : "ltr";
 }
 
@@ -1681,9 +1682,10 @@ const SAMPLES = {
   ur: "السلام علیکم، یہ آپ کی منتخب کردہ آواز ہے۔",
   ar: "مرحبا، هذا هو الصوت الذي اخترته.",
   hi: "नमस्ते, यह आपकी चुनी हुई आवाज़ है।",
+  "pa-PK": "السلام علیکم، ایہہ تہاڈی چنی ہوئی آواز اے۔",
 };
 function sampleFor(locale) {
-  return SAMPLES[(locale || "").slice(0, 2)] || "Hello, this is the voice you selected for EYEWAZ.";
+  return SAMPLES[locale] || SAMPLES[(locale || "").slice(0, 2)] || "Hello, this is the voice you selected for EYEWAZ.";
 }
 
 async function populateVoiceControls() {
