@@ -170,5 +170,59 @@ class DialectFallbackTests(_EngineUp):
             self.assertEqual(self._fallbacks(), {"ur-PK-UzmaNeural"})
 
 
+PUNJABI = {"id": "eyewaz-punjabi-male", "gender": "male", "language": "pa"}
+
+
+class PunjabiTests(_EngineUp):
+    """Our trained Punjabi voice replaces Azure for the Punjabi dialect, and only there."""
+
+    def setUp(self):
+        super().setUp()
+        mock.patch.object(selfhost_tts, "voices", return_value=[FEMALE, MALE, PUNJABI]).start()
+
+    def _dialects(self):
+        from resources import dialects
+        with mock.patch.object(dialects, "list_voices",
+                               return_value=[{"shortName": "pa-IN-VaaniNeural", "gender": "Female"}]), \
+                mock.patch.object(dialects.DialectVoice, "objects", return_value=[]):
+            dialects._VOICE_CACHE = None
+            with app.app_context():
+                tok = create_access_token(identity="voice-test@example.com")
+            r = app.test_client().get("/api/dialects",
+                                      headers={"Authorization": "Bearer " + tok})
+        return {d["id"]: d for d in r.get_json()["dialects"]}
+
+    def test_punjabi_dialect_uses_our_voice_and_urdu_script(self):
+        pa = self._dialects()["punjabi"]
+        self.assertEqual([v["shortName"] for v in pa["voices"]], ["sh:eyewaz-punjabi-male"])
+        self.assertEqual(pa["locale"], "ur-PK")   # Shahmukhi, never Azure's Gurmukhi
+        self.assertEqual(pa["tier"], "free")
+
+    def test_urdu_does_not_list_the_punjabi_voice(self):
+        ur = self._dialects()["urdu"]
+        self.assertEqual({v["shortName"] for v in ur["voices"]},
+                         {"sh:eyewaz-urdu-female", "sh:eyewaz-urdu-male"})
+
+    def test_urdu_default_stays_urdu(self):
+        self.assertEqual(selfhost_tts.default_voice(), "sh:eyewaz-urdu-female")
+
+    def test_punjabi_falls_back_to_azure_without_our_voice(self):
+        mock.patch.object(selfhost_tts, "voices", return_value=[FEMALE, MALE]).start()
+        pa = self._dialects()["punjabi"]
+        self.assertEqual(pa["voices"][0]["shortName"], "pa-IN-VaaniNeural")
+        self.assertEqual(pa["locale"], "pa-IN")
+
+    def test_punjabi_speech_reaches_the_engine(self):
+        mock.patch.object(web, "synthesize").start()
+        mock.patch.object(web, "translate", side_effect=lambda t, a, b: "اردو متن").start()
+        mock.patch.object(web.storage, "save_file", return_value=_Stored()).start()
+        with app.app_context():
+            tok = create_access_token(identity="voice-test@example.com")
+        r = app.test_client().post("/api/screen-reader", headers={"Authorization": "Bearer " + tok},
+                                   json={"text": "Settings", "voice": "sh:eyewaz-punjabi-male"})
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(self.ours.call_args.kwargs["voice"], "eyewaz-punjabi-male")
+
+
 if __name__ == "__main__":
     unittest.main()

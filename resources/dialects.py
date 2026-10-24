@@ -30,10 +30,12 @@ FALLBACK_LOCALE = "ur-PK"
 
 # Biggest regional varieties first. `voices` are candidate Azure short-names;
 # only the ones the live catalogue actually has are surfaced. Empty / missing =>
-# "coming soon" (Phase 2 cloned voice bank).
+# "coming soon" (Phase 2 cloned voice bank). `selfhost` is the engine language
+# code of our own trained voice for that dialect; when the engine has one, it
+# replaces Azure.
 CATALOG = [
-    {"id": "urdu",    "label": "Standard Urdu",        "region": "National",            "locale": "ur-PK", "voices": ["ur-PK-UzmaNeural", "ur-PK-AsadNeural"], "selfhost": True},
-    {"id": "punjabi", "label": "Punjabi · Urdu",       "region": "Punjab",              "locale": "pa-IN", "voices": ["pa-IN-VaaniNeural", "pa-IN-OjasNeural", "pa-IN-GurpreetNeural"]},
+    {"id": "urdu",    "label": "Standard Urdu",        "region": "National",            "locale": "ur-PK", "voices": ["ur-PK-UzmaNeural", "ur-PK-AsadNeural"], "selfhost": "ur"},
+    {"id": "punjabi", "label": "Punjabi · Urdu",       "region": "Punjab",              "locale": "pa-IN", "voices": ["pa-IN-VaaniNeural", "pa-IN-OjasNeural", "pa-IN-GurpreetNeural"], "selfhost": "pa"},
     {"id": "pashto",  "label": "Pashto · Urdu",        "region": "Khyber Pakhtunkhwa",  "locale": "ps-AF", "voices": ["ps-AF-LatifaNeural", "ps-AF-GulNawazNeural"]},
     {"id": "sindhi",  "label": "Sindhi · Karachi Urdu","region": "Sindh",               "locale": "ur-PK", "voices": []},
     {"id": "saraiki", "label": "Saraiki",              "region": "South Punjab",        "locale": "ur-PK", "voices": []},
@@ -62,18 +64,21 @@ class DialectsAPI(Resource):
         cloned = {dv.dialect_id: dv for dv in DialectVoice.objects()}
 
         out = []
-        # Urdu is spoken by our own trained voices whenever the engine answers.
-        # Azure's Urdu stays listed only as the fallback when it does not.
+        # Urdu and Punjabi are spoken by our own trained voices whenever the
+        # engine has one. Azure stays listed only as the fallback when it does not.
         own_voices = selfhost_tts.voices()
         fallback_voice = selfhost_tts.default_voice() or FALLBACK_VOICE
         for d in CATALOG:
-            if d.get("selfhost") and own_voices:
+            ours = [v for v in own_voices if d.get("selfhost") and v.get("language") == d["selfhost"]]
+            if ours:
+                # Text is translated to Urdu, as for a cloned dialect voice: our
+                # Punjabi voice reads Urdu script (Shahmukhi), not Azure's Gurmukhi.
                 out.append({
                     "id": d["id"], "label": d["label"], "region": d["region"],
                     "locale": "ur-PK", "status": "live",
                     "voices": [{"shortName": "sh:" + v["id"], "gender": v.get("gender", ""),
                                 "engine": "eyewaz", "name": v.get("name", v["id"])}
-                               for v in own_voices if v.get("language") == "ur"],
+                               for v in ours],
                     "cloned": False, "tier": "free",
                     "fallback_voice": fallback_voice, "fallback_locale": FALLBACK_LOCALE,
                 })
