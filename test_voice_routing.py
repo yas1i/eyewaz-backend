@@ -223,6 +223,35 @@ class PunjabiTests(_EngineUp):
         self.assertEqual(r.status_code, 200)
         self.assertEqual(self.ours.call_args.kwargs["voice"], "eyewaz-punjabi-male")
 
+    def _profile_voices(self, engine_voices):
+        from resources import account
+        azure = [{"shortName": "ur-PK-UzmaNeural", "locale": "ur-PK", "gender": "Female"},
+                 {"shortName": "ur-PK-AsadNeural", "locale": "ur-PK", "gender": "Male"},
+                 {"shortName": "en-GB-SoniaNeural", "locale": "en-GB", "gender": "Female"}]
+        mock.patch.object(selfhost_tts, "voices", return_value=engine_voices).start()
+        account._VOICES_CACHE = azure
+        self.addCleanup(setattr, account, "_VOICES_CACHE", None)
+        with app.app_context():
+            tok = create_access_token(identity="voice-test@example.com")
+        r = app.test_client().get("/api/voices", headers={"Authorization": "Bearer " + tok})
+        return r.get_json()["voices"]
+
+    def test_profile_offers_urdu_female_and_punjabi_male_only(self):
+        vs = self._profile_voices([FEMALE, MALE, PUNJABI])
+        urdu = [(v["shortName"], v["displayName"]) for v in vs if v["locale"] == "ur-PK"]
+        self.assertEqual(urdu, [("sh:eyewaz-urdu-female", "EYEWAZ Urdu (female)"),
+                                ("sh:eyewaz-punjabi-male", "EYEWAZ Punjabi (male)")])
+        self.assertIn("en-GB-SoniaNeural", [v["shortName"] for v in vs])   # other languages stay
+
+    def test_profile_shows_azure_urdu_when_engine_is_off(self):
+        names = [v["shortName"] for v in self._profile_voices([])]
+        self.assertIn("ur-PK-UzmaNeural", names)
+        self.assertIn("ur-PK-AsadNeural", names)
+
+    def test_male_means_punjabi(self):
+        self.assertEqual(web.ours_for_azure_urdu("ur-PK-AsadNeural"), "sh:eyewaz-punjabi-male")
+        self.assertEqual(web.ours_for_azure_urdu("ur-PK-UzmaNeural"), "sh:eyewaz-urdu-female")
+
 
 if __name__ == "__main__":
     unittest.main()

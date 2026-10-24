@@ -51,10 +51,10 @@ def urdu_voice(prefer_gender=None):
     """
     import selfhost_tts
     if selfhost_tts.configured():
-        available = selfhost_tts.voices()
         if prefer_gender:
-            for v in available:
-                if v.get("language") == "ur" and v.get("gender") == prefer_gender:
+            # Male is our Punjabi voice, female our Urdu one (see picker_voices).
+            for v in selfhost_tts.picker_voices():
+                if v.get("gender") == prefer_gender:
                     return "sh:" + v["id"]
         default = selfhost_tts.default_voice()
         if default:

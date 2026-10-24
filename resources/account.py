@@ -103,26 +103,31 @@ class VoicesAPI(Resource):
                 _VOICES_CACHE = list_voices()
             except Exception as e:
                 return _resp({"message": f"Could not load voices: {e}"}, 502)
-        return _resp({"voices": _own_urdu_voices() + _VOICES_CACHE}, 200)
+        ours = _own_urdu_voices()
+        # While our voices answer, Azure's Urdu (Uzma, Asad) is not offered: it
+        # would only be remapped to ours anyway, and listing it is confusing.
+        azure = [v for v in _VOICES_CACHE if not (ours and v.get("locale") == "ur-PK")]
+        return _resp({"voices": ours + azure}, 200)
 
 
 def _own_urdu_voices():
     """Our trained voices, shaped like Azure entries so the picker needs no change.
 
-    Empty when the engine is not configured or not answering, so the picker
-    quietly falls back to Azure rather than offering a voice that cannot speak.
+    Two choices under Urdu: female is our Urdu voice, male is our Punjabi voice.
+    Both read Urdu script. Empty when the engine is not configured or not
+    answering, so the picker quietly falls back to Azure rather than offering a
+    voice that cannot speak.
     """
     import selfhost_tts
     out = []
-    for v in selfhost_tts.voices():
-        if v.get("language") != "ur":
-            continue
+    for v in selfhost_tts.picker_voices():
         gender = (v.get("gender") or "").capitalize()
+        language = "Punjabi" if v.get("language") == "pa" else "Urdu"
         out.append({
             "shortName": "sh:" + v["id"],
             "locale": "ur-PK",
             "localeName": "Urdu (Pakistan)",
-            "displayName": f"EYEWAZ Urdu{f' ({gender.lower()})' if gender else ''}",
+            "displayName": f"EYEWAZ {language}{f' ({gender.lower()})' if gender else ''}",
             "gender": gender,
         })
     return out
